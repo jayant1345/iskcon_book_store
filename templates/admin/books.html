@@ -10,9 +10,14 @@
             <button type="submit" class="btn btn-warning"><i class="fas fa-search"></i></button>
         </form>
     </div>
-    <a href="{{ url_for('admin_add_book') }}" class="btn btn-warning">
-        <i class="fas fa-plus-circle me-2"></i>Add Book
-    </a>
+    <div class="d-flex gap-2">
+        <a href="{{ url_for('export_stock_csv') }}" class="btn btn-outline-success">
+            <i class="fas fa-file-csv me-2"></i>Download Stock CSV
+        </a>
+        <a href="{{ url_for('admin_add_book') }}" class="btn btn-warning">
+            <i class="fas fa-plus-circle me-2"></i>Add Book
+        </a>
+    </div>
 </div>
 
 <div class="card table-card shadow-sm">

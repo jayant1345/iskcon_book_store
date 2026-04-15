@@ -9,6 +9,8 @@ import uuid
 import hmac
 import hashlib
 import json
+import csv
+import io
 from datetime import datetime
 from functools import wraps
 
@@ -771,6 +773,51 @@ def admin_books():
     return render_template("admin/books.html", books=books, query=query)
 
 
+@app.route("/admin/books/export-stock-csv")
+@admin_required
+def export_stock_csv():
+    """Download all books as a CSV stock receipt for physical records."""
+    all_books = Book.query.order_by(Book.category_id, Book.title).all()
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+
+    # Header row
+    writer.writerow([
+        "Sr No", "Title", "Author", "Category", "Language", "Format",
+        "Price (INR)", "Original Price (INR)", "Discount %",
+        "Stock Qty", "ISBN", "Publisher", "Pages", "Active", "Featured"
+    ])
+
+    for idx, book in enumerate(all_books, start=1):
+        writer.writerow([
+            idx,
+            book.title,
+            book.author,
+            book.category.name if book.category else "",
+            book.language or "",
+            "eBook" if book.is_ebook else "Paper",
+            int(book.price),
+            int(book.original_price) if book.original_price else "",
+            book.discount_percent or "",
+            book.stock,
+            book.isbn or "",
+            book.publisher or "",
+            book.pages or "",
+            "Yes" if book.active else "No",
+            "Yes" if book.featured else "No",
+        ])
+
+    csv_bytes = output.getvalue().encode("utf-8-sig")   # utf-8-sig adds BOM for Excel
+    from flask import Response
+    filename = f"stock_report_{datetime.now().strftime('%Y%m%d_%H%M')}.csv"
+    return Response(
+        csv_bytes,
+        mimetype="text/csv",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
+
+
 @app.route("/admin/books/add", methods=["GET", "POST"])
 @admin_required
 def admin_add_book():
@@ -913,6 +960,65 @@ def admin_stock():
                            now=datetime.utcnow())
 
 
+@app.route("/admin/stock/export-csv")
+@admin_required
+def export_stock_receipts_csv():
+    """Download temple stock receipts as CSV — all / paid / pending."""
+    from flask import Response
+
+    payment_filter = request.args.get("payment_status", "")
+
+    rq = StockReceipt.query
+    if payment_filter:
+        rq = rq.filter_by(payment_status=payment_filter)
+    all_receipts = rq.order_by(StockReceipt.received_date.desc()).all()
+
+    # Totals for summary rows
+    total_qty     = sum(r.quantity for r in all_receipts)
+    total_cost    = sum(r.total_payment for r in all_receipts)
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+
+    # Title block
+    label = {"paid": "Payment Done", "pending": "Payment Pending"}.get(payment_filter, "All Receipts")
+    writer.writerow([f"ISKCON Book Store — Temple Stock Receipt Report ({label})"])
+    writer.writerow([f"Generated on: {datetime.now().strftime('%d-%m-%Y %H:%M')}"])
+    writer.writerow([])
+
+    # Header
+    writer.writerow([
+        "Sr No", "Date Received", "Book Title",
+        "Qty Received", "Cost / Copy (INR)", "Total Amount (INR)",
+        "Payment Status", "Notes"
+    ])
+
+    for idx, r in enumerate(all_receipts, start=1):
+        writer.writerow([
+            idx,
+            r.received_date.strftime("%d-%m-%Y"),
+            r.book_name,
+            r.quantity,
+            int(r.cost_per_unit),
+            int(r.total_payment),
+            "PAID" if r.payment_status == "paid" else "PENDING",
+            r.notes or "",
+        ])
+
+    # Summary footer
+    writer.writerow([])
+    writer.writerow(["", "", "TOTAL", total_qty, "", int(total_cost), "", ""])
+
+    csv_bytes = output.getvalue().encode("utf-8-sig")
+    tag = f"_{payment_filter}" if payment_filter else ""
+    filename = f"temple_stock{tag}_{datetime.now().strftime('%Y%m%d_%H%M')}.csv"
+    return Response(
+        csv_bytes,
+        mimetype="text/csv",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
+
+
 @app.route("/admin/stock/add", methods=["POST"])
 @admin_required
 def admin_add_stock():
@@ -1009,6 +1115,76 @@ def admin_orders():
         oq = oq.filter_by(order_status=status)
     orders = oq.order_by(Order.created_at.desc()).paginate(page=page, per_page=20)
     return render_template("admin/orders.html", orders=orders, status=status)
+
+
+@app.route("/admin/orders/export-csv")
+@admin_required
+def export_orders_csv():
+    """Download all orders as CSV — payment received/pending + order status for temple records."""
+    from flask import Response
+
+    status_filter   = request.args.get("status", "")
+    payment_filter  = request.args.get("payment_status", "")
+
+    oq = Order.query
+    if status_filter:
+        oq = oq.filter_by(order_status=status_filter)
+    if payment_filter:
+        oq = oq.filter_by(payment_status=payment_filter)
+
+    all_orders = oq.order_by(Order.created_at.desc()).all()
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+
+    # Header
+    writer.writerow([
+        "Order #", "Date", "Customer Name", "Phone", "Email",
+        "Address", "City", "State", "Pincode",
+        "Books Ordered",
+        "Subtotal (INR)", "Shipping (INR)", "Discount (INR)", "Total (INR)",
+        "Payment Method", "Payment Status",
+        "Order Status", "Coupon Code", "Notes"
+    ])
+
+    for order in all_orders:
+        books_list = "; ".join(
+            f"{item.book_title} x{item.quantity}" for item in order.items
+        )
+        writer.writerow([
+            order.order_number,
+            order.created_at.strftime("%d-%m-%Y %H:%M"),
+            order.customer_name,
+            order.customer_phone,
+            order.customer_email or "",
+            order.address,
+            order.city or "",
+            order.state or "",
+            order.pincode or "",
+            books_list,
+            int(order.subtotal),
+            int(order.shipping_charge),
+            int(order.discount_amount),
+            int(order.total_amount),
+            order.payment_method.upper(),
+            order.payment_status.upper(),
+            order.order_status.capitalize(),
+            order.coupon_code or "",
+            order.notes or "",
+        ])
+
+    csv_bytes = output.getvalue().encode("utf-8-sig")
+    filename = f"orders_{datetime.now().strftime('%Y%m%d_%H%M')}.csv"
+    if status_filter:
+        filename = f"orders_{status_filter}_{datetime.now().strftime('%Y%m%d_%H%M')}.csv"
+    if payment_filter:
+        filename = f"orders_payment_{payment_filter}_{datetime.now().strftime('%Y%m%d_%H%M')}.csv"
+
+    return Response(
+        csv_bytes,
+        mimetype="text/csv",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
 
 
 @app.route("/admin/orders/<int:order_id>")

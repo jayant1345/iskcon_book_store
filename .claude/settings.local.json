@@ -3,7 +3,10 @@
     "allow": [
       "Bash(timeout 5 python app.py)",
       "Bash(python:*)",
-      "Bash(taskkill /F /IM python.exe)"
+      "Bash(taskkill /F /IM python.exe)",
+      "Bash(pkill -f \"python.*app.py\")",
+      "Bash(/c/Project_AI/iskon_book_store/venv/Scripts/python.exe /c/Project_AI/iskon_book_store/app.py)",
+      "Bash(curl -s http://127.0.0.1:5000 -o /dev/null -w \"%{http_code}\")"
     ]
   }
 }
