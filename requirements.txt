@@ -12,4 +12,4 @@ Pillow==10.4.0
 
 # For local dev with SQLite (default), you don't need psycopg2.
 # For cloud deployment with PostgreSQL, uncomment the next line:
-# psycopg2-binary==2.9.9
+psycopg2-binary==2.9.9
