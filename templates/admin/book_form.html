@@ -1,0 +1,138 @@
+{% extends "admin/admin_base.html" %}
+{% block page_title %}{{ 'Edit Book' if book else 'Add New Book' }}{% endblock %}
+{% block content %}
+
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        <div class="card shadow-sm">
+            <div class="card-header bg-warning text-dark py-3">
+                <h5 class="mb-0"><i class="fas fa-book me-2"></i>{{ 'Edit Book' if book else 'Add New Book' }}</h5>
+            </div>
+            <div class="card-body p-4">
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                  {% for cat, msg in messages %}
+                    <div class="alert alert-{{ cat }}">{{ msg }}</div>
+                  {% endfor %}
+                {% endwith %}
+
+                <form method="POST" enctype="multipart/form-data">
+                    <div class="row g-4">
+                        <!-- Left Column -->
+                        <div class="col-md-8">
+                            <div class="mb-3">
+                                <label class="form-label">Title *</label>
+                                <input type="text" name="title" class="form-control" value="{{ book.title if book else '' }}" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Author *</label>
+                                <input type="text" name="author" class="form-control" value="{{ book.author if book else '' }}" required>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Category</label>
+                                    <select name="category_id" class="form-select">
+                                        <option value="">-- Select Category --</option>
+                                        {% for cat in categories %}
+                                        <option value="{{ cat.id }}" {% if book and book.category_id == cat.id %}selected{% endif %}>{{ cat.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Language</label>
+                                    <select name="language" class="form-select">
+                                        <option value="English" {% if book and book.language=='English' %}selected{% endif %}>English</option>
+                                        <option value="Hindi" {% if book and book.language=='Hindi' %}selected{% endif %}>Hindi</option>
+                                        <option value="Sanskrit" {% if book and book.language=='Sanskrit' %}selected{% endif %}>Sanskrit</option>
+                                        <option value="Other" {% if book and book.language=='Other' %}selected{% endif %}>Other</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label">Price (₹) *</label>
+                                    <input type="number" step="0.01" name="price" class="form-control" value="{{ book.price if book else '' }}" required>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label">Original Price (₹)</label>
+                                    <input type="number" step="0.01" name="original_price" class="form-control" value="{{ book.original_price if book and book.original_price else '' }}">
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label">Stock</label>
+                                    <input type="number" name="stock" class="form-control" value="{{ book.stock if book else 100 }}">
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label">ISBN</label>
+                                    <input type="text" name="isbn" class="form-control" value="{{ book.isbn if book else '' }}">
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label">Pages</label>
+                                    <input type="number" name="pages" class="form-control" value="{{ book.pages if book else '' }}">
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label">Publisher</label>
+                                    <input type="text" name="publisher" class="form-control" value="{{ book.publisher if book else 'The Bhaktivedanta Book Trust' }}">
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Short Description</label>
+                                <input type="text" name="short_desc" class="form-control" value="{{ book.short_desc if book else '' }}" maxlength="300" placeholder="Brief summary for cards">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Full Description</label>
+                                <textarea name="description" class="form-control" rows="5">{{ book.description if book else '' }}</textarea>
+                            </div>
+                        </div>
+
+                        <!-- Right Column -->
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label class="form-label">Book Image</label>
+                                <div class="border rounded p-3 text-center bg-light">
+                                    {% if book and book.image %}
+                                    <img src="{{ url_for('static', filename='images/books/' + book.image) }}"
+                                         class="mb-3" style="max-height:200px;max-width:100%;object-fit:contain;"
+                                         onerror="this.src='{{ url_for('static', filename='images/books/default_book.jpg') }}'">
+                                    {% else %}
+                                    <div class="text-muted py-4">
+                                        <i class="fas fa-image fa-3x mb-2"></i>
+                                        <p class="mb-0">No image uploaded</p>
+                                    </div>
+                                    {% endif %}
+                                    <input type="file" name="image" class="form-control mt-2" accept="image/*">
+                                    <small class="text-muted">PNG, JPG, WEBP (max 16MB)</small>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <div class="form-check">
+                                    <input type="checkbox" name="featured" class="form-check-input" id="featuredCheck"
+                                           value="1" {% if book and book.featured %}checked{% endif %}>
+                                    <label class="form-check-label" for="featuredCheck">Featured Book</label>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <div class="form-check">
+                                    <input type="checkbox" name="active" class="form-check-input" id="activeCheck"
+                                           value="1" {% if book and book.active %}checked{% elif not book %}checked{% endif %}>
+                                    <label class="form-check-label" for="activeCheck">Active (Visible in Store)</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr class="my-4">
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('admin_books') }}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left me-2"></i>Cancel
+                        </a>
+                        <button type="submit" class="btn btn-warning">
+                            <i class="fas fa-save me-2"></i>{{ 'Update Book' if book else 'Add Book' }}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

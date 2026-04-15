@@ -1,0 +1,75 @@
+{% extends "admin/admin_base.html" %}
+{% set active_page = 'categories' %}
+{% block page_title %}Manage Categories{% endblock %}
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0">Categories</h4>
+    <button class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#addCatModal">
+        <i class="fas fa-plus-circle me-2"></i>Add Category
+    </button>
+</div>
+
+<div class="row g-3">
+    {% for cat in categories %}
+    <div class="col-md-4 col-lg-3">
+        <div class="card shadow-sm h-100">
+            <div class="card-body text-center py-4">
+                <div class="display-4 mb-2">{{ cat.icon }}</div>
+                <h5 class="fw-bold">{{ cat.name }}</h5>
+                <p class="text-muted small mb-2">{{ cat.description[:60] if cat.description else '' }}{% if cat.description and cat.description|length > 60 %}...{% endif %}</p>
+                <span class="badge bg-secondary mb-2">{{ cat.books|length }} Books</span>
+                <div class="mt-3">
+                    <form method="POST" action="{{ url_for('admin_delete_category', cat_id=cat.id) }}" onsubmit="return confirm('Delete category &quot;{{ cat.name }}&quot;?');">
+                        <button type="submit" class="btn btn-sm btn-outline-danger">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="col-12 text-center py-5 text-muted">
+        <i class="fas fa-folder-open fa-3x mb-3"></i>
+        <p>No categories yet. Add one!</p>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Add Category Modal -->
+<div class="modal fade" id="addCatModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title"><i class="fas fa-plus me-2"></i>Add New Category</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('admin_add_category') }}">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Category Name *</label>
+                        <input type="text" name="name" class="form-control" required placeholder="e.g., Bhagavad Gita">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Icon (Emoji)</label>
+                        <input type="text" name="icon" class="form-control" value="B" placeholder="Enter emoji or letter">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Description</label>
+                        <textarea name="description" class="form-control" rows="2"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Sort Order</label>
+                        <input type="number" name="sort_order" class="form-control" value="0" placeholder="Lower = appears first">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-warning">Add Category</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% block title %}Order Confirmed! — {{ store_name }}{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+  <div class="success-card">
+    <div class="success-icon">🎉</div>
+    <h2 class="section-title text-center mt-3" style="color:#28a745;">
+      Order Confirmed!
+    </h2>
+    <p class="text-muted">🙏 Hare Krishna! Thank you for your purchase.</p>
+
+    <div class="order-number">{{ order.order_number }}</div>
+
+    <div style="background:var(--cream-dark); border-radius:10px; padding:20px; text-align:left; margin:20px 0;">
+      <div class="row g-2 mb-3">
+        <div class="col-6">
+          <small class="text-muted d-block">Customer</small>
+          <strong>{{ order.customer_name }}</strong>
+        </div>
+        <div class="col-6">
+          <small class="text-muted d-block">Phone</small>
+          <strong>{{ order.customer_phone }}</strong>
+        </div>
+        <div class="col-12">
+          <small class="text-muted d-block">Delivery Address</small>
+          <strong>{{ order.address }}, {{ order.city }}{% if order.state %}, {{ order.state }}{% endif %} — {{ order.pincode }}</strong>
+        </div>
+        <div class="col-6">
+          <small class="text-muted d-block">Payment</small>
+          <strong class="text-capitalize">{{ order.payment_method|upper }}</strong>
+        </div>
+        <div class="col-6">
+          <small class="text-muted d-block">Status</small>
+          <span class="status-badge status-{{ order.payment_status }}">
+            {{ order.payment_status|capitalize }}
+          </span>
+        </div>
+      </div>
+
+      <h6 style="font-family:'Cinzel',serif; color:var(--brown); margin-bottom:10px; border-top:1px solid var(--border); padding-top:12px;">
+        Items Ordered
+      </h6>
+      {% for item in order.items %}
+      <div class="d-flex justify-content-between py-1">
+        <span style="font-size:0.87rem;">{{ item.book_title }} × {{ item.quantity }}</span>
+        <span style="font-size:0.87rem; font-weight:700; color:var(--saffron);">
+          ₹{{ (item.price * item.quantity)|int }}
+        </span>
+      </div>
+      {% endfor %}
+      <div class="d-flex justify-content-between mt-2 pt-2" style="border-top:1px solid var(--border);">
+        <strong>Total Paid</strong>
+        <strong style="color:var(--saffron); font-size:1.1rem;">₹{{ order.total_amount|int }}</strong>
+      </div>
+    </div>
+
+    {% if order.payment_method == 'upi' %}
+    <div class="alert alert-warning text-start" style="border-radius:12px;">
+      <h6 class="fw-bold mb-3">📲 Complete Your UPI Payment</h6>
+      <div class="d-flex align-items-center gap-3 mb-3">
+        <div style="background:#fff; border-radius:10px; padding:10px; font-size:2rem; line-height:1;">📲</div>
+        <div>
+          <div class="text-muted small mb-1">Pay ₹{{ order.total_amount|int }} to</div>
+          <div style="font-size:1.3rem; font-weight:700; color:#e65c00; letter-spacing:0.5px;">{{ upi_id }}</div>
+          <div class="text-muted small">{{ upi_name }}</div>
+        </div>
+      </div>
+      <ol class="mb-2 ps-3" style="font-size:0.88rem;">
+        <li>Open GPay, PhonePe, Paytm or any UPI app</li>
+        <li>Send <strong>₹{{ order.total_amount|int }}</strong> to UPI ID: <strong>{{ upi_id }}</strong></li>
+        <li>Use order number <strong>{{ order.order_number }}</strong> as payment note/remark</li>
+        <li>Take a screenshot of the payment confirmation</li>
+        <li>Send the screenshot on WhatsApp to confirm your order</li>
+      </ol>
+      <div class="text-muted small">⚠️ Your order will be confirmed once we verify the payment.</div>
+    </div>
+    {% elif order.payment_method == 'cod' %}
+    <div class="alert alert-iskcon-info text-start">
+      💵 <strong>Cash on Delivery:</strong> Please keep ₹{{ order.total_amount|int }} ready at the time of delivery.
+    </div>
+    {% endif %}
+
+    <div class="d-flex gap-3 justify-content-center flex-wrap mt-4">
+      <a href="{{ url_for('books') }}" class="btn btn-saffron px-4">
+        📚 Continue Shopping
+      </a>
+      <a href="{{ url_for('order_track') }}" class="btn btn-outline-saffron px-4">
+        📦 Track My Order
+      </a>
+      <button id="whatsapp-order-btn" class="whatsapp-btn"
+              data-phone="{{ whatsapp_num }}"
+              data-order="{{ order.order_number }}">
+        💬 WhatsApp Support
+      </button>
+    </div>
+
+    <p class="text-muted small mt-4">
+      🙏 Your purchase helps spread Vedic wisdom across the world. Hare Krishna!
+    </p>
+  </div>
+</div>
+{% endblock %}

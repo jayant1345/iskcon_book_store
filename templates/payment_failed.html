@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Payment Failed — {{ store_name }}{% endblock %}
+{% block content %}
+<div class="container py-5">
+  <div class="success-card">
+    <div style="font-size:5rem;">😔</div>
+    <h2 class="section-title text-center mt-3" style="color:#dc3545;">Payment Failed</h2>
+    <p class="text-muted">Order {{ order.order_number }} — your payment could not be processed.</p>
+    <div class="alert alert-iskcon-warning text-start mt-3">
+      ⚠️ No money has been deducted. You can retry payment or choose Cash on Delivery.
+    </div>
+    <div class="d-flex gap-3 justify-content-center flex-wrap mt-4">
+      <a href="{{ url_for('checkout') }}" class="btn btn-saffron px-4">🔄 Retry Payment</a>
+      <a href="{{ url_for('cart') }}" class="btn btn-outline-saffron px-4">← Back to Cart</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

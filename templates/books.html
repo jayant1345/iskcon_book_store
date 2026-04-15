@@ -1,0 +1,213 @@
+{% extends "base.html" %}
+{% block title %}
+  {% if active_cat %}{{ active_cat.name }} – {% endif %}Books — {{ store_name }}
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+
+  <!-- Breadcrumb -->
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb breadcrumb-iskcon">
+      <li class="breadcrumb-item"><a href="{{ url_for('index') }}">🏠 Home</a></li>
+      <li class="breadcrumb-item active">
+        {% if active_cat %}{{ active_cat.icon }} {{ active_cat.name }}{% else %}📚 All Books{% endif %}
+      </li>
+    </ol>
+  </nav>
+
+  <div class="row g-4">
+
+    <!-- ── Sidebar Filters ── -->
+    <div class="col-lg-3">
+      <div class="filter-sidebar">
+        <h6 class="filter-title">🔍 Search</h6>
+        <form action="{{ url_for('books') }}" method="get" class="mb-4">
+          {% if active_cat %}<input type="hidden" name="category" value="{{ active_cat.slug }}">{% endif %}
+          <div class="input-group">
+            <input type="search" class="form-control" name="q" value="{{ query }}" placeholder="Title, author…">
+            <button class="btn btn-saffron" type="submit"><i class="bi bi-search"></i></button>
+          </div>
+        </form>
+
+        <h6 class="filter-title">📂 Categories</h6>
+        <div class="mb-4">
+          <a href="{{ url_for('books') }}"
+             class="filter-option d-flex justify-content-between {{ 'fw-bold text-saffron' if not active_cat }}">
+            <span>📚 All Books</span>
+          </a>
+          {% for cat in categories %}
+          <a href="{{ url_for('books', category=cat.slug) }}"
+             class="filter-option d-flex justify-content-between {{ 'fw-bold' if active_cat and active_cat.slug == cat.slug }}">
+            <span>{{ cat.icon }} {{ cat.name }}</span>
+            <span style="color:var(--saffron);font-size:0.8rem;">{{ cat.books|selectattr('active')|list|length }}</span>
+          </a>
+          {% endfor %}
+        </div>
+
+        <h6 class="filter-title">🌐 Language</h6>
+        <form action="{{ url_for('books') }}" method="get">
+          {% if active_cat %}<input type="hidden" name="category" value="{{ active_cat.slug }}">{% endif %}
+          {% if query %}<input type="hidden" name="q" value="{{ query }}">{% endif %}
+          <div class="mb-3">
+            <label class="filter-option">
+              <input type="radio" name="language" value="" {{ 'checked' if not language }}> All Languages
+            </label>
+            {% for lang in languages %}
+            <label class="filter-option">
+              <input type="radio" name="language" value="{{ lang }}" {{ 'checked' if language == lang }}> {{ lang }}
+            </label>
+            {% endfor %}
+          </div>
+          <button type="submit" class="btn btn-outline-saffron w-100 btn-sm">Apply Filter</button>
+        </form>
+
+        {% if query or active_cat or language %}
+        <div class="mt-3">
+          <a href="{{ url_for('books') }}" class="btn btn-sm w-100" style="background:var(--cream-dark); color:var(--brown);">
+            ✕ Clear Filters
+          </a>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- ── Book Grid ── -->
+    <div class="col-lg-9">
+      <!-- Toolbar -->
+      <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+        <div>
+          <h4 class="section-title mb-0">
+            {% if active_cat %}{{ active_cat.icon }} {{ active_cat.name }}
+            {% elif query %}Results for "{{ query }}"
+            {% else %}📚 All Books
+            {% endif %}
+          </h4>
+          <small class="text-muted">{{ pagination.total }} book{{ 's' if pagination.total != 1 }}</small>
+        </div>
+        <form action="{{ url_for('books') }}" method="get" class="d-flex gap-2 align-items-center">
+          {% if active_cat %}<input type="hidden" name="category" value="{{ active_cat.slug }}">{% endif %}
+          {% if query %}<input type="hidden" name="q" value="{{ query }}">{% endif %}
+          {% if language %}<input type="hidden" name="language" value="{{ language }}">{% endif %}
+          <label class="text-muted small">Sort:</label>
+          <select name="sort" class="form-select form-select-sm" style="width:auto;" onchange="this.form.submit()">
+            <option value="title"      {{ 'selected' if sort=='title' }}>Title A–Z</option>
+            <option value="price_low"  {{ 'selected' if sort=='price_low' }}>Price: Low→High</option>
+            <option value="price_high" {{ 'selected' if sort=='price_high' }}>Price: High→Low</option>
+            <option value="newest"     {{ 'selected' if sort=='newest' }}>Newest First</option>
+          </select>
+        </form>
+      </div>
+
+      <!-- Mobile search -->
+      <form action="{{ url_for('books') }}" method="get" class="d-lg-none mb-3">
+        <div class="input-group">
+          <input type="search" class="form-control" name="q" value="{{ query }}" placeholder="Search books…">
+          <button class="btn btn-saffron" type="submit"><i class="bi bi-search"></i></button>
+        </div>
+      </form>
+
+      {% if books %}
+      <div class="row g-3">
+        {% for book in books %}
+        <div class="col-6 col-md-4 col-xl-3">
+          <div class="book-card">
+            <a href="{{ url_for('book_detail', book_id=book.id) }}">
+              <div class="book-card-img-wrap">
+                <img src="{{ url_for('static', filename='images/books/' + book.image) }}"
+                     alt="{{ book.title }}"
+                     onerror="this.src='https://via.placeholder.com/300x400/FF6600/FFF?text=📖'">
+                {% if not book.in_stock %}
+                <div style="position:absolute;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;">
+                  <span style="color:white;font-weight:700;font-size:0.8rem;">Out of Stock</span>
+                </div>
+                {% endif %}
+                {% if book.discount_percent %}
+                <span class="discount-badge">-{{ book.discount_percent }}%</span>
+                {% endif %}
+                {% if book.featured %}
+                <span class="book-card-badge badge-featured">⭐</span>
+                {% endif %}
+              </div>
+            </a>
+            <div class="book-card-body">
+              <div class="book-category">{{ book.category.name if book.category else '' }}</div>
+              <a href="{{ url_for('book_detail', book_id=book.id) }}" class="text-decoration-none">
+                <h6 class="book-title">{{ book.title }}</h6>
+              </a>
+              <p class="book-author">{{ book.author }}</p>
+              <div class="book-price-wrap">
+                <span class="book-price">₹{{ book.price|int }}</span>
+                {% if book.original_price %}
+                <span class="book-price-original">₹{{ book.original_price|int }}</span>
+                {% endif %}
+              </div>
+              <div class="book-card-actions">
+                {% if book.in_stock %}
+                <form class="ajax-add-to-cart" action="{{ url_for('add_to_cart', book_id=book.id) }}" method="post">
+                  <input type="hidden" name="qty" value="1">
+                  <button type="submit" class="btn btn-saffron w-100" style="font-size:0.8rem; padding:6px;">
+                    <i class="bi bi-cart-plus"></i> Add
+                  </button>
+                </form>
+                <a href="{{ url_for('book_detail', book_id=book.id) }}"
+                   class="btn btn-outline-saffron" style="font-size:0.8rem; padding:6px 10px;">
+                  View
+                </a>
+                {% else %}
+                <button class="btn w-100" disabled
+                        style="background:var(--cream-dark); color:var(--text-muted); font-size:0.8rem;">
+                  Out of Stock
+                </button>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+
+      <!-- Pagination -->
+      {% if pagination.pages > 1 %}
+      <nav class="mt-5 d-flex justify-content-center">
+        <ul class="pagination">
+          {% if pagination.has_prev %}
+          <li class="page-item">
+            <a class="page-link" href="{{ url_for('books', page=pagination.prev_num,
+               q=query, category=active_cat.slug if active_cat else '', language=language, sort=sort) }}">← Prev</a>
+          </li>
+          {% endif %}
+
+          {% for p in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+            {% if p %}
+            <li class="page-item {{ 'active' if p == pagination.page }}">
+              <a class="page-link" href="{{ url_for('books', page=p,
+                 q=query, category=active_cat.slug if active_cat else '', language=language, sort=sort) }}">{{ p }}</a>
+            </li>
+            {% else %}
+            <li class="page-item disabled"><span class="page-link">…</span></li>
+            {% endif %}
+          {% endfor %}
+
+          {% if pagination.has_next %}
+          <li class="page-item">
+            <a class="page-link" href="{{ url_for('books', page=pagination.next_num,
+               q=query, category=active_cat.slug if active_cat else '', language=language, sort=sort) }}">Next →</a>
+          </li>
+          {% endif %}
+        </ul>
+      </nav>
+      {% endif %}
+
+      {% else %}
+      <div class="empty-state">
+        <div class="empty-icon">📭</div>
+        <h4>No books found</h4>
+        <p>Try adjusting your search or filters.</p>
+        <a href="{{ url_for('books') }}" class="btn btn-saffron mt-3">Browse All Books</a>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

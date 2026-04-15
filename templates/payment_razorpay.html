@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}Complete Payment — {{ store_name }}{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+  <div class="text-center mb-5">
+    <div style="font-size:4rem;">💳</div>
+    <h2 class="section-title text-center mt-3">Complete Your Payment</h2>
+    <p class="text-muted">Order <strong style="color:var(--saffron);">{{ order.order_number }}</strong></p>
+  </div>
+
+  <div class="success-card" style="max-width:500px; margin:0 auto;">
+    <!-- Order Summary -->
+    <div style="background:var(--cream-dark); border-radius:10px; padding:20px; margin-bottom:24px; text-align:left;">
+      <h6 style="font-family:'Cinzel',serif; color:var(--brown); margin-bottom:12px;">Order Summary</h6>
+      {% for item in order.items %}
+      <div class="d-flex justify-content-between py-1">
+        <span style="font-size:0.85rem;">{{ item.book_title }} × {{ item.quantity }}</span>
+        <span style="font-size:0.85rem; font-weight:700;">₹{{ (item.price * item.quantity)|int }}</span>
+      </div>
+      {% endfor %}
+      <hr style="border-color:var(--border); margin:10px 0;">
+      <div class="d-flex justify-content-between">
+        <strong>Total Amount</strong>
+        <strong style="color:var(--saffron); font-size:1.2rem;">₹{{ order.total_amount|int }}</strong>
+      </div>
+    </div>
+
+    <!-- Pay Button -->
+    <button id="rzp-pay-btn"
+            class="btn btn-saffron w-100 btn-lg mb-3"
+            data-key="{{ key_id }}"
+            data-amount="{{ (order.total_amount * 100)|int }}"
+            data-order-id="{{ rp_order.id }}"
+            data-order-number="{{ order.order_number }}"
+            data-name="{{ order.customer_name }}"
+            data-phone="{{ order.customer_phone }}"
+            data-email="{{ order.customer_email or '' }}">
+      💳 Pay ₹{{ order.total_amount|int }} via Razorpay
+    </button>
+
+    <div class="text-center text-muted small mb-3">
+      Supports UPI · Cards · Net Banking · Wallets
+    </div>
+
+    <!-- COD Fallback -->
+    <form method="post" action="{{ url_for('checkout') }}">
+      <input type="hidden" name="payment_fallback" value="cod">
+    </form>
+
+    <div class="text-center">
+      <a href="{{ url_for('cart') }}" class="text-muted small">← Back to Cart</a>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+{% endblock %}

@@ -1,0 +1,15 @@
+# ISKCON Book Store - Python Dependencies
+# Install with: pip install -r requirements.txt
+
+Flask==3.0.3
+Flask-SQLAlchemy==3.1.1
+Werkzeug==3.0.3
+SQLAlchemy==2.0.31
+razorpay==1.4.1
+gunicorn==22.0.0
+python-dotenv==1.0.1
+Pillow==10.4.0
+
+# For local dev with SQLite (default), you don't need psycopg2.
+# For cloud deployment with PostgreSQL, uncomment the next line:
+# psycopg2-binary==2.9.9

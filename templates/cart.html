@@ -1,0 +1,194 @@
+{% extends "base.html" %}
+{% block title %}Shopping Cart — {{ store_name }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb breadcrumb-iskcon">
+      <li class="breadcrumb-item"><a href="{{ url_for('index') }}">🏠 Home</a></li>
+      <li class="breadcrumb-item active">🛒 Cart</li>
+    </ol>
+  </nav>
+
+  <h2 class="section-title mb-4">Shopping Cart
+    <small style="font-size:1rem; color:var(--text-muted); font-family:'Lato',sans-serif;">
+      ({{ items|length }} item{{ 's' if items|length != 1 }})
+    </small>
+  </h2>
+
+  {% if items %}
+  <div class="row g-4">
+
+    <!-- ── Cart Items ── -->
+    <div class="col-lg-8">
+      <form id="cart-form" method="post" action="{{ url_for('update_cart') }}">
+        <div class="cart-table table-responsive">
+          <table class="table table-hover mb-0">
+            <thead>
+              <tr>
+                <th>Book</th>
+                <th class="text-center">Price</th>
+                <th class="text-center">Quantity</th>
+                <th class="text-center">Total</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for item in items %}
+              <tr data-price="{{ item.book.price }}">
+                <td>
+                  <div class="d-flex align-items-center gap-3">
+                    <img src="{{ url_for('static', filename='images/books/' + item.book.image) }}"
+                         alt="{{ item.book.title }}" class="cart-item-img"
+                         onerror="this.src='https://via.placeholder.com/70x90/FF6600/FFF?text=📖'">
+                    <div>
+                      <a href="{{ url_for('book_detail', book_id=item.book.id) }}"
+                         class="fw-bold text-decoration-none" style="color:var(--brown);">
+                        {{ item.book.title }}
+                      </a>
+                      <div class="text-muted small">{{ item.book.author }}</div>
+                      {% if item.book.category %}
+                      <span class="badge" style="background:var(--cream-dark); color:var(--saffron); font-size:0.7rem;">
+                        {{ item.book.category.name }}
+                      </span>
+                      {% endif %}
+                    </div>
+                  </div>
+                </td>
+                <td class="text-center align-middle">
+                  <span style="color:var(--saffron); font-weight:700;">₹{{ item.book.price|int }}</span>
+                </td>
+                <td class="text-center align-middle">
+                  <div class="qty-control justify-content-center">
+                    <div class="qty-picker">
+                      <button type="button" data-action="minus">−</button>
+                      <input type="number" name="qty_{{ item.book.id }}"
+                             value="{{ item.qty }}" min="1" max="{{ item.book.stock }}">
+                      <button type="button" data-action="plus">+</button>
+                    </div>
+                  </div>
+                </td>
+                <td class="text-center align-middle">
+                  <span class="fw-bold line-total" style="color:var(--brown);">
+                    ₹{{ item.line_total|int }}
+                  </span>
+                </td>
+                <td class="text-center align-middle">
+                  <a href="{{ url_for('remove_from_cart', book_id=item.book.id) }}"
+                     class="btn btn-sm btn-outline-danger"
+                     onclick="return confirm('Remove this item?')"
+                     title="Remove">
+                    <i class="bi bi-trash3"></i>
+                  </a>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        <div class="d-flex justify-content-between mt-3 flex-wrap gap-2">
+          <a href="{{ url_for('books') }}" class="btn btn-outline-saffron">
+            ← Continue Shopping
+          </a>
+          <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-saffron">
+              <i class="bi bi-arrow-clockwise me-1"></i>Update Cart
+            </button>
+            <a href="{{ url_for('clear_cart') }}" class="btn btn-outline-danger"
+               onclick="return confirm('Clear the entire cart?')">
+              <i class="bi bi-trash3 me-1"></i>Clear
+            </a>
+          </div>
+        </div>
+      </form>
+
+      <!-- Coupon -->
+      <div class="checkout-section mt-4">
+        <h5><i class="bi bi-ticket-perforated me-2"></i>Have a Coupon?</h5>
+        <form method="post" action="{{ url_for('apply_coupon') }}">
+          <div class="coupon-input-wrap">
+            <input type="text" name="coupon_code" class="form-control"
+                   placeholder="Enter coupon code"
+                   value="{{ coupon_code or '' }}" maxlength="30">
+            <button type="submit" class="btn btn-gold px-4">Apply</button>
+          </div>
+          {% if coupon_code %}
+          <div class="mt-2 small" style="color:#28a745;">
+            ✅ Coupon <strong>{{ coupon_code }}</strong> applied — you save ₹{{ discount|int }}!
+          </div>
+          {% endif %}
+        </form>
+        <div class="mt-3" style="font-size:0.82rem; color:var(--text-muted);">
+          Available coupons: <strong>HARE10</strong> (10% off) &nbsp;|&nbsp;
+          <strong>KRISHNA50</strong> (₹50 off above ₹500) &nbsp;|&nbsp;
+          <strong>WELCOME20</strong> (20% off)
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Order Summary ── -->
+    <div class="col-lg-4">
+      <div class="order-summary-card">
+        <h5><i class="bi bi-receipt me-2"></i>Order Summary</h5>
+
+        <div class="summary-row">
+          <span>Subtotal</span>
+          <span>₹{{ subtotal|int }}</span>
+        </div>
+        <div class="summary-row">
+          <span>Shipping</span>
+          <span>
+            {% if shipping == 0 %}
+            <span style="color:#28a745;">Free 🎉</span>
+            {% else %}
+            ₹{{ shipping|int }}
+            {% endif %}
+          </span>
+        </div>
+        {% if discount > 0 %}
+        <div class="summary-row">
+          <span>Discount</span>
+          <span style="color:#28a745;">−₹{{ discount|int }}</span>
+        </div>
+        {% endif %}
+        <div class="summary-row total">
+          <span>Total</span>
+          <span>₹{{ total|int }}</span>
+        </div>
+
+        {% if subtotal < 500 %}
+        <div class="mt-3 p-2 text-center" style="background:var(--cream-dark); border-radius:8px; font-size:0.82rem;">
+          Add ₹{{ (500 - subtotal)|int }} more for <strong style="color:#28a745;">free shipping!</strong>
+        </div>
+        {% endif %}
+
+        <a href="{{ url_for('checkout') }}" class="btn btn-saffron w-100 mt-4 btn-lg">
+          Proceed to Checkout →
+        </a>
+
+        <div class="text-center mt-3" style="font-size:0.78rem; color:var(--text-muted);">
+          🔒 Secure checkout &nbsp;|&nbsp; 💳 UPI, Cards, COD
+        </div>
+
+        <!-- Payment icons -->
+        <div class="text-center mt-3" style="font-size:1.5rem; opacity:0.7;">
+          💳 🏧 📱 🏦
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {% else %}
+  <div class="empty-state py-5">
+    <div class="empty-icon">🛒</div>
+    <h4>Your cart is empty</h4>
+    <p class="text-muted">Add some wonderful Vedic books to your cart!</p>
+    <a href="{{ url_for('books') }}" class="btn btn-saffron btn-lg mt-3 px-5">
+      📚 Browse Books
+    </a>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

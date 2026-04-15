@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+{% block title %}Track Your Order — {{ store_name }}{% endblock %}
+
+{% block content %}
+<div class="container py-4" style="max-width:800px;">
+  <h2 class="section-title text-center mb-2">📦 Track Your Order</h2>
+  <p class="text-center text-muted mb-4">Enter your order number or phone number to track your delivery.</p>
+
+  <!-- Search Form -->
+  <div class="checkout-section mb-4">
+    <form method="post" action="{{ url_for('order_track') }}">
+      <div class="row g-3 align-items-end">
+        <div class="col-md-8">
+          <label class="form-label">Order Number or Phone Number</label>
+          <input type="text" name="query" class="form-control"
+                 placeholder="e.g. ISKCON20240101ABCDEF or 9876543210" required
+                 value="{{ request.form.get('query', '') }}">
+        </div>
+        <div class="col-md-4">
+          <button type="submit" class="btn btn-saffron w-100">
+            <i class="bi bi-search me-2"></i>Track Order
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  {% if order %}
+  <div class="checkout-section">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4">
+      <div>
+        <h5 style="font-family:'Cinzel',serif; color:var(--brown);">
+          Order: <span style="color:var(--saffron);">{{ order.order_number }}</span>
+        </h5>
+        <small class="text-muted">Placed on {{ order.created_at.strftime('%d %b %Y, %I:%M %p') }}</small>
+      </div>
+      <div class="text-end">
+        <div><strong>₹{{ order.total_amount|int }}</strong></div>
+        <span class="status-badge status-{{ order.payment_status }}">
+          {{ order.payment_status|capitalize }}
+        </span>
+      </div>
+    </div>
+
+    <!-- Tracking Steps -->
+    {% set steps = [
+      ('placed',    '📋', 'Order Placed'),
+      ('confirmed', '✅', 'Confirmed'),
+      ('shipped',   '🚚', 'Shipped'),
+      ('delivered', '🏠', 'Delivered'),
+    ] %}
+    {% set status_order = ['placed','confirmed','shipped','delivered'] %}
+    {% set current_idx = status_order.index(order.order_status) if order.order_status in status_order else 0 %}
+
+    <div class="tracking-steps mb-4">
+      {% for step_key, icon, label in steps %}
+      {% set step_idx = loop.index0 %}
+      <div class="tracking-step
+        {% if step_idx < current_idx %}done
+        {% elif step_idx == current_idx %}active
+        {% endif %}">
+        <div class="step-dot">{{ icon }}</div>
+        <div class="step-label">{{ label }}</div>
+      </div>
+      {% endfor %}
+    </div>
+
+    {% if order.order_status == 'cancelled' %}
+    <div class="alert alert-iskcon-danger">❌ This order has been cancelled.</div>
+    {% endif %}
+
+    <!-- Order Details -->
+    <div class="row g-3">
+      <div class="col-md-6">
+        <h6 style="font-family:'Cinzel',serif; color:var(--brown);">Customer Info</h6>
+        <table class="table table-sm">
+          <tr><td class="text-muted">Name</td><td><strong>{{ order.customer_name }}</strong></td></tr>
+          <tr><td class="text-muted">Phone</td><td>{{ order.customer_phone }}</td></tr>
+          <tr><td class="text-muted">Payment</td><td class="text-uppercase">{{ order.payment_method }}</td></tr>
+        </table>
+      </div>
+      <div class="col-md-6">
+        <h6 style="font-family:'Cinzel',serif; color:var(--brown);">Delivery Address</h6>
+        <p style="font-size:0.9rem; line-height:1.8;">
+          {{ order.address }}<br>
+          {{ order.city }}{% if order.state %}, {{ order.state }}{% endif %}<br>
+          PIN: {{ order.pincode }}
+        </p>
+      </div>
+    </div>
+
+    <!-- Items -->
+    <h6 style="font-family:'Cinzel',serif; color:var(--brown); margin-top:16px; padding-top:16px; border-top:1px solid var(--border);">
+      Items Ordered
+    </h6>
+    <div class="table-responsive">
+      <table class="table table-sm">
+        <thead>
+          <tr>
+            <th>Book</th>
+            <th class="text-center">Qty</th>
+            <th class="text-end">Price</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in order.items %}
+          <tr>
+            <td>{{ item.book_title }}</td>
+            <td class="text-center">{{ item.quantity }}</td>
+            <td class="text-end">₹{{ (item.price * item.quantity)|int }}</td>
+          </tr>
+          {% endfor %}
+          <tr class="table-active fw-bold">
+            <td>Total</td><td></td>
+            <td class="text-end" style="color:var(--saffron);">₹{{ order.total_amount|int }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="text-center mt-3">
+      <button id="whatsapp-order-btn" class="whatsapp-btn"
+              data-phone="{{ whatsapp_num }}" data-order="{{ order.order_number }}">
+        💬 Contact Support via WhatsApp
+      </button>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
