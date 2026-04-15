@@ -28,6 +28,7 @@
                     <th>Stock</th>
                     <th>Featured</th>
                     <th>Active</th>
+                    <th>eBook</th>
                     <th>Actions</th>
                 </tr>
             </thead>
@@ -72,6 +73,15 @@
                         {% endif %}
                     </td>
                     <td>
+                        {% if book.is_ebook and book.ebook_file %}
+                            <span class="badge bg-primary">&#x1F4E5; eBook</span>
+                        {% elif book.is_ebook %}
+                            <span class="badge bg-warning text-dark">No File</span>
+                        {% else %}
+                            <span class="badge bg-light text-muted">—</span>
+                        {% endif %}
+                    </td>
+                    <td>
                         <a href="{{ url_for('admin_edit_book', book_id=book.id) }}" class="btn btn-sm btn-primary">
                             <i class="fas fa-edit"></i>
                         </a>
@@ -83,7 +93,7 @@
                     </td>
                 </tr>
                 {% else %}
-                <tr><td colspan="9" class="text-center py-4 text-muted">No books found. <a href="{{ url_for('admin_add_book') }}">Add one!</a></td></tr>
+                <tr><td colspan="10" class="text-center py-4 text-muted">No books found. <a href="{{ url_for('admin_add_book') }}">Add one!</a></td></tr>
                 {% endfor %}
             </tbody>
         </table>

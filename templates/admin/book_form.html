@@ -40,10 +40,9 @@
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label">Language</label>
                                     <select name="language" class="form-select">
-                                        <option value="English" {% if book and book.language=='English' %}selected{% endif %}>English</option>
+                                        <option value="Gujarati" {% if book and book.language=='Gujarati' %}selected{% endif %}>Gujarati</option>
                                         <option value="Hindi" {% if book and book.language=='Hindi' %}selected{% endif %}>Hindi</option>
-                                        <option value="Sanskrit" {% if book and book.language=='Sanskrit' %}selected{% endif %}>Sanskrit</option>
-                                        <option value="Other" {% if book and book.language=='Other' %}selected{% endif %}>Other</option>
+                                        <option value="English" {% if book and book.language=='English' %}selected{% endif %}>English</option>
                                     </select>
                                 </div>
                             </div>
@@ -118,8 +117,47 @@
                                     <label class="form-check-label" for="activeCheck">Active (Visible in Store)</label>
                                 </div>
                             </div>
+                            <div class="mb-3">
+                                <div class="card border-primary">
+                                    <div class="card-header bg-primary text-white py-2">
+                                        <small class="fw-bold">&#x1F4E5; Digital Edition (eBook)</small>
+                                    </div>
+                                    <div class="card-body p-3">
+                                        <div class="form-check mb-2">
+                                            <input type="checkbox" name="is_ebook" class="form-check-input"
+                                                   id="isEbookCheck" value="1"
+                                                   {% if book and book.is_ebook %}checked{% endif %}>
+                                            <label class="form-check-label" for="isEbookCheck">
+                                                This book has an eBook (upload file)
+                                            </label>
+                                        </div>
+                                        <div id="ebookUploadSection"
+                                             style="display:{% if book and book.is_ebook %}block{% else %}none{% endif %}">
+                                            {% if book and book.ebook_file %}
+                                            <p class="text-success small mb-1">
+                                                &#x2705; File uploaded: <code>{{ book.ebook_file[-12:] }}</code>
+                                            </p>
+                                            {% endif %}
+                                            <label class="form-label small fw-bold mt-1">Upload eBook File</label>
+                                            <input type="file" name="ebook_file" class="form-control form-control-sm"
+                                                   accept=".pdf,.epub">
+                                            <small class="text-muted">Accepted formats: PDF or EPUB &nbsp;|&nbsp; Max size: 16MB</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
+
+                    <script>
+                        document.addEventListener('DOMContentLoaded', function () {
+                            var cb = document.getElementById('isEbookCheck');
+                            var section = document.getElementById('ebookUploadSection');
+                            cb.addEventListener('change', function () {
+                                section.style.display = this.checked ? 'block' : 'none';
+                            });
+                        });
+                    </script>
 
                     <hr class="my-4">
                     <div class="d-flex justify-content-between">

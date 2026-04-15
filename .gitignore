@@ -7,3 +7,4 @@ instance/
 .env
 server.log
 *.pdf
+ebooks/

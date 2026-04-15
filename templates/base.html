@@ -30,7 +30,7 @@
   <div class="container">
     <!-- Brand -->
     <a class="navbar-brand" href="{{ url_for('index') }}">
-      <span class="brand-lotus">🪷</span>
+      <img src="{{ url_for('static', filename='images/iskcon_logo.png') }}" alt="ISKCON" style="height:42px; width:auto; margin-right:8px;">
       <span class="brand-text">
         <span class="brand-title">ISKCON Books</span>
         <span class="brand-subtitle">Hare Krishna • हरे कृष्ण</span>
@@ -113,7 +113,11 @@
     <div class="row g-4">
       <!-- About -->
       <div class="col-lg-4 col-md-6">
-        <h5>🪷 ISKCON Book Store</h5>
+        <div class="d-flex align-items-center gap-3 mb-2">
+          <img src="{{ url_for('static', filename='images/iskcon_logo.png') }}" alt="ISKCON" style="height:48px; width:auto;">
+          <img src="{{ url_for('static', filename='images/bbt_logo.png') }}" alt="BBT" style="height:48px; width:auto; filter:brightness(0) invert(1);">
+        </div>
+        <h5>ISKCON Book Store</h5>
         <p style="font-size:0.88rem; color:#C8A070; line-height:1.8;">
           Spreading the wisdom of Vedic literature worldwide. Books by His Divine Grace
           A.C. Bhaktivedanta Swami Prabhupada and other Vaishnava authors.

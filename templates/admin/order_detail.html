@@ -135,6 +135,7 @@
                             <th>Price</th>
                             <th>Qty</th>
                             <th>Subtotal</th>
+                            <th>eBook</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -144,6 +145,12 @@
                             <td>₹{{ "%.0f"|format(item.price) }}</td>
                             <td>{{ item.quantity }}</td>
                             <td class="fw-bold">₹{{ "%.0f"|format(item.subtotal) }}</td>
+                            <td>
+                                {% if item.book and item.book.is_ebook and item.book.ebook_file %}
+                                <a href="{{ url_for('ebook_download', order_number=order.order_number, book_id=item.book_id) }}"
+                                   class="btn btn-sm btn-outline-primary" target="_blank">&#x1F4E5;</a>
+                                {% else %}—{% endif %}
+                            </td>
                         </tr>
                         {% endfor %}
                     </tbody>

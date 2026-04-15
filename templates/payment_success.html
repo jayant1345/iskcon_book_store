@@ -42,11 +42,19 @@
         Items Ordered
       </h6>
       {% for item in order.items %}
-      <div class="d-flex justify-content-between py-1">
+      <div class="d-flex justify-content-between py-1 align-items-center">
         <span style="font-size:0.87rem;">{{ item.book_title }} × {{ item.quantity }}</span>
-        <span style="font-size:0.87rem; font-weight:700; color:var(--saffron);">
-          ₹{{ (item.price * item.quantity)|int }}
-        </span>
+        <div class="d-flex align-items-center gap-2">
+          <span style="font-size:0.87rem; font-weight:700; color:var(--saffron);">
+            ₹{{ (item.price * item.quantity)|int }}
+          </span>
+          {% if item.book and item.book.is_ebook and item.book.ebook_file and order.payment_method != 'cod' %}
+          <a href="{{ url_for('ebook_download', order_number=order.order_number, book_id=item.book_id) }}"
+             class="btn btn-sm btn-outline-success py-0 px-2" style="font-size:0.75rem;">
+            &#x1F4E5; Download
+          </a>
+          {% endif %}
+        </div>
       </div>
       {% endfor %}
       <div class="d-flex justify-content-between mt-2 pt-2" style="border-top:1px solid var(--border);">

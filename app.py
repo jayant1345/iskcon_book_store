@@ -14,7 +14,7 @@ from functools import wraps
 
 from flask import (
     Flask, render_template, request, session, redirect,
-    url_for, flash, jsonify, abort
+    url_for, flash, jsonify, abort, send_from_directory
 )
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -37,6 +37,8 @@ class Config:
     UPLOAD_FOLDER = os.path.join(BASE_DIR, "static", "images", "books")
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024          # 16 MB
     ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "webp"}
+    EBOOK_FOLDER = os.path.join(BASE_DIR, "ebooks")
+    ALLOWED_EBOOK_EXTENSIONS = {"pdf", "epub"}
     RAZORPAY_KEY_ID = os.environ.get("RAZORPAY_KEY_ID", "rzp_test_your_key_id")
     RAZORPAY_KEY_SECRET = os.environ.get("RAZORPAY_KEY_SECRET", "your_razorpay_secret")
     ADMIN_USERNAME = os.environ.get("ADMIN_USERNAME", "admin")
@@ -59,6 +61,7 @@ if db_url.startswith("postgres://"):
 db = SQLAlchemy(app)
 
 os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
+os.makedirs(app.config["EBOOK_FOLDER"], exist_ok=True)
 
 
 # ─────────────────────────────────────────────
@@ -97,6 +100,8 @@ class Book(db.Model):
     stock          = db.Column(db.Integer, default=100)
     featured       = db.Column(db.Boolean, default=False)
     active         = db.Column(db.Boolean, default=True)
+    is_ebook       = db.Column(db.Boolean, default=False)
+    ebook_file     = db.Column(db.String(200), nullable=True)
     created_at     = db.Column(db.DateTime, default=datetime.utcnow)
     order_items    = db.relationship("OrderItem", backref="book", lazy=True)
 
@@ -205,6 +210,21 @@ def save_image(file):
         ext = file.filename.rsplit(".", 1)[1].lower()
         filename = f"{uuid.uuid4().hex}.{ext}"
         file.save(os.path.join(app.config["UPLOAD_FOLDER"], filename))
+        return filename
+    return None
+
+
+def allowed_ebook_file(filename):
+    return "." in filename and \
+           filename.rsplit(".", 1)[1].lower() in app.config["ALLOWED_EBOOK_EXTENSIONS"]
+
+
+def save_ebook(file):
+    """Save uploaded ebook file and return filename."""
+    if file and allowed_ebook_file(file.filename):
+        ext = file.filename.rsplit(".", 1)[1].lower()
+        filename = f"{uuid.uuid4().hex}.{ext}"
+        file.save(os.path.join(app.config["EBOOK_FOLDER"], filename))
         return filename
     return None
 
@@ -601,6 +621,39 @@ def order_success(order_number):
     return render_template("payment_success.html", order=order)
 
 
+@app.route("/ebook/download/<order_number>/<int:book_id>")
+def ebook_download(order_number, book_id):
+    order = Order.query.filter_by(order_number=order_number).first_or_404()
+
+    # Access control: COD denied; Razorpay must be paid; UPI allowed (trust-based)
+    if order.payment_method == "cod":
+        abort(403)
+    if order.payment_method == "razorpay" and order.payment_status != "paid":
+        abort(403)
+
+    # Verify book is actually in the order
+    item = next((i for i in order.items if i.book_id == book_id), None)
+    if not item:
+        abort(404)
+
+    book = Book.query.get_or_404(book_id)
+    if not book.is_ebook or not book.ebook_file:
+        abort(404)
+
+    ebook_path = os.path.join(app.config["EBOOK_FOLDER"], book.ebook_file)
+    if not os.path.exists(ebook_path):
+        flash("eBook file not found. Please contact support.", "warning")
+        return redirect(url_for("order_success", order_number=order_number))
+
+    ext = book.ebook_file.rsplit(".", 1)[1]
+    return send_from_directory(
+        app.config["EBOOK_FOLDER"],
+        book.ebook_file,
+        as_attachment=True,
+        download_name=f"{book.title}.{ext}"
+    )
+
+
 @app.route("/order/failed/<order_number>")
 def payment_failed(order_number):
     order = Order.query.filter_by(order_number=order_number).first_or_404()
@@ -690,6 +743,10 @@ def admin_add_book():
         image_file = request.files.get("image")
         image_name = save_image(image_file) or "default_book.jpg"
 
+        ebook_file_obj = request.files.get("ebook_file")
+        ebook_filename = save_ebook(ebook_file_obj)
+        is_ebook = bool(request.form.get("is_ebook"))
+
         book = Book(
             title          = request.form["title"].strip(),
             author         = request.form["author"].strip(),
@@ -706,6 +763,8 @@ def admin_add_book():
             stock          = int(request.form.get("stock", 100)),
             featured       = bool(request.form.get("featured")),
             active         = bool(request.form.get("active", True)),
+            is_ebook       = is_ebook,
+            ebook_file     = ebook_filename,
         )
         db.session.add(book)
         db.session.commit()
@@ -745,6 +804,21 @@ def admin_edit_book(book_id):
         book.stock          = int(request.form.get("stock", 100))
         book.featured       = bool(request.form.get("featured"))
         book.active         = bool(request.form.get("active"))
+
+        is_ebook = bool(request.form.get("is_ebook"))
+        book.is_ebook = is_ebook
+
+        ebook_file_obj = request.files.get("ebook_file")
+        if ebook_file_obj and ebook_file_obj.filename:
+            if book.ebook_file:
+                old_ebook = os.path.join(app.config["EBOOK_FOLDER"], book.ebook_file)
+                if os.path.exists(old_ebook):
+                    os.remove(old_ebook)
+            book.ebook_file = save_ebook(ebook_file_obj)
+
+        if not is_ebook:
+            book.ebook_file = None
+
         db.session.commit()
         flash("Book updated!", "success")
         return redirect(url_for("admin_books"))
