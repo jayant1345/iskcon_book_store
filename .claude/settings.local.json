@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(timeout 5 python app.py)",
+      "Bash(python:*)",
+      "Bash(taskkill /F /IM python.exe)"
+    ]
+  }
+}
