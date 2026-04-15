@@ -38,6 +38,7 @@ class Config:
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024          # 16 MB
     ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "webp"}
     EBOOK_FOLDER = os.path.join(BASE_DIR, "ebooks")
+    PREVIEW_FOLDER = os.path.join(BASE_DIR, "static", "previews")
     ALLOWED_EBOOK_EXTENSIONS = {"pdf", "epub"}
     RAZORPAY_KEY_ID = os.environ.get("RAZORPAY_KEY_ID", "rzp_test_your_key_id")
     RAZORPAY_KEY_SECRET = os.environ.get("RAZORPAY_KEY_SECRET", "your_razorpay_secret")
@@ -62,6 +63,7 @@ db = SQLAlchemy(app)
 
 os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
 os.makedirs(app.config["EBOOK_FOLDER"], exist_ok=True)
+os.makedirs(app.config["PREVIEW_FOLDER"], exist_ok=True)
 
 
 # ─────────────────────────────────────────────
@@ -102,6 +104,7 @@ class Book(db.Model):
     active         = db.Column(db.Boolean, default=True)
     is_ebook       = db.Column(db.Boolean, default=False)
     ebook_file     = db.Column(db.String(200), nullable=True)
+    preview_file   = db.Column(db.String(200), nullable=True)
     created_at     = db.Column(db.DateTime, default=datetime.utcnow)
     order_items    = db.relationship("OrderItem", backref="book", lazy=True)
 
@@ -242,6 +245,15 @@ def save_ebook(file):
         ext = file.filename.rsplit(".", 1)[1].lower()
         filename = f"{uuid.uuid4().hex}.{ext}"
         file.save(os.path.join(app.config["EBOOK_FOLDER"], filename))
+        return filename
+    return None
+
+
+def save_preview(file):
+    """Save uploaded preview PDF and return filename (stored in static/previews/)."""
+    if file and file.filename and file.filename.lower().endswith(".pdf"):
+        filename = f"preview_{uuid.uuid4().hex}.pdf"
+        file.save(os.path.join(app.config["PREVIEW_FOLDER"], filename))
         return filename
     return None
 
@@ -770,6 +782,7 @@ def admin_add_book():
         ebook_file_obj = request.files.get("ebook_file")
         is_ebook = request.form.get("book_format") == "ebook"
         ebook_filename = save_ebook(ebook_file_obj) if is_ebook else None
+        preview_filename = save_preview(request.files.get("preview_file"))
 
         book = Book(
             title          = request.form["title"].strip(),
@@ -789,6 +802,7 @@ def admin_add_book():
             active         = bool(request.form.get("active", True)),
             is_ebook       = is_ebook,
             ebook_file     = ebook_filename,
+            preview_file   = preview_filename,
         )
         db.session.add(book)
         db.session.commit()
@@ -842,6 +856,14 @@ def admin_edit_book(book_id):
 
         if not is_ebook:
             book.ebook_file = None
+
+        preview_file_obj = request.files.get("preview_file")
+        if preview_file_obj and preview_file_obj.filename:
+            if book.preview_file:
+                old_preview = os.path.join(app.config["PREVIEW_FOLDER"], book.preview_file)
+                if os.path.exists(old_preview):
+                    os.remove(old_preview)
+            book.preview_file = save_preview(preview_file_obj)
 
         db.session.commit()
         flash("Book updated!", "success")

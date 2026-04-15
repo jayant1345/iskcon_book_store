@@ -125,6 +125,17 @@
       </div>
       {% endif %}
 
+      <!-- eBook Preview -->
+      {% if book.preview_file %}
+      <div class="mb-4">
+        <button type="button" class="btn btn-outline-primary btn-lg px-4"
+                data-bs-toggle="modal" data-bs-target="#previewModal">
+          📖 Read Free Preview
+        </button>
+        <small class="text-muted ms-2">See what's inside before you buy</small>
+      </div>
+      {% endif %}
+
       <!-- WhatsApp -->
       <div class="d-flex gap-3 flex-wrap mb-4">
         <button id="whatsapp-order-btn"
@@ -209,4 +220,43 @@
   {% endif %}
 
 </div>
+
+{% if book.preview_file %}
+<!-- ── eBook Preview Modal ── -->
+<div class="modal fade" id="previewModal" tabindex="-1" aria-labelledby="previewModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header" style="background:#2c1a0e; color:white;">
+        <div>
+          <h5 class="modal-title mb-0" id="previewModalLabel">📖 Free Preview — {{ book.title }}</h5>
+          <small style="color:rgba(255,255,255,0.65);">Sample pages · Full book available after purchase</small>
+        </div>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-0" style="background:#525659;">
+        <iframe src="{{ url_for('static', filename='previews/' + book.preview_file) }}#toolbar=1&navpanes=0&scrollbar=1"
+                width="100%" height="620px" style="border:none; display:block;"
+                title="eBook Preview">
+        </iframe>
+      </div>
+      <div class="modal-footer justify-content-between" style="background:#f8f4ef;">
+        <small class="text-muted">
+          🔒 This is a free sample. Purchase the full eBook to unlock all pages.
+        </small>
+        <div class="d-flex gap-2">
+          <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+          {% if book.in_stock %}
+          <form method="post" action="{{ url_for('add_to_cart', book_id=book.id) }}" class="d-inline">
+            <input type="hidden" name="qty" value="1">
+            <button type="submit" class="btn btn-sm text-white" style="background:#FF9933;">
+              🛒 Buy Full eBook — ₹{{ book.price|int }}
+            </button>
+          </form>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
 {% endblock %}
