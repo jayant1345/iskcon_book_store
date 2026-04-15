@@ -24,11 +24,12 @@
                     <th>Title</th>
                     <th>Author</th>
                     <th>Category</th>
+                    <th>Language</th>
+                    <th>Format</th>
                     <th>Price</th>
                     <th>Stock</th>
                     <th>Featured</th>
                     <th>Active</th>
-                    <th>eBook</th>
                     <th>Actions</th>
                 </tr>
             </thead>
@@ -37,7 +38,7 @@
                 <tr>
                     <td>
                         <img src="{{ url_for('static', filename='images/books/' + book.image) }}"
-                             onerror="this.src='{{ url_for('static', filename='images/books/default_book.jpg') }}'"
+                             onerror="this.onerror=null;this.src='{{ url_for('static', filename='images/books/default_book.jpg') }}'"
                              alt="{{ book.title }}" style="width:50px;height:60px;object-fit:cover;border-radius:6px;">
                     </td>
                     <td>
@@ -45,6 +46,15 @@
                     </td>
                     <td>{{ book.author[:25] }}{% if book.author|length > 25 %}...{% endif %}</td>
                     <td>{{ book.category.name if book.category else '-' }}</td>
+                    <td><span class="badge bg-light text-dark border">{{ book.language or '-' }}</span></td>
+                    <td>
+                        {% if book.is_ebook %}
+                            <span class="badge bg-primary">📱 eBook</span>
+                            {% if not book.ebook_file %}<br><small class="text-warning">No file</small>{% endif %}
+                        {% else %}
+                            <span class="badge bg-success">📄 Paper</span>
+                        {% endif %}
+                    </td>
                     <td>
                         <span class="fw-bold text-success">₹{{ "%.0f"|format(book.price) }}</span>
                         {% if book.original_price %}
@@ -73,15 +83,6 @@
                         {% endif %}
                     </td>
                     <td>
-                        {% if book.is_ebook and book.ebook_file %}
-                            <span class="badge bg-primary">&#x1F4E5; eBook</span>
-                        {% elif book.is_ebook %}
-                            <span class="badge bg-warning text-dark">No File</span>
-                        {% else %}
-                            <span class="badge bg-light text-muted">—</span>
-                        {% endif %}
-                    </td>
-                    <td>
                         <a href="{{ url_for('admin_edit_book', book_id=book.id) }}" class="btn btn-sm btn-primary">
                             <i class="fas fa-edit"></i>
                         </a>
@@ -93,7 +94,7 @@
                     </td>
                 </tr>
                 {% else %}
-                <tr><td colspan="10" class="text-center py-4 text-muted">No books found. <a href="{{ url_for('admin_add_book') }}">Add one!</a></td></tr>
+                <tr><td colspan="11" class="text-center py-4 text-muted">No books found. <a href="{{ url_for('admin_add_book') }}">Add one!</a></td></tr>
                 {% endfor %}
             </tbody>
         </table>

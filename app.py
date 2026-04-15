@@ -192,8 +192,25 @@ class Coupon(db.Model):
             disc = cart_total * self.discount_value / 100
             if self.max_discount:
                 disc = min(disc, self.max_discount)
+
             return round(disc, 2)
         return min(self.discount_value, cart_total)
+
+
+class StockReceipt(db.Model):
+    """Records each batch of books received from the ISKCON temple main store."""
+    __tablename__ = "stock_receipts"
+    id             = db.Column(db.Integer, primary_key=True)
+    book_id        = db.Column(db.Integer, db.ForeignKey("books.id"), nullable=True)
+    book_name      = db.Column(db.String(250), nullable=False)   # stored in case book is deleted
+    quantity       = db.Column(db.Integer, nullable=False)
+    cost_per_unit  = db.Column(db.Float, nullable=False)         # price paid to temple per copy
+    total_payment  = db.Column(db.Float, nullable=False)         # quantity × cost_per_unit
+    payment_status = db.Column(db.String(20), default="paid")    # paid / pending
+    received_date  = db.Column(db.DateTime, default=datetime.utcnow)
+    notes          = db.Column(db.Text)
+    created_at     = db.Column(db.DateTime, default=datetime.utcnow)
+    book           = db.relationship("Book", backref="stock_receipts", lazy=True)
 
 
 # ─────────────────────────────────────────────
@@ -705,20 +722,27 @@ def admin_logout():
 @app.route("/admin/dashboard")
 @admin_required
 def admin_dashboard():
-    total_orders   = Order.query.count()
-    total_revenue  = db.session.query(db.func.sum(Order.total_amount))\
-                                .filter(Order.payment_status != "failed").scalar() or 0
-    total_books    = Book.query.filter_by(active=True).count()
-    pending_orders = Order.query.filter_by(order_status="placed").count()
-    recent_orders  = Order.query.order_by(Order.created_at.desc()).limit(10).all()
-    low_stock      = Book.query.filter(Book.stock < 5, Book.active == True).all()
+    total_orders        = Order.query.count()
+    total_revenue       = db.session.query(db.func.sum(Order.total_amount))\
+                                    .filter(Order.payment_status != "failed").scalar() or 0
+    total_books         = Book.query.filter_by(active=True).count()
+    pending_orders      = Order.query.filter_by(order_status="placed").count()
+    recent_orders       = Order.query.order_by(Order.created_at.desc()).limit(10).all()
+    low_stock           = Book.query.filter(Book.stock < 5, Book.active == True).all()
+    temple_books_total  = db.session.query(db.func.sum(StockReceipt.quantity)).scalar() or 0
+    temple_pending_payment = db.session.query(db.func.sum(StockReceipt.total_payment))\
+                               .filter(StockReceipt.payment_status == "pending").scalar() or 0
+    recent_receipts     = StockReceipt.query.order_by(StockReceipt.received_date.desc()).limit(5).all()
     return render_template("admin/dashboard.html",
                            total_orders=total_orders,
                            total_revenue=total_revenue,
                            total_books=total_books,
                            pending_orders=pending_orders,
                            recent_orders=recent_orders,
-                           low_stock=low_stock)
+                           low_stock=low_stock,
+                           temple_books_total=temple_books_total,
+                           temple_pending_payment=temple_pending_payment,
+                           recent_receipts=recent_receipts)
 
 
 # ── Admin: Books ──
@@ -744,8 +768,8 @@ def admin_add_book():
         image_name = save_image(image_file) or "default_book.jpg"
 
         ebook_file_obj = request.files.get("ebook_file")
-        ebook_filename = save_ebook(ebook_file_obj)
-        is_ebook = bool(request.form.get("is_ebook"))
+        is_ebook = request.form.get("book_format") == "ebook"
+        ebook_filename = save_ebook(ebook_file_obj) if is_ebook else None
 
         book = Book(
             title          = request.form["title"].strip(),
@@ -805,7 +829,7 @@ def admin_edit_book(book_id):
         book.featured       = bool(request.form.get("featured"))
         book.active         = bool(request.form.get("active"))
 
-        is_ebook = bool(request.form.get("is_ebook"))
+        is_ebook = request.form.get("book_format") == "ebook"
         book.is_ebook = is_ebook
 
         ebook_file_obj = request.files.get("ebook_file")
@@ -843,6 +867,72 @@ def toggle_featured(book_id):
     book.featured = not book.featured
     db.session.commit()
     return jsonify({"featured": book.featured})
+
+
+# ── Admin: Temple Stock ──
+
+@app.route("/admin/stock")
+@admin_required
+def admin_stock():
+    page     = request.args.get("page", 1, type=int)
+    receipts = StockReceipt.query.order_by(StockReceipt.received_date.desc()).paginate(page=page, per_page=20)
+    books    = Book.query.order_by(Book.title).all()
+    total_books_received = db.session.query(db.func.sum(StockReceipt.quantity)).scalar() or 0
+    total_paid           = db.session.query(db.func.sum(StockReceipt.total_payment))\
+                              .filter(StockReceipt.payment_status == "paid").scalar() or 0
+    total_pending        = db.session.query(db.func.sum(StockReceipt.total_payment))\
+                              .filter(StockReceipt.payment_status == "pending").scalar() or 0
+    return render_template("admin/stock.html",
+                           receipts=receipts,
+                           books=books,
+                           total_books_received=total_books_received,
+                           total_paid=total_paid,
+                           total_pending=total_pending,
+                           now=datetime.utcnow())
+
+
+@app.route("/admin/stock/add", methods=["POST"])
+@admin_required
+def admin_add_stock():
+    book_id      = request.form.get("book_id")
+    book         = Book.query.get(book_id) if book_id else None
+    quantity     = int(request.form["quantity"])
+    cost_per_unit = float(request.form["cost_per_unit"])
+    received_date_str = request.form.get("received_date", "")
+    received_date = datetime.strptime(received_date_str, "%Y-%m-%d") if received_date_str else datetime.utcnow()
+
+    receipt = StockReceipt(
+        book_id        = book.id if book else None,
+        book_name      = book.title if book else request.form.get("book_name_manual", "Unknown"),
+        quantity       = quantity,
+        cost_per_unit  = cost_per_unit,
+        total_payment  = round(quantity * cost_per_unit, 2),
+        payment_status = request.form.get("payment_status", "paid"),
+        received_date  = received_date,
+        notes          = request.form.get("notes", "").strip(),
+    )
+    db.session.add(receipt)
+    # Also update book stock
+    if book:
+        book.stock += quantity
+    db.session.commit()
+    flash(f"Stock receipt added: {receipt.quantity} copies of '{receipt.book_name}'.", "success")
+    return redirect(url_for("admin_stock"))
+
+
+@app.route("/admin/stock/delete/<int:receipt_id>", methods=["POST"])
+@admin_required
+def admin_delete_stock(receipt_id):
+    receipt = StockReceipt.query.get_or_404(receipt_id)
+    # Reverse the stock addition
+    if receipt.book_id:
+        book = Book.query.get(receipt.book_id)
+        if book:
+            book.stock = max(0, book.stock - receipt.quantity)
+    db.session.delete(receipt)
+    db.session.commit()
+    flash("Stock receipt deleted.", "info")
+    return redirect(url_for("admin_stock"))
 
 
 # ── Admin: Categories ──

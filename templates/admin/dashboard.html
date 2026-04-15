@@ -59,6 +59,52 @@
     </div>
 </div>
 
+<!-- Temple Stock Stats Row -->
+<div class="row g-4 mb-4">
+    <div class="col-md-4">
+        <div class="card stat-card shadow-sm p-3" style="border-left:4px solid #FF9933;">
+            <div class="d-flex align-items-center">
+                <div class="icon me-3" style="background:rgba(255,153,51,0.12); color:#FF9933;">
+                    <i class="fas fa-warehouse"></i>
+                </div>
+                <div>
+                    <small class="text-muted">Books from Temple</small>
+                    <h3 class="mb-0">{{ temple_books_total }}</h3>
+                    <small class="text-muted">Total copies received</small>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card stat-card shadow-sm p-3" style="border-left:4px solid #dc3545;">
+            <div class="d-flex align-items-center">
+                <div class="icon bg-danger bg-opacity-10 text-danger me-3">
+                    <i class="fas fa-rupee-sign"></i>
+                </div>
+                <div>
+                    <small class="text-muted">Pending Temple Payment</small>
+                    <h3 class="mb-0 text-danger">₹{{ "%.0f"|format(temple_pending_payment) }}</h3>
+                    <small class="text-muted">Amount yet to be paid</small>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <a href="{{ url_for('admin_stock') }}" class="card stat-card shadow-sm p-3 text-decoration-none d-block" style="border-left:4px solid #198754;">
+            <div class="d-flex align-items-center">
+                <div class="icon bg-success bg-opacity-10 text-success me-3">
+                    <i class="fas fa-plus-circle"></i>
+                </div>
+                <div>
+                    <small class="text-muted">Temple Stock</small>
+                    <h5 class="mb-0 text-success">Add / View Records</h5>
+                    <small class="text-muted">Click to manage</small>
+                </div>
+            </div>
+        </a>
+    </div>
+</div>
+
 <div class="row g-4">
     <!-- Recent Orders -->
     <div class="col-lg-8">
@@ -148,6 +194,55 @@
                 <a href="{{ url_for('index') }}" class="btn btn-outline-secondary w-100">
                     <i class="fas fa-store me-2"></i>View Store
                 </a>
+                <a href="{{ url_for('admin_stock') }}" class="btn w-100 mt-2" style="background:#FF9933;color:white;">
+                    <i class="fas fa-warehouse me-2"></i>Temple Stock
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Temple Stock Receipts -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card table-card shadow-sm">
+            <div class="card-header d-flex justify-content-between align-items-center py-3" style="background:#FF9933;">
+                <h5 class="mb-0 text-white"><i class="fas fa-warehouse me-2"></i>Recent Temple Stock Receipts</h5>
+                <a href="{{ url_for('admin_stock') }}" class="btn btn-dark btn-sm">View All</a>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Book</th>
+                            <th>Qty Received</th>
+                            <th>Cost/Copy (₹)</th>
+                            <th>Total Paid (₹)</th>
+                            <th>Payment</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for r in recent_receipts %}
+                        <tr>
+                            <td>{{ r.received_date.strftime('%d %b %Y') }}</td>
+                            <td class="fw-bold">{{ r.book_name[:35] }}{% if r.book_name|length > 35 %}...{% endif %}</td>
+                            <td><span class="badge bg-primary">{{ r.quantity }}</span></td>
+                            <td>₹{{ "%.0f"|format(r.cost_per_unit) }}</td>
+                            <td class="fw-bold">₹{{ "%.0f"|format(r.total_payment) }}</td>
+                            <td>
+                                {% if r.payment_status == 'paid' %}
+                                    <span class="badge bg-success">Paid</span>
+                                {% else %}
+                                    <span class="badge bg-danger">Pending</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="6" class="text-center text-muted py-4">No stock receipts yet. <a href="{{ url_for('admin_stock') }}">Add first receipt</a></td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
