@@ -82,14 +82,30 @@
           <div class="text-muted small">{{ upi_name }}</div>
         </div>
       </div>
-      <ol class="mb-2 ps-3" style="font-size:0.88rem;">
+      <ol class="mb-3 ps-3" style="font-size:0.88rem;">
         <li>Open GPay, PhonePe, Paytm or any UPI app</li>
         <li>Send <strong>₹{{ order.total_amount|int }}</strong> to UPI ID: <strong>{{ upi_id }}</strong></li>
         <li>Use order number <strong>{{ order.order_number }}</strong> as payment note/remark</li>
-        <li>Take a screenshot of the payment confirmation</li>
-        <li>Send the screenshot on WhatsApp to confirm your order</li>
+        <li>Enter your UPI Transaction ID below after payment</li>
       </ol>
-      <div class="text-muted small">⚠️ Your order will be confirmed once we verify the payment.</div>
+
+      {% if order.upi_transaction_id %}
+      <div class="alert alert-success py-2 mb-2" style="border-radius:8px;">
+        ✅ <strong>Transaction ID submitted:</strong> <code>{{ order.upi_transaction_id }}</code><br>
+        <small>We will verify and confirm your order shortly.</small>
+      </div>
+      {% else %}
+      <form method="POST" action="{{ url_for('upi_confirm', order_number=order.order_number) }}" class="mt-2">
+        <label class="form-label small fw-bold mb-1">Enter UPI Transaction ID / UTR Number</label>
+        <div class="input-group input-group-sm">
+          <input type="text" name="utr" class="form-control"
+                 placeholder="e.g. 407612345678 or UTR number from your UPI app"
+                 required style="font-size:0.85rem;">
+          <button type="submit" class="btn btn-warning fw-bold">Submit</button>
+        </div>
+        <small class="text-muted">Find it in your GPay/PhonePe/Paytm transaction details</small>
+      </form>
+      {% endif %}
     </div>
     {% elif order.payment_method == 'cod' %}
     <div class="alert alert-iskcon-info text-start">

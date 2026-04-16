@@ -221,6 +221,30 @@
             </div>
         </div>
 
+        {% if order.payment_method == 'upi' %}
+        <div class="card shadow-sm mb-4 {% if not order.upi_transaction_id and order.payment_status == 'pending' %}border-warning{% endif %}">
+            <div class="card-header py-3 {% if not order.upi_transaction_id and order.payment_status == 'pending' %}bg-warning text-dark{% else %}bg-secondary text-white{% endif %}">
+                <h5 class="mb-0"><i class="fas fa-mobile-alt me-2"></i>UPI Payment
+                  {% if not order.upi_transaction_id and order.payment_status == 'pending' %}
+                  <span class="badge bg-danger ms-2" style="font-size:0.75rem;">⚠ Awaiting Verification</span>
+                  {% elif order.upi_transaction_id and order.payment_status == 'pending' %}
+                  <span class="badge bg-warning text-dark ms-2" style="font-size:0.75rem;">UTR Received – Verify Now</span>
+                  {% elif order.payment_status == 'paid' %}
+                  <span class="badge bg-success ms-2" style="font-size:0.75rem;">✓ Verified</span>
+                  {% endif %}
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if order.upi_transaction_id %}
+                <p class="mb-1"><strong>Customer's Transaction ID (UTR):</strong> <code class="fs-6">{{ order.upi_transaction_id }}</code></p>
+                <p class="text-muted small mb-2">Verify this UTR in your bank/UPI app, then mark payment as <strong>Paid</strong> above.</p>
+                {% else %}
+                <p class="text-muted mb-0">Customer has not submitted a Transaction ID yet.</p>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
         {% if order.razorpay_order_id %}
         <div class="card shadow-sm">
             <div class="card-header py-3">

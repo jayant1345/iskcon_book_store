@@ -155,6 +155,7 @@ class Order(db.Model):
     courier_name       = db.Column(db.String(100))
     tracking_number    = db.Column(db.String(100))
     expected_delivery  = db.Column(db.Date)
+    upi_transaction_id = db.Column(db.String(100))
     items              = db.relationship("OrderItem", backref="order", lazy=True)
 
     def __repr__(self):
@@ -658,6 +659,19 @@ def payment_verify():
 def order_success(order_number):
     order = Order.query.filter_by(order_number=order_number).first_or_404()
     return render_template("payment_success.html", order=order)
+
+
+@app.route("/order/upi-confirm/<order_number>", methods=["POST"])
+def upi_confirm(order_number):
+    order = Order.query.filter_by(order_number=order_number).first_or_404()
+    if order.payment_method != "upi":
+        abort(400)
+    utr = request.form.get("utr", "").strip()
+    if utr:
+        order.upi_transaction_id = utr
+        db.session.commit()
+        flash("Transaction ID submitted! We will verify and confirm your order shortly.", "success")
+    return redirect(url_for("order_success", order_number=order_number))
 
 
 @app.route("/ebook/download/<order_number>/<int:book_id>")
@@ -1330,9 +1344,10 @@ def init_db():
 
         # Add new columns to existing tables if they don't exist (safe for PostgreSQL & SQLite)
         migrations = [
-            ("orders", "courier_name",      "VARCHAR(100)"),
-            ("orders", "tracking_number",   "VARCHAR(100)"),
-            ("orders", "expected_delivery", "DATE"),
+            ("orders", "courier_name",       "VARCHAR(100)"),
+            ("orders", "tracking_number",    "VARCHAR(100)"),
+            ("orders", "expected_delivery",  "DATE"),
+            ("orders", "upi_transaction_id", "VARCHAR(100)"),
         ]
         with db.engine.connect() as conn:
             for table, column, col_type in migrations:

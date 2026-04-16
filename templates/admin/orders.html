@@ -75,7 +75,16 @@
                     </td>
                     <td>{{ order.items|length }} item{{ 's' if order.items|length != 1 else '' }}</td>
                     <td class="fw-bold text-success">₹{{ "%.0f"|format(order.total_amount) }}</td>
-                    <td><span class="badge bg-secondary">{{ order.payment_method|upper }}</span></td>
+                    <td>
+                        <span class="badge bg-secondary">{{ order.payment_method|upper }}</span>
+                        {% if order.payment_method == 'upi' and order.payment_status == 'pending' %}
+                          {% if order.upi_transaction_id %}
+                          <span class="badge bg-warning text-dark d-block mt-1" style="font-size:0.7rem;">UTR Received</span>
+                          {% else %}
+                          <span class="badge bg-danger d-block mt-1" style="font-size:0.7rem;">No UTR yet</span>
+                          {% endif %}
+                        {% endif %}
+                    </td>
                     <td>
                         {% if order.order_status == 'placed' %}
                             <span class="badge bg-warning text-dark">{{ order.order_status|capitalize }}</span>
