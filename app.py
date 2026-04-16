@@ -58,14 +58,18 @@ app.config.from_object(Config)
 
 # Fix Heroku/Render postgres:// → postgresql://
 db_url = app.config["SQLALCHEMY_DATABASE_URI"]
+print(f"[DB] Using: {db_url[:40]}...")  # debug — shows first 40 chars only
 if db_url.startswith("postgres://"):
     app.config["SQLALCHEMY_DATABASE_URI"] = db_url.replace("postgres://", "postgresql://", 1)
 
 db = SQLAlchemy(app)
 
-os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
-os.makedirs(app.config["EBOOK_FOLDER"], exist_ok=True)
-os.makedirs(app.config["PREVIEW_FOLDER"], exist_ok=True)
+try:
+    os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
+    os.makedirs(app.config["EBOOK_FOLDER"], exist_ok=True)
+    os.makedirs(app.config["PREVIEW_FOLDER"], exist_ok=True)
+except Exception as e:
+    print(f"[WARNING] makedirs failed: {e}")
 
 
 # ─────────────────────────────────────────────
@@ -1304,8 +1308,18 @@ def server_error(e):
 def init_db():
     """Create tables if they don't exist."""
     with app.app_context():
-        db.create_all()
-        print("[OK] Database tables created.")
+        try:
+            db.create_all()
+            print("[OK] Database tables created.")
+        except Exception as e:
+            print(f"[ERROR] db.create_all() failed: {e}")
+
+
+# Auto-init DB when loaded by gunicorn
+try:
+    init_db()
+except Exception as e:
+    print(f"[ERROR] init_db failed at startup: {e}")
 
 
 if __name__ == "__main__":
