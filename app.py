@@ -1349,14 +1349,16 @@ def init_db():
             ("orders", "expected_delivery",  "DATE"),
             ("orders", "upi_transaction_id", "VARCHAR(100)"),
         ]
-        with db.engine.connect() as conn:
-            for table, column, col_type in migrations:
-                try:
+        for table, column, col_type in migrations:
+            # Use a fresh connection per column so a failed ALTER doesn't
+            # leave the transaction in an aborted state (PostgreSQL issue)
+            try:
+                with db.engine.connect() as conn:
                     conn.execute(db.text(f"ALTER TABLE {table} ADD COLUMN {column} {col_type}"))
                     conn.commit()
                     print(f"[MIGRATE] Added column {table}.{column}")
-                except Exception:
-                    pass  # Column already exists — ignore
+            except Exception:
+                pass  # Column already exists — ignore
 
 
 # Auto-init DB when loaded by gunicorn
