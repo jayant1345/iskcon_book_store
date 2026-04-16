@@ -1320,13 +1320,28 @@ def server_error(e):
 # ─────────────────────────────────────────────
 
 def init_db():
-    """Create tables if they don't exist."""
+    """Create tables if they don't exist, and add any missing columns."""
     with app.app_context():
         try:
             db.create_all()
             print("[OK] Database tables created.")
         except Exception as e:
             print(f"[ERROR] db.create_all() failed: {e}")
+
+        # Add new columns to existing tables if they don't exist (safe for PostgreSQL & SQLite)
+        migrations = [
+            ("orders", "courier_name",      "VARCHAR(100)"),
+            ("orders", "tracking_number",   "VARCHAR(100)"),
+            ("orders", "expected_delivery", "DATE"),
+        ]
+        with db.engine.connect() as conn:
+            for table, column, col_type in migrations:
+                try:
+                    conn.execute(db.text(f"ALTER TABLE {table} ADD COLUMN {column} {col_type}"))
+                    conn.commit()
+                    print(f"[MIGRATE] Added column {table}.{column}")
+                except Exception:
+                    pass  # Column already exists — ignore
 
 
 # Auto-init DB when loaded by gunicorn
