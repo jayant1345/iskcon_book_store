@@ -668,9 +668,18 @@ def upi_confirm(order_number):
         abort(400)
     utr = request.form.get("utr", "").strip()
     if utr:
-        order.upi_transaction_id = utr
-        db.session.commit()
-        flash("Transaction ID submitted! We will verify and confirm your order shortly.", "success")
+        try:
+            # Use raw SQL in case column was just added and SQLAlchemy mapper cache is stale
+            db.session.execute(
+                db.text("UPDATE orders SET upi_transaction_id = :utr WHERE id = :oid"),
+                {"utr": utr, "oid": order.id}
+            )
+            db.session.commit()
+            flash("Transaction ID submitted! We will verify and confirm your order shortly.", "success")
+        except Exception as e:
+            db.session.rollback()
+            print(f"[ERROR] upi_confirm save failed: {e}")
+            flash("Could not save Transaction ID. Please send it via WhatsApp.", "warning")
     return redirect(url_for("order_success", order_number=order_number))
 
 

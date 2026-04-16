@@ -89,7 +89,7 @@
         <li>Enter your UPI Transaction ID below after payment</li>
       </ol>
 
-      {% if order.upi_transaction_id %}
+      {% if order.upi_transaction_id is defined and order.upi_transaction_id %}
       <div class="alert alert-success py-2 mb-2" style="border-radius:8px;">
         ✅ <strong>Transaction ID submitted:</strong> <code>{{ order.upi_transaction_id }}</code><br>
         <small>We will verify and confirm your order shortly.</small>
