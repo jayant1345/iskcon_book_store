@@ -70,6 +70,21 @@
     <div class="alert alert-iskcon-danger">❌ This order has been cancelled.</div>
     {% endif %}
 
+    {% if order.courier_name or order.tracking_number or order.expected_delivery %}
+    <div class="alert alert-iskcon-info text-start mb-4" style="border-radius:12px;">
+      <h6 class="fw-bold mb-2">🚚 Delivery Details</h6>
+      {% if order.courier_name %}
+      <div><span class="text-muted" style="font-size:0.85rem;">Courier:</span> <strong>{{ order.courier_name }}</strong></div>
+      {% endif %}
+      {% if order.tracking_number %}
+      <div><span class="text-muted" style="font-size:0.85rem;">Tracking Number:</span> <strong><code>{{ order.tracking_number }}</code></strong></div>
+      {% endif %}
+      {% if order.expected_delivery %}
+      <div><span class="text-muted" style="font-size:0.85rem;">Expected Delivery:</span> <strong>{{ order.expected_delivery.strftime('%d %b %Y') }}</strong></div>
+      {% endif %}
+    </div>
+    {% endif %}
+
     <!-- Order Details -->
     <div class="row g-3">
       <div class="col-md-6">

@@ -152,6 +152,9 @@ class Order(db.Model):
     coupon_code        = db.Column(db.String(50))
     notes              = db.Column(db.Text)
     created_at         = db.Column(db.DateTime, default=datetime.utcnow)
+    courier_name       = db.Column(db.String(100))
+    tracking_number    = db.Column(db.String(100))
+    expected_delivery  = db.Column(db.Date)
     items              = db.relationship("OrderItem", backref="order", lazy=True)
 
     def __repr__(self):
@@ -1234,9 +1237,20 @@ def admin_order_detail(order_id):
 @app.route("/admin/orders/update/<int:order_id>", methods=["POST"])
 @admin_required
 def admin_update_order(order_id):
-    order              = Order.query.get_or_404(order_id)
-    order.order_status = request.form.get("order_status", order.order_status)
+    order                = Order.query.get_or_404(order_id)
+    order.order_status   = request.form.get("order_status", order.order_status)
     order.payment_status = request.form.get("payment_status", order.payment_status)
+    order.courier_name   = request.form.get("courier_name", "").strip() or None
+    order.tracking_number = request.form.get("tracking_number", "").strip() or None
+    exp_del = request.form.get("expected_delivery", "").strip()
+    if exp_del:
+        try:
+            from datetime import date
+            order.expected_delivery = date.fromisoformat(exp_del)
+        except ValueError:
+            pass
+    else:
+        order.expected_delivery = None
     db.session.commit()
     flash("Order updated.", "success")
     return redirect(url_for("admin_order_detail", order_id=order_id))

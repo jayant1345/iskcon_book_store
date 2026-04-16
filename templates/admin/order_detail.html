@@ -36,6 +36,15 @@
                     {% if order.coupon_code %}
                     <tr><td class="text-muted">Coupon</td><td><span class="badge bg-success">{{ order.coupon_code }}</span></td></tr>
                     {% endif %}
+                    {% if order.courier_name %}
+                    <tr><td class="text-muted">Courier</td><td>{{ order.courier_name }}</td></tr>
+                    {% endif %}
+                    {% if order.tracking_number %}
+                    <tr><td class="text-muted">Tracking No.</td><td><code>{{ order.tracking_number }}</code></td></tr>
+                    {% endif %}
+                    {% if order.expected_delivery %}
+                    <tr><td class="text-muted">Exp. Delivery</td><td>{{ order.expected_delivery.strftime('%d %b %Y') }}</td></tr>
+                    {% endif %}
                 </table>
             </div>
         </div>
@@ -69,6 +78,25 @@
                             <option value="paid" {% if order.payment_status=='paid' %}selected{% endif %}>Paid</option>
                             <option value="failed" {% if order.payment_status=='failed' %}selected{% endif %}>Failed</option>
                         </select>
+                    </div>
+                    <hr class="my-3">
+                    <p class="small fw-bold text-muted mb-2"><i class="fas fa-truck me-1"></i>Delivery Details</p>
+                    <div class="mb-2">
+                        <label class="form-label small mb-1">Courier Name</label>
+                        <input type="text" name="courier_name" class="form-control form-control-sm"
+                               placeholder="e.g. India Post, DTDC, BlueDart"
+                               value="{{ order.courier_name or '' }}">
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label small mb-1">Tracking / Docket Number</label>
+                        <input type="text" name="tracking_number" class="form-control form-control-sm"
+                               placeholder="e.g. EW123456789IN"
+                               value="{{ order.tracking_number or '' }}">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small mb-1">Expected Delivery Date</label>
+                        <input type="date" name="expected_delivery" class="form-control form-control-sm"
+                               value="{{ order.expected_delivery.strftime('%Y-%m-%d') if order.expected_delivery else '' }}">
                     </div>
                     <button type="submit" class="btn btn-warning w-100">
                         <i class="fas fa-save me-2"></i>Update Order
