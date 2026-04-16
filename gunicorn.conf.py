@@ -13,5 +13,8 @@ preload_app = True
 
 def on_starting(server):
     """Initialize DB before workers fork."""
-    from app import init_db
-    init_db()
+    try:
+        from app import init_db
+        init_db()
+    except Exception as e:
+        print(f"[WARNING] DB init on_starting failed: {e}")

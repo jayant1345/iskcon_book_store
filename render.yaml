@@ -3,7 +3,7 @@ services:
     name: iskcon-book-store
     runtime: python
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn app:app --config gunicorn.conf.py
+    startCommand: gunicorn app:app --bind "0.0.0.0:$PORT" --workers 2 --timeout 120 --log-level info
     plan: free
     envVars:
       - key: FLASK_ENV
