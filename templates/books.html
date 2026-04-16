@@ -11,7 +11,7 @@
     <ol class="breadcrumb breadcrumb-iskcon">
       <li class="breadcrumb-item"><a href="{{ url_for('index') }}">🏠 Home</a></li>
       <li class="breadcrumb-item active">
-        {% if active_cat %}{{ active_cat.icon }} {{ active_cat.name }}{% else %}📚 All Books{% endif %}
+        {% if active_cat %}{{ active_cat.name }}{% else %}📚 All Books{% endif %}
       </li>
     </ol>
   </nav>
@@ -39,7 +39,7 @@
           {% for cat in categories %}
           <a href="{{ url_for('books', category=cat.slug) }}"
              class="filter-option d-flex justify-content-between {{ 'fw-bold' if active_cat and active_cat.slug == cat.slug }}">
-            <span>{{ cat.icon }} {{ cat.name }}</span>
+            <span>{{ cat.name }}</span>
             <span style="color:var(--saffron);font-size:0.8rem;">{{ cat.books|selectattr('active')|list|length }}</span>
           </a>
           {% endfor %}
@@ -78,7 +78,7 @@
       <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
         <div>
           <h4 class="section-title mb-0">
-            {% if active_cat %}{{ active_cat.icon }} {{ active_cat.name }}
+            {% if active_cat %}{{ active_cat.name }}
             {% elif query %}Results for "{{ query }}"
             {% else %}📚 All Books
             {% endif %}

@@ -104,6 +104,7 @@ class Book(db.Model):
     stock          = db.Column(db.Integer, default=100)
     featured       = db.Column(db.Boolean, default=False)
     active         = db.Column(db.Boolean, default=True)
+    deleted        = db.Column(db.Boolean, default=False)   # True = moved to Trash
     is_ebook       = db.Column(db.Boolean, default=False)
     ebook_file     = db.Column(db.String(200), nullable=True)
     preview_file   = db.Column(db.String(200), nullable=True)
@@ -766,11 +767,12 @@ def admin_dashboard():
 def admin_books():
     page  = request.args.get("page", 1, type=int)
     query = request.args.get("q", "")
-    bq    = Book.query
+    bq    = Book.query.filter_by(deleted=False)
     if query:
         bq = bq.filter(Book.title.ilike(f"%{query}%"))
-    books = bq.order_by(Book.created_at.desc()).paginate(page=page, per_page=20)
-    return render_template("admin/books.html", books=books, query=query)
+    books       = bq.order_by(Book.created_at.desc()).paginate(page=page, per_page=20)
+    trash_count = Book.query.filter_by(deleted=True).count()
+    return render_template("admin/books.html", books=books, query=query, trash_count=trash_count)
 
 
 @app.route("/admin/books/export-stock-csv")
@@ -923,10 +925,41 @@ def admin_edit_book(book_id):
 @admin_required
 def admin_delete_book(book_id):
     book = Book.query.get_or_404(book_id)
-    book.active = False   # Soft delete
+    book.active  = False
+    book.deleted = True   # Move to Trash
     db.session.commit()
-    flash(f'Book "{book.title}" removed from store.', "info")
+    flash(f'Book "{book.title}" moved to Trash. You can restore or permanently delete it from the Trash tab.', "info")
     return redirect(url_for("admin_books"))
+
+
+@app.route("/admin/books/trash")
+@admin_required
+def admin_trash_books():
+    page          = request.args.get("page", 1, type=int)
+    deleted_books = Book.query.filter_by(deleted=True).order_by(Book.created_at.desc()).paginate(page=page, per_page=20)
+    return render_template("admin/trash_books.html", books=deleted_books)
+
+
+@app.route("/admin/books/restore/<int:book_id>", methods=["POST"])
+@admin_required
+def admin_restore_book(book_id):
+    book = Book.query.get_or_404(book_id)
+    book.deleted = False
+    book.active  = True
+    db.session.commit()
+    flash(f'Book "{book.title}" restored. You can now edit it.', "success")
+    return redirect(url_for("admin_trash_books"))
+
+
+@app.route("/admin/books/hard-delete/<int:book_id>", methods=["POST"])
+@admin_required
+def admin_hard_delete_book(book_id):
+    book = Book.query.get_or_404(book_id)
+    title = book.title
+    db.session.delete(book)
+    db.session.commit()
+    flash(f'Book "{title}" permanently deleted.', "danger")
+    return redirect(url_for("admin_trash_books"))
 
 
 @app.route("/admin/books/toggle-featured/<int:book_id>", methods=["POST"])

@@ -14,6 +14,14 @@
         <a href="{{ url_for('export_stock_csv') }}" class="btn btn-outline-success">
             <i class="fas fa-file-csv me-2"></i>Download Stock CSV
         </a>
+        <a href="{{ url_for('admin_trash_books') }}" class="btn btn-outline-danger position-relative">
+            <i class="fas fa-trash me-1"></i> Trash
+            {% if trash_count %}
+            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                {{ trash_count }}
+            </span>
+            {% endif %}
+        </a>
         <a href="{{ url_for('admin_add_book') }}" class="btn btn-warning">
             <i class="fas fa-plus-circle me-2"></i>Add Book
         </a>
