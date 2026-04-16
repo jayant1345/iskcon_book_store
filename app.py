@@ -727,8 +727,17 @@ def order_track():
     order = None
     if request.method == "POST":
         query = request.form.get("query", "").strip()
+        # Normalise phone: try both raw input and without +91 / 91 prefix
+        phone_variants = [query]
+        digits = query.lstrip("+")
+        if digits.startswith("91") and len(digits) == 12:
+            phone_variants.append(digits[2:])       # strip 91 → 10-digit
+        elif len(digits) == 10:
+            phone_variants.append("91" + digits)    # add 91
+            phone_variants.append("+91" + digits)   # add +91
         order = Order.query.filter(
-            or_(Order.order_number == query, Order.customer_phone == query)
+            or_(Order.order_number == query,
+                Order.customer_phone.in_(phone_variants))
         ).order_by(Order.created_at.desc()).first()
         if not order:
             flash("No order found with that order number or phone.", "warning")
