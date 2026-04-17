@@ -805,14 +805,21 @@ def admin_dashboard():
 @app.route("/admin/books")
 @admin_required
 def admin_books():
-    page  = request.args.get("page", 1, type=int)
-    query = request.args.get("q", "")
-    bq    = Book.query.filter_by(deleted=False)
+    page        = request.args.get("page", 1, type=int)
+    query       = request.args.get("q", "")
+    category_id = request.args.get("category_id", type=int)
+    bq          = Book.query.filter_by(deleted=False)
     if query:
         bq = bq.filter(Book.title.ilike(f"%{query}%"))
-    books       = bq.order_by(Book.created_at.desc()).paginate(page=page, per_page=20)
-    trash_count = Book.query.filter_by(deleted=True).count()
-    return render_template("admin/books.html", books=books, query=query, trash_count=trash_count)
+    if category_id:
+        bq = bq.filter_by(category_id=category_id)
+    books          = bq.order_by(Book.created_at.desc()).paginate(page=page, per_page=20)
+    trash_count    = Book.query.filter_by(deleted=True).count()
+    all_categories = Category.query.order_by(Category.sort_order).all()
+    active_cat     = Category.query.get(category_id) if category_id else None
+    return render_template("admin/books.html", books=books, query=query,
+                           trash_count=trash_count, all_categories=all_categories,
+                           active_cat=active_cat, category_id=category_id)
 
 
 @app.route("/admin/books/export-stock-csv")
