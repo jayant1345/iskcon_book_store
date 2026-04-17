@@ -11,6 +11,7 @@ import hashlib
 import json
 import csv
 import io
+import zipfile
 from datetime import datetime
 from functools import wraps
 
@@ -1326,6 +1327,87 @@ def admin_delete_coupon(coupon_id):
     db.session.commit()
     flash("Coupon deleted.", "info")
     return redirect(url_for("admin_coupons"))
+
+
+@app.route("/admin/backup")
+@admin_required
+def admin_backup():
+    """Download full backup as ZIP containing orders, books, and coupons CSV files."""
+    from flask import Response
+
+    zip_buffer = io.BytesIO()
+
+    with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zf:
+
+        # ── 1. Orders CSV ──
+        orders_buf = io.StringIO()
+        w = csv.writer(orders_buf)
+        w.writerow([
+            "Order #", "Date", "Customer Name", "Phone", "Email",
+            "Address", "City", "State", "Pincode", "Books Ordered",
+            "Subtotal (INR)", "Shipping (INR)", "Discount (INR)", "Total (INR)",
+            "Payment Method", "Payment Status", "Order Status", "Coupon Code", "Notes"
+        ])
+        for order in Order.query.order_by(Order.created_at.desc()).all():
+            books_list = "; ".join(f"{i.book_title} x{i.quantity}" for i in order.items)
+            w.writerow([
+                order.order_number,
+                order.created_at.strftime("%d-%m-%Y %H:%M"),
+                order.customer_name, order.customer_phone, order.customer_email or "",
+                order.address, order.city or "", order.state or "", order.pincode or "",
+                books_list,
+                int(order.subtotal), int(order.shipping_charge),
+                int(order.discount_amount), int(order.total_amount),
+                order.payment_method.upper(), order.payment_status.upper(),
+                order.order_status.capitalize(), order.coupon_code or "", order.notes or "",
+            ])
+        zf.writestr("orders.csv", orders_buf.getvalue().encode("utf-8-sig"))
+
+        # ── 2. Books CSV ──
+        books_buf = io.StringIO()
+        w = csv.writer(books_buf)
+        w.writerow([
+            "ID", "Title", "Author", "Category", "Language",
+            "Price (INR)", "Original Price (INR)", "Stock", "Pages",
+            "ISBN", "Publisher", "Featured", "Active", "Is eBook"
+        ])
+        for book in Book.query.order_by(Book.id).all():
+            w.writerow([
+                book.id, book.title, book.author,
+                book.category.name if book.category else "",
+                book.language or "", int(book.price),
+                int(book.original_price) if book.original_price else "",
+                book.stock, book.pages or "",
+                book.isbn or "", book.publisher or "",
+                "Yes" if book.featured else "No",
+                "Yes" if book.active else "No",
+                "Yes" if book.is_ebook else "No",
+            ])
+        zf.writestr("books.csv", books_buf.getvalue().encode("utf-8-sig"))
+
+        # ── 3. Coupons CSV ──
+        coupons_buf = io.StringIO()
+        w = csv.writer(coupons_buf)
+        w.writerow([
+            "Code", "Description", "Type", "Discount Value",
+            "Min Order (INR)", "Max Discount (INR)", "Max Uses", "Times Used", "Active"
+        ])
+        for c in Coupon.query.order_by(Coupon.id).all():
+            w.writerow([
+                c.code, c.description or "", c.discount_type,
+                c.discount_value, int(c.min_order) if c.min_order else 0,
+                int(c.max_discount) if c.max_discount else "",
+                c.max_uses or "", c.used_count, "Yes" if c.active else "No",
+            ])
+        zf.writestr("coupons.csv", coupons_buf.getvalue().encode("utf-8-sig"))
+
+    zip_buffer.seek(0)
+    filename = f"iskcon_backup_{datetime.now().strftime('%Y%m%d_%H%M')}.zip"
+    return Response(
+        zip_buffer.read(),
+        mimetype="application/zip",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
 
 
 # ─────────────────────────────────────────────
