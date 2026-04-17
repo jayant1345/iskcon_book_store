@@ -11,7 +11,7 @@
     <ol class="breadcrumb breadcrumb-iskcon">
       <li class="breadcrumb-item"><a href="{{ url_for('index') }}">🏠 Home</a></li>
       <li class="breadcrumb-item active">
-        {% if active_cat %}{{ active_cat.name }}{% else %}📚 All Books{% endif %}
+        {% if active_cat %}{{ active_cat.name }}{% elif sort == 'newest' %}🌸 New Arrivals{% else %}📚 All Books{% endif %}
       </li>
     </ol>
   </nav>
@@ -80,6 +80,9 @@
           <h4 class="section-title mb-0">
             {% if active_cat %}{{ active_cat.name }}
             {% elif query %}Results for "{{ query }}"
+            {% elif sort == 'newest' %}🌸 New Arrivals
+            {% elif sort == 'price_low' %}💰 Price: Low to High
+            {% elif sort == 'price_high' %}💰 Price: High to Low
             {% else %}📚 All Books
             {% endif %}
           </h4>

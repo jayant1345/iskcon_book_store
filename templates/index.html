@@ -3,74 +3,152 @@
 
 {% block content %}
 
-<!-- ═══════ HERO ═══════ -->
-<section class="hero-section">
-  <div class="container">
-    <div class="row align-items-center">
-      <!-- Left: Text -->
-      <div class="col-lg-7">
-        <h1 class="hero-title">
-          Transform Your Life Through the Wisdom of
-          A. C. Bhaktivedanta Swami Prabhupada
-        </h1>
-        <p class="hero-subtitle">
-          Bhagavad Gita · Srimad Bhagavatam · Chaitanya Charitamrita
-          and all ISKCON literature — delivered to your doorstep
-        </p>
-        <div class="hero-quote mt-4">
-          "One who reads Bhagavad-gita very scrutinizingly and renders service to the pure devotee
-          can be freed from all sinful reactions, and will worship Vishnu." — Bhagavad Gita 18.68
-        </div>
-      </div>
-      <!-- Right: Auto-scrolling book carousel -->
-      <div class="col-lg-5 text-center d-none d-lg-block">
-        <div id="heroCarousel" class="carousel slide" data-bs-ride="carousel" data-bs-interval="2500">
-          <div class="carousel-inner">
-            {% set carousel_books = featured_books if featured_books else [] %}
-            {% if carousel_books %}
-              {% for book in carousel_books %}
-              <div class="carousel-item {% if loop.first %}active{% endif %}">
-                <a href="{{ url_for('book_detail', book_id=book.id) }}">
-                  <img src="{{ url_for('static', filename='images/books/' + book.image) }}"
-                       alt="{{ book.title }}"
-                       style="max-height:380px; max-width:100%; object-fit:contain;
-                              filter:drop-shadow(0 8px 24px rgba(0,0,0,0.5));
-                              border-radius:10px;">
-                  <div style="color:#FFE0A0; font-size:0.85rem; margin-top:10px; font-style:italic;">
-                    {{ book.title[:50] }}{% if book.title|length > 50 %}...{% endif %}
-                  </div>
-                </a>
+<!-- ═══════ HERO CAROUSEL ═══════ -->
+<div id="heroCarousel" class="carousel slide" data-bs-ride="carousel" data-bs-interval="10000">
+  <div class="carousel-inner">
+
+    <!-- Slide 0: Welcome / Brand -->
+    <div class="carousel-item active" data-bs-interval="10000">
+      <div class="hero-slide" style="background: linear-gradient(135deg, #0077b6 0%, #0096c7 40%, #00b4d8 75%, #90e0ef 100%);">
+        <div class="hero-slide-lotus">🪷</div>
+        <div class="container hero-slide-content">
+          <div class="row align-items-center g-4">
+            <div class="col-lg-7 col-md-8">
+              <div class="hero-slide-badge">ISKCON Book Distribution</div>
+              <h1 class="hero-title mb-2" style="font-size:clamp(1.5rem,3vw,2.3rem); font-weight:700; letter-spacing:0.02em; text-transform:uppercase; font-family:'Georgia',serif; line-height:1.25;">
+                Transform Your Life<br>Through the Wisdom of
+              </h1>
+              <div style="font-size:clamp(1rem,2vw,1.25rem); font-weight:700; color:#ffffff; margin-bottom:10px; font-family:'Georgia',serif; font-style:italic; letter-spacing:0.02em; line-height:1.5; text-shadow:1px 1px 6px rgba(0,0,0,0.7);">
+                His Divine Grace A. C. Bhaktivedanta Swami Prabhupada
               </div>
-              {% endfor %}
-            {% else %}
-              <div class="carousel-item active">
-                <img src="{{ url_for('static', filename='images/bhagvat_gita.jpg') }}"
-                     alt="Bhagavad Gita As It Is"
-                     style="max-height:380px; max-width:100%; object-fit:contain;
-                            filter:drop-shadow(0 8px 24px rgba(0,0,0,0.5));
-                            border-radius:10px;">
-              </div>
-            {% endif %}
+              <p class="hero-subtitle" style="font-size:0.95rem; opacity:0.88;">
+                Bhagavad Gita &middot; Srimad Bhagavatam &middot; Chaitanya Charitamrta and all ISKCON literature &mdash; delivered to your doorstep
+              </p>
+              <a href="{{ url_for('books') }}" class="btn btn-gold btn-lg mt-4 px-5">Explore All Books</a>
+            </div>
+            <div class="col-lg-5 col-md-4 text-center d-none d-md-block">
+              <img src="{{ url_for('static', filename='images/bhagvat_gita.jpg') }}" alt="ISKCON Books"
+                   class="hero-slide-img" style="max-height:320px;">
+            </div>
           </div>
-          <!-- Carousel indicators -->
-          {% if carousel_books|length > 1 %}
-          <div class="carousel-indicators" style="bottom:-25px;">
-            {% for book in carousel_books %}
-            <button type="button" data-bs-target="#heroCarousel" data-bs-slide-to="{{ loop.index0 }}"
-                    {% if loop.first %}class="active"{% endif %}
-                    style="background-color:#FFD700; width:8px; height:8px; border-radius:50%;">
-            </button>
-            {% endfor %}
-          </div>
-          {% endif %}
         </div>
       </div>
     </div>
+
+    <!-- Slide 1: Bhagavad Gita -->
+    <div class="carousel-item" data-bs-interval="10000">
+      <div class="hero-slide" style="background: linear-gradient(135deg, #7c2d12 0%, #c2410c 40%, #ea580c 75%, #fb923c 100%);">
+        <div class="hero-slide-lotus">🪷</div>
+        <div class="container hero-slide-content">
+          <div class="row align-items-center g-4">
+            <div class="col-lg-6 col-md-7">
+              <div class="hero-slide-badge">Featured Scripture</div>
+              <h1 class="hero-title mb-3">Bhagavad Gita As It Is</h1>
+              <p class="hero-subtitle">The complete authorized edition with original Sanskrit, transliteration and purports by His Divine Grace A.C. Bhaktivedanta Swami Prabhupada</p>
+              <div class="hero-quote">"One who reads Bhagavad-gita very scrutinizingly and renders service to the pure devotee can be freed from all sinful reactions." — BG 18.68</div>
+              <a href="{{ url_for('book_detail', book_id=carousel_books.gita.id) if carousel_books.gita else url_for('books', q='Bhagavad Gita') }}" class="btn btn-gold btn-lg mt-4 px-4">Shop Now</a>
+            </div>
+            <div class="col-lg-6 col-md-5 text-center d-none d-md-block">
+              <img src="{{ url_for('static', filename='images/books/719ba4dc6a8d46d8bbbbdb20ac70c9fb.png') }}" alt="Bhagavad Gita"
+                   class="hero-slide-img">
+              <div class="hero-slide-caption">Bhagavad Gita As It Is</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Slide 2: Srimad Bhagavatam -->
+    <div class="carousel-item" data-bs-interval="10000">
+      <div class="hero-slide" style="background: linear-gradient(135deg, #14532d 0%, #166534 40%, #16a34a 75%, #4ade80 100%);">
+        <div class="hero-slide-lotus" style="opacity:0.07;">🪷</div>
+        <div class="container hero-slide-content">
+          <div class="row align-items-center g-4">
+            <div class="col-lg-6 col-md-7">
+              <div class="hero-slide-badge" style="background:rgba(22,163,74,0.3); border-color:rgba(74,222,128,0.5);">Complete Series</div>
+              <h1 class="hero-title mb-3">Srimad Bhagavatam</h1>
+              <p class="hero-subtitle">The complete 18-volume set with all 12 cantos, original Sanskrit, transliteration and elaborate purports by Srila Prabhupada</p>
+              <div class="hero-quote">"Srimad Bhagavatam is the spotless Purana. It is most dear to the Vaishnavas." — SB 12.13.18</div>
+              <a href="{{ url_for('book_detail', book_id=carousel_books.sb.id) if carousel_books.sb else url_for('books', q='Srimad Bhagavatam') }}" class="btn btn-gold btn-lg mt-4 px-4">Shop Now</a>
+            </div>
+            <div class="col-lg-6 col-md-5 text-center d-none d-md-block">
+              <img src="{{ url_for('static', filename='images/bhagvat_gita.jpg') }}" alt="Srimad Bhagavatam"
+                   class="hero-slide-img" style="transform:scale(0.93);">
+              <div class="hero-slide-caption">Srimad Bhagavatam — 18 Volumes</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Slide 3: Krishna Book -->
+    <div class="carousel-item" data-bs-interval="10000">
+      <div class="hero-slide" style="background: linear-gradient(135deg, #023e58 0%, #0a7a8f 40%, #0fb8d0 75%, #38d9f0 100%);">
+        <div class="hero-slide-lotus" style="opacity:0.07;">🪷</div>
+        <div class="container hero-slide-content">
+          <div class="row align-items-center g-4">
+            <div class="col-lg-6 col-md-7">
+              <div class="hero-slide-badge" style="background:rgba(15,184,208,0.25); border-color:rgba(56,217,240,0.5);">Transcendental Pastimes</div>
+              <h1 class="hero-title mb-3">Krishna Book</h1>
+              <p class="hero-subtitle">A brilliant summary study of the Tenth Canto of Srimad Bhagavatam recounting the transcendental pastimes of Lord Sri Krishna</p>
+              <div class="hero-quote">"Krishna is the Supreme Personality of Godhead, the cause of all causes, the source of all sources." — Brahma Samhita</div>
+              <a href="{{ url_for('book_detail', book_id=carousel_books.krishna.id) if carousel_books.krishna else url_for('books', q='Krishna') }}" class="btn btn-gold btn-lg mt-4 px-4">Shop Now</a>
+            </div>
+            <div class="col-lg-6 col-md-5 text-center d-none d-md-block">
+              <img src="{{ url_for('static', filename='images/books/2966f65759b74480a79415c4cdfc0ad2.jpg') }}" alt="Krishna Book"
+                   class="hero-slide-img" style="filter:drop-shadow(0 8px 40px rgba(15,184,208,0.55)); border-radius:12px;">
+              <div class="hero-slide-caption">Krishna — Source of All Pleasure</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Slide 4: Nectar of Devotion -->
+    <div class="carousel-item" data-bs-interval="10000">
+      <div class="hero-slide" style="background: linear-gradient(135deg, #3b0764 0%, #6d28d9 40%, #8b5cf6 75%, #c084fc 100%);">
+        <div class="hero-slide-lotus" style="opacity:0.07;">🪷</div>
+        <div class="container hero-slide-content">
+          <div class="row align-items-center g-4">
+            <div class="col-lg-6 col-md-7">
+              <div class="hero-slide-badge" style="background:rgba(139,92,246,0.25); border-color:rgba(192,132,252,0.5);">Bhakti Yoga</div>
+              <h1 class="hero-title mb-3">Nectar of Devotion</h1>
+              <p class="hero-subtitle">64 principles of devotional service, stages of devotional development and the ultimate perfection of loving service to Sri Krishna</p>
+              <div class="hero-quote">"The highest perfection of human life is to achieve the loving service of the Lord." — Nectar of Devotion</div>
+              <a href="{{ url_for('book_detail', book_id=carousel_books.nod.id) if carousel_books.nod else url_for('books', q='Nectar of Devotion') }}" class="btn btn-gold btn-lg mt-4 px-4">Shop Now</a>
+            </div>
+            <div class="col-lg-6 col-md-5 text-center d-none d-md-block">
+              <img src="{{ url_for('static', filename='images/bhagvat_gita.jpg') }}" alt="Nectar of Devotion"
+                   class="hero-slide-img" style="filter:drop-shadow(0 8px 40px rgba(139,92,246,0.5)); border-radius:12px;">
+              <div class="hero-slide-caption">Nectar of Devotion</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </div>
-</section>
+
+  <!-- Prev / Next arrows -->
+  <button class="carousel-control-prev" type="button" data-bs-target="#heroCarousel" data-bs-slide="prev">
+    <span class="carousel-control-prev-icon"></span>
+  </button>
+  <button class="carousel-control-next" type="button" data-bs-target="#heroCarousel" data-bs-slide="next">
+    <span class="carousel-control-next-icon"></span>
+  </button>
+
+  <!-- Dot indicators -->
+  <div class="carousel-indicators">
+    <button type="button" data-bs-target="#heroCarousel" data-bs-slide-to="0" class="active"></button>
+    <button type="button" data-bs-target="#heroCarousel" data-bs-slide-to="1"></button>
+    <button type="button" data-bs-target="#heroCarousel" data-bs-slide-to="2"></button>
+    <button type="button" data-bs-target="#heroCarousel" data-bs-slide-to="3"></button>
+    <button type="button" data-bs-target="#heroCarousel" data-bs-slide-to="4"></button>
+  </div>
+</div>
 
 <!-- ═══════ HERO BUTTONS ═══════ -->
-<div style="background:rgba(0,0,0,0.15); padding:24px 0;">
+<div style="background:linear-gradient(90deg,#3D1A00,#7A3500); padding:20px 0; border-top:2px solid rgba(255,165,0,0.3);">
   <div class="container text-center">
     <div class="d-flex gap-3 flex-wrap justify-content-center">
       <a href="{{ url_for('books') }}" class="btn btn-gold btn-lg px-5">
@@ -84,24 +162,24 @@
 </div>
 
 <!-- ═══════ STATS BAR ═══════ -->
-<section style="background: linear-gradient(135deg, var(--saffron), var(--saffron-dark)); padding:20px 0;">
+<section style="background: linear-gradient(135deg, var(--saffron), var(--saffron-dark)); padding:10px 0;">
   <div class="container">
     <div class="row text-white text-center g-0">
-      <div class="col-6 col-md-3" style="padding:8px; border-right:1px solid rgba(255,255,255,0.3);">
-        <div style="font-size:1.8rem; font-weight:700;">500+</div>
-        <div style="font-size:0.8rem; opacity:0.9; text-transform:uppercase; letter-spacing:1px;">Books Available</div>
+      <div class="col-6 col-md-3" style="padding:5px 8px; border-right:1px solid rgba(255,255,255,0.3);">
+        <div style="font-size:1.3rem; font-weight:700; line-height:1.2;">500+</div>
+        <div style="font-size:0.72rem; opacity:0.9; text-transform:uppercase; letter-spacing:1px;">Books Available</div>
       </div>
-      <div class="col-6 col-md-3" style="padding:8px; border-right:1px solid rgba(255,255,255,0.3);">
-        <div style="font-size:1.8rem; font-weight:700;">108</div>
-        <div style="font-size:0.8rem; opacity:0.9; text-transform:uppercase; letter-spacing:1px;">Countries Served</div>
+      <div class="col-6 col-md-3" style="padding:5px 8px; border-right:1px solid rgba(255,255,255,0.3);">
+        <div style="font-size:1.3rem; font-weight:700; line-height:1.2;">108</div>
+        <div style="font-size:0.72rem; opacity:0.9; text-transform:uppercase; letter-spacing:1px;">Countries Served</div>
       </div>
-      <div class="col-6 col-md-3" style="padding:8px; border-right:1px solid rgba(255,255,255,0.3);">
-        <div style="font-size:1.8rem; font-weight:700;">50+</div>
-        <div style="font-size:0.8rem; opacity:0.9; text-transform:uppercase; letter-spacing:1px;">Languages</div>
+      <div class="col-6 col-md-3" style="padding:5px 8px; border-right:1px solid rgba(255,255,255,0.3);">
+        <div style="font-size:1.3rem; font-weight:700; line-height:1.2;">50+</div>
+        <div style="font-size:0.72rem; opacity:0.9; text-transform:uppercase; letter-spacing:1px;">Languages</div>
       </div>
-      <div class="col-6 col-md-3" style="padding:8px;">
-        <div style="font-size:1.8rem; font-weight:700;">100%</div>
-        <div style="font-size:0.8rem; opacity:0.9; text-transform:uppercase; letter-spacing:1px;">Authentic</div>
+      <div class="col-6 col-md-3" style="padding:5px 8px;">
+        <div style="font-size:1.3rem; font-weight:700; line-height:1.2;">100%</div>
+        <div style="font-size:0.72rem; opacity:0.9; text-transform:uppercase; letter-spacing:1px;">Authentic</div>
       </div>
     </div>
   </div>

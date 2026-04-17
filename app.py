@@ -228,6 +228,26 @@ class StockReceipt(db.Model):
     book           = db.relationship("Book", backref="stock_receipts", lazy=True)
 
 
+class Setting(db.Model):
+    __tablename__ = "settings"
+    key   = db.Column(db.String(100), primary_key=True)
+    value = db.Column(db.String(500), nullable=True)
+
+    @staticmethod
+    def get(key, default=None):
+        s = Setting.query.get(key)
+        return s.value if s else default
+
+    @staticmethod
+    def set(key, value):
+        s = Setting.query.get(key)
+        if s:
+            s.value = value
+        else:
+            db.session.add(Setting(key=key, value=value))
+        db.session.commit()
+
+
 # ─────────────────────────────────────────────
 # Helpers
 # ─────────────────────────────────────────────
@@ -358,10 +378,26 @@ def index():
     featured_books  = Book.query.filter_by(featured=True, active=True).limit(8).all()
     new_arrivals    = Book.query.filter_by(active=True).order_by(Book.created_at.desc()).limit(6).all()
     categories      = Category.query.order_by(Category.sort_order).all()
+    # Look up carousel books from admin settings, fall back to keyword search
+    def get_carousel_book(setting_key, keyword):
+        book_id = Setting.get(setting_key)
+        if book_id:
+            b = Book.query.filter_by(id=int(book_id), active=True).first()
+            if b:
+                return b
+        return Book.query.filter(Book.title.ilike(f'%{keyword}%'), Book.active == True).first()
+
+    carousel_books = {
+        'gita':    get_carousel_book('carousel_slide_1', 'Bhagavad Gita'),
+        'sb':      get_carousel_book('carousel_slide_2', 'Bhagavatam'),
+        'krishna': get_carousel_book('carousel_slide_3', 'Krishna'),
+        'nod':     get_carousel_book('carousel_slide_4', 'Nectar of Devotion'),
+    }
     return render_template("index.html",
                            featured_books=featured_books,
                            new_arrivals=new_arrivals,
-                           categories=categories)
+                           categories=categories,
+                           carousel_books=carousel_books)
 
 
 @app.route("/books")
@@ -1466,6 +1502,29 @@ def init_db():
                     print(f"[MIGRATE] Added column {table}.{column}")
             except Exception:
                 pass  # Column already exists — ignore
+
+
+@app.route("/admin/carousel", methods=["GET", "POST"])
+@admin_required
+def admin_carousel():
+    all_books = Book.query.filter_by(active=True).order_by(Book.title).all()
+    keys = ["carousel_slide_1", "carousel_slide_2", "carousel_slide_3", "carousel_slide_4"]
+    labels = ["Slide 1 — Bhagavad Gita", "Slide 2 — Srimad Bhagavatam", "Slide 3 — Krishna Book", "Slide 4 — Nectar of Devotion"]
+
+    if request.method == "POST":
+        for key in keys:
+            val = request.form.get(key, "")
+            Setting.set(key, val if val else None)
+        flash("Carousel books updated successfully.", "success")
+        return redirect(url_for("admin_carousel"))
+
+    current = {key: Setting.get(key) for key in keys}
+    return render_template("admin/carousel.html",
+                           all_books=all_books,
+                           keys=keys,
+                           labels=labels,
+                           current=current,
+                           active_page="carousel")
 
 
 # Auto-init DB when loaded by gunicorn

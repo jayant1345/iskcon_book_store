@@ -39,6 +39,7 @@
             <li class="nav-item"><a href="{{ url_for('admin_orders') }}" class="nav-link {{ 'active' if active_page=='orders' else '' }}"><i class="fas fa-shopping-cart me-2"></i>Orders</a></li>
             <li class="nav-item"><a href="{{ url_for('admin_coupons') }}" class="nav-link {{ 'active' if active_page=='coupons' else '' }}"><i class="fas fa-ticket-alt me-2"></i>Coupons</a></li>
             <li class="nav-item"><a href="{{ url_for('admin_stock') }}" class="nav-link {{ 'active' if active_page=='stock' else '' }}"><i class="fas fa-warehouse me-2"></i>Temple Stock</a></li>
+            <li class="nav-item"><a href="{{ url_for('admin_carousel') }}" class="nav-link {{ 'active' if active_page=='carousel' else '' }}"><i class="fas fa-images me-2"></i>Carousel Books</a></li>
             <li class="nav-item mt-4"><a href="{{ url_for('index') }}" class="nav-link"><i class="fas fa-store me-2"></i>View Store</a></li>
             <li class="nav-item"><a href="{{ url_for('admin_logout') }}" class="nav-link text-danger"><i class="fas fa-sign-out-alt me-2"></i>Logout</a></li>
         </ul>
