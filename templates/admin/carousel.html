@@ -13,7 +13,7 @@
       <div class="card-body p-4">
 
         <form method="POST">
-          {% for i in range(4) %}
+          {% for i in range(5) %}
           {% set key = keys[i] %}
           {% set label = labels[i] %}
           <div class="mb-4">
@@ -44,7 +44,7 @@
             <small class="text-muted mt-1 d-block">Using keyword fallback (auto-detect)</small>
             {% endif %}
           </div>
-          {% if i < 3 %}<hr>{% endif %}
+          {% if i < 4 %}<hr>{% endif %}
           {% endfor %}
 
           <div class="d-flex gap-2 mt-4">
