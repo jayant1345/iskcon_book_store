@@ -388,6 +388,7 @@ def index():
         return Book.query.filter(Book.title.ilike(f'%{keyword}%'), Book.active == True).order_by(Book.id).first()
 
     carousel_books = {
+        'slide0':  get_carousel_book('carousel_slide_0', 'Prabhupada'),
         'gita':    get_carousel_book('carousel_slide_1', 'Bhagavad Gita'),
         'sb':      get_carousel_book('carousel_slide_2', 'Bhagavatam'),
         'krishna': get_carousel_book('carousel_slide_3', 'Krishna'),
@@ -1508,8 +1509,8 @@ def init_db():
 @admin_required
 def admin_carousel():
     all_books = Book.query.filter_by(active=True).order_by(Book.title).all()
-    keys = ["carousel_slide_1", "carousel_slide_2", "carousel_slide_3", "carousel_slide_4"]
-    labels = ["Slide 1 — Bhagavad Gita", "Slide 2 — Srimad Bhagavatam", "Slide 3 — Krishna Book", "Slide 4 — Nectar of Devotion"]
+    keys = ["carousel_slide_0", "carousel_slide_1", "carousel_slide_2", "carousel_slide_3", "carousel_slide_4"]
+    labels = ["Slide 0 — Welcome (brand image)", "Slide 1 — Bhagavad Gita", "Slide 2 — Srimad Bhagavatam", "Slide 3 — Krishna Book", "Slide 4 — Nectar of Devotion"]
 
     if request.method == "POST":
         for key in keys:

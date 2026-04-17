@@ -27,8 +27,13 @@
               <a href="{{ url_for('books') }}" class="btn btn-gold btn-lg mt-4 px-5">Explore All Books</a>
             </div>
             <div class="col-lg-5 col-md-4 text-center d-none d-md-block">
+              {% if carousel_books.slide0 and carousel_books.slide0.image and carousel_books.slide0.image != 'default_book.jpg' %}
+              <img src="{{ url_for('static', filename='images/books/' + carousel_books.slide0.image) }}" alt="ISKCON Books"
+                   class="hero-slide-img" style="max-height:320px;">
+              {% else %}
               <img src="{{ url_for('static', filename='images/bhagvat_gita.jpg') }}" alt="ISKCON Books"
                    class="hero-slide-img" style="max-height:320px;">
+              {% endif %}
             </div>
           </div>
         </div>
