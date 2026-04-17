@@ -385,7 +385,7 @@ def index():
             b = Book.query.filter_by(id=int(book_id), active=True).first()
             if b:
                 return b
-        return Book.query.filter(Book.title.ilike(f'%{keyword}%'), Book.active == True).first()
+        return Book.query.filter(Book.title.ilike(f'%{keyword}%'), Book.active == True).order_by(Book.id).first()
 
     carousel_books = {
         'gita':    get_carousel_book('carousel_slide_1', 'Bhagavad Gita'),

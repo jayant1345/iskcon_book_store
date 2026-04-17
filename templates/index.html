@@ -49,9 +49,11 @@
               <a href="{{ url_for('book_detail', book_id=carousel_books.gita.id) if carousel_books.gita else url_for('books', q='Bhagavad Gita') }}" class="btn btn-gold btn-lg mt-4 px-4">Shop Now</a>
             </div>
             <div class="col-lg-6 col-md-5 text-center d-none d-md-block">
-              <img src="{{ url_for('static', filename='images/books/719ba4dc6a8d46d8bbbbdb20ac70c9fb.png') }}" alt="Bhagavad Gita"
+              {% if carousel_books.gita and carousel_books.gita.image and carousel_books.gita.image != 'default_book.jpg' %}
+              <img src="{{ url_for('static', filename='images/books/' + carousel_books.gita.image) }}" alt="{{ carousel_books.gita.title }}"
                    class="hero-slide-img">
-              <div class="hero-slide-caption">Bhagavad Gita As It Is</div>
+              {% endif %}
+              <div class="hero-slide-caption">{{ carousel_books.gita.title if carousel_books.gita else 'Bhagavad Gita As It Is' }}</div>
             </div>
           </div>
         </div>
@@ -72,9 +74,11 @@
               <a href="{{ url_for('book_detail', book_id=carousel_books.sb.id) if carousel_books.sb else url_for('books', q='Srimad Bhagavatam') }}" class="btn btn-gold btn-lg mt-4 px-4">Shop Now</a>
             </div>
             <div class="col-lg-6 col-md-5 text-center d-none d-md-block">
-              <img src="{{ url_for('static', filename='images/bhagvat_gita.jpg') }}" alt="Srimad Bhagavatam"
+              {% if carousel_books.sb and carousel_books.sb.image and carousel_books.sb.image != 'default_book.jpg' %}
+              <img src="{{ url_for('static', filename='images/books/' + carousel_books.sb.image) }}" alt="{{ carousel_books.sb.title }}"
                    class="hero-slide-img" style="transform:scale(0.93);">
-              <div class="hero-slide-caption">Srimad Bhagavatam — 18 Volumes</div>
+              {% endif %}
+              <div class="hero-slide-caption">{{ carousel_books.sb.title if carousel_books.sb else 'Srimad Bhagavatam' }}</div>
             </div>
           </div>
         </div>
@@ -95,9 +99,11 @@
               <a href="{{ url_for('book_detail', book_id=carousel_books.krishna.id) if carousel_books.krishna else url_for('books', q='Krishna') }}" class="btn btn-gold btn-lg mt-4 px-4">Shop Now</a>
             </div>
             <div class="col-lg-6 col-md-5 text-center d-none d-md-block">
-              <img src="{{ url_for('static', filename='images/books/2966f65759b74480a79415c4cdfc0ad2.jpg') }}" alt="Krishna Book"
+              {% if carousel_books.krishna and carousel_books.krishna.image and carousel_books.krishna.image != 'default_book.jpg' %}
+              <img src="{{ url_for('static', filename='images/books/' + carousel_books.krishna.image) }}" alt="{{ carousel_books.krishna.title }}"
                    class="hero-slide-img" style="filter:drop-shadow(0 8px 40px rgba(15,184,208,0.55)); border-radius:12px;">
-              <div class="hero-slide-caption">Krishna — Source of All Pleasure</div>
+              {% endif %}
+              <div class="hero-slide-caption">{{ carousel_books.krishna.title if carousel_books.krishna else 'Krishna Book' }}</div>
             </div>
           </div>
         </div>
@@ -118,9 +124,11 @@
               <a href="{{ url_for('book_detail', book_id=carousel_books.nod.id) if carousel_books.nod else url_for('books', q='Nectar of Devotion') }}" class="btn btn-gold btn-lg mt-4 px-4">Shop Now</a>
             </div>
             <div class="col-lg-6 col-md-5 text-center d-none d-md-block">
-              <img src="{{ url_for('static', filename='images/bhagvat_gita.jpg') }}" alt="Nectar of Devotion"
+              {% if carousel_books.nod and carousel_books.nod.image and carousel_books.nod.image != 'default_book.jpg' %}
+              <img src="{{ url_for('static', filename='images/books/' + carousel_books.nod.image) }}" alt="{{ carousel_books.nod.title }}"
                    class="hero-slide-img" style="filter:drop-shadow(0 8px 40px rgba(139,92,246,0.5)); border-radius:12px;">
-              <div class="hero-slide-caption">Nectar of Devotion</div>
+              {% endif %}
+              <div class="hero-slide-caption">{{ carousel_books.nod.title if carousel_books.nod else 'Nectar of Devotion' }}</div>
             </div>
           </div>
         </div>
