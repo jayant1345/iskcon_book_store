@@ -1060,6 +1060,21 @@ def admin_hard_delete_book(book_id):
 
 
 
+@app.route("/admin/receive-image", methods=["POST"])
+def receive_image():
+    token = request.form.get("token", "")
+    if token != "iskcon-img-sync-2024":
+        abort(403)
+    f = request.files.get("file")
+    filename = request.form.get("filename", "")
+    import re as _re
+    if not f or not filename or not _re.match(r'^[a-f0-9]{32}\.(jpg|jpeg|png|gif|webp)$', filename):
+        return "bad request", 400
+    save_path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
+    f.save(save_path)
+    return f"saved:{filename}", 200
+
+
 @app.route("/admin/check-files")
 @admin_required
 def check_files():
