@@ -1535,6 +1535,48 @@ except Exception as e:
     print(f"[ERROR] init_db failed at startup: {e}")
 
 
+# ── TEMPORARY: BBT bulk import route (remove after running on Railway) ──
+@app.route("/admin/run-bbt-import", methods=["GET", "POST"])
+@admin_required
+def run_bbt_import():
+    AUTHOR    = "A.C. Bhaktivedanta Swami Prabhupada"
+    PUBLISHER = "The Bhaktivedanta Book Trust"
+
+    from import_bbt_books import BOOKS
+
+    cat = Category.query.filter_by(slug="paper-copy").first()
+    if not cat:
+        cat = Category(name="Paper Copy", slug="paper-copy", icon="📗", sort_order=1,
+                       description="Physical books in English, Hindi & Gujarati by Srila Prabhupada")
+        db.session.add(cat)
+        db.session.flush()
+
+    inserted, skipped = 0, 0
+    log = []
+    for title, prices, short_desc, full_desc in BOOKS:
+        for lang, price in prices.items():
+            if price is None:
+                skipped += 1
+                continue
+            existing = Book.query.filter_by(title=title, language=lang).first()
+            if existing:
+                log.append(f"EXISTS: {title} ({lang})")
+                skipped += 1
+                continue
+            db.session.add(Book(
+                title=title, author=AUTHOR, description=full_desc,
+                short_desc=short_desc, price=float(price),
+                language=lang, publisher=PUBLISHER,
+                category_id=cat.id, stock=100, active=True,
+            ))
+            log.append(f"ADDED: {title} ({lang}) Rs.{price}")
+            inserted += 1
+    db.session.commit()
+
+    result = f"Done! Inserted: {inserted} | Skipped/Existing: {skipped}\n\n" + "\n".join(log)
+    return f"<pre style='font-family:monospace; padding:20px;'>{result}</pre>"
+
+
 if __name__ == "__main__":
     init_db()
     debug = os.environ.get("FLASK_ENV", "development") == "development"
