@@ -1060,6 +1060,18 @@ def admin_hard_delete_book(book_id):
 
 
 
+@app.route("/admin/check-files")
+@admin_required
+def check_files():
+    import os
+    base = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static", "images", "books")
+    try:
+        files = os.listdir(base)
+        return f"<pre>Path: {base}\nFile count: {len(files)}\nFirst 5:\n" + "\n".join(files[:5]) + "</pre>"
+    except Exception as e:
+        return f"<pre>ERROR: {e}\nCWD: {os.getcwd()}</pre>"
+
+
 @app.route("/admin/sync-images2")
 @admin_required
 def sync_images2():
