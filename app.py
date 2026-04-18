@@ -412,11 +412,16 @@ def books():
     bq = Book.query.filter_by(active=True)
 
     if query:
-        bq = bq.filter(or_(
-            Book.title.ilike(f"%{query}%"),
-            Book.author.ilike(f"%{query}%"),
-            Book.description.ilike(f"%{query}%"),
-        ))
+        import re
+        for word in query.split():
+            word = re.sub(r"[^\w]", "", word)
+            if not word:
+                continue
+            bq = bq.filter(or_(
+                Book.title.ilike(f"%{word}%"),
+                Book.author.ilike(f"%{word}%"),
+                Book.description.ilike(f"%{word}%"),
+            ))
     if cat:
         category = Category.query.filter_by(slug=cat).first()
         if category:
@@ -847,7 +852,15 @@ def admin_books():
     category_id = request.args.get("category_id", type=int)
     bq          = Book.query.filter_by(deleted=False)
     if query:
-        bq = bq.filter(Book.title.ilike(f"%{query}%"))
+        import re
+        for word in query.split():
+            word = re.sub(r"[^\w]", "", word)  # strip punctuation like parentheses
+            if not word:
+                continue
+            bq = bq.filter(or_(
+                Book.title.ilike(f"%{word}%"),
+                Book.author.ilike(f"%{word}%"),
+            ))
     if category_id:
         bq = bq.filter_by(category_id=category_id)
     books          = bq.order_by(Book.created_at.desc()).paginate(page=page, per_page=20)
