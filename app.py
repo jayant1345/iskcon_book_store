@@ -1507,6 +1507,10 @@ def init_db():
             ("orders", "tracking_number",    "VARCHAR(100)"),
             ("orders", "expected_delivery",  "DATE"),
             ("orders", "upi_transaction_id", "VARCHAR(100)"),
+            ("books",  "deleted",            "BOOLEAN DEFAULT FALSE"),
+            ("books",  "is_ebook",           "BOOLEAN DEFAULT FALSE"),
+            ("books",  "ebook_file",         "VARCHAR(200)"),
+            ("books",  "preview_file",       "VARCHAR(200)"),
         ]
         for table, column, col_type in migrations:
             # Use a fresh connection per column so a failed ALTER doesn't

@@ -54,15 +54,19 @@ def sync_db(data):
     cat_name_to_local_id = {}
 
     for cat in data["categories"]:
-        cur.execute("SELECT id FROM categories WHERE name = ?", (cat["name"],))
+        # Match by name OR slug (handles case where name differs slightly)
+        cur.execute(
+            "SELECT id FROM categories WHERE LOWER(TRIM(name)) = LOWER(TRIM(?)) OR slug = ?",
+            (cat["name"], cat["slug"])
+        )
         row = cur.fetchone()
         if row:
             # Update existing
             cur.execute("""
                 UPDATE categories
-                SET slug=?, description=?, icon=?, sort_order=?
+                SET name=?, slug=?, description=?, icon=?, sort_order=?
                 WHERE id=?
-            """, (cat["slug"], cat["description"], cat["icon"], cat["sort_order"], row["id"]))
+            """, (cat["name"], cat["slug"], cat["description"], cat["icon"], cat["sort_order"], row["id"]))
             cat_name_to_local_id[cat["name"]] = row["id"]
         else:
             # Insert new
