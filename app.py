@@ -1520,6 +1520,56 @@ def init_db():
                 pass  # Column already exists — ignore
 
 
+@app.route("/admin/export-data")
+def admin_export_data():
+    """
+    Export all books and categories as JSON for local sync.
+    Protected by a simple token (not admin session — needed for script access).
+    Usage: GET /admin/export-data?token=iskcon-sync-2024
+    """
+    token = request.args.get("token", "")
+    if token != "iskcon-sync-2024":
+        abort(403)
+
+    categories = []
+    for c in Category.query.order_by(Category.sort_order).all():
+        categories.append({
+            "id": c.id,
+            "name": c.name,
+            "slug": c.slug,
+            "description": c.description or "",
+            "icon": c.icon or "📚",
+            "sort_order": c.sort_order,
+        })
+
+    books = []
+    for b in Book.query.all():
+        books.append({
+            "id": b.id,
+            "title": b.title,
+            "author": b.author,
+            "description": b.description or "",
+            "short_desc": b.short_desc or "",
+            "price": b.price,
+            "original_price": b.original_price,
+            "image": b.image or "default_book.jpg",
+            "category_name": b.category.name if b.category else None,
+            "isbn": b.isbn or "",
+            "language": b.language or "English",
+            "pages": b.pages,
+            "publisher": b.publisher or "The Bhaktivedanta Book Trust",
+            "stock": b.stock,
+            "featured": b.featured,
+            "active": b.active,
+            "deleted": b.deleted,
+            "is_ebook": b.is_ebook,
+            "ebook_file": b.ebook_file or "",
+            "preview_file": b.preview_file or "",
+        })
+
+    return jsonify({"categories": categories, "books": books})
+
+
 @app.route("/admin/carousel", methods=["GET", "POST"])
 @admin_required
 def admin_carousel():
