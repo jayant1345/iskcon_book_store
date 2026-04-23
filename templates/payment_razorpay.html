@@ -60,6 +60,7 @@
 <script>
 document.getElementById('rzp-pay-btn').addEventListener('click', function () {
   var btn = this;
+  var paymentCaptured = false;
   btn.disabled = true;
   btn.textContent = 'Opening payment...';
 
@@ -78,7 +79,8 @@ document.getElementById('rzp-pay-btn').addEventListener('click', function () {
     theme: { color: '#e65c00' },
 
     handler: function (response) {
-      // Payment captured — verify signature server-side
+      paymentCaptured = true;
+      btn.textContent = '⏳ Verifying payment...';
       fetch('/payment/verify', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -94,14 +96,16 @@ document.getElementById('rzp-pay-btn').addEventListener('click', function () {
       .catch(function () {
         btn.disabled = false;
         btn.textContent = '💳 Pay ₹{{ order.total_amount|int }} via Razorpay';
-        alert('Network error. Please try again.');
+        alert('Payment was received but verification failed. Please contact support.');
       });
     },
 
     modal: {
       ondismiss: function () {
-        btn.disabled = false;
-        btn.textContent = '💳 Pay ₹{{ order.total_amount|int }} via Razorpay';
+        if (!paymentCaptured) {
+          btn.disabled = false;
+          btn.textContent = '💳 Pay ₹{{ order.total_amount|int }} via Razorpay';
+        }
       }
     }
   };
