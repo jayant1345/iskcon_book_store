@@ -107,9 +107,6 @@ document.getElementById('rzp-pay-btn').addEventListener('click', function () {
   };
 
   var rzp = new Razorpay(options);
-  rzp.on('payment.failed', function (response) {
-    window.location.href = '/order/failed/' + btn.dataset.orderNumber;
-  });
   rzp.open();
 });
 </script>
