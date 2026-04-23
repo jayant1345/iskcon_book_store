@@ -58,60 +58,70 @@
 {% block extra_js %}
 <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 <script>
-document.getElementById('rzp-pay-btn').addEventListener('click', function () {
-  var btn = this;
-  var paymentCaptured = false;
-  btn.disabled = true;
-  btn.textContent = 'Opening payment...';
+var btn = document.getElementById('rzp-pay-btn');
+var paymentCaptured = false;
 
-  var options = {
-    key:         btn.dataset.key,
-    amount:      parseInt(btn.dataset.amount),
-    currency:    'INR',
-    order_id:    btn.dataset.orderId,
-    name:        'ISKCON Book Store',
-    description: 'Order ' + btn.dataset.orderNumber,
-    prefill: {
-      name:    btn.dataset.name,
-      contact: btn.dataset.phone,
-      email:   btn.dataset.email
-    },
-    theme: { color: '#e65c00' },
+var options = {
+  key:         btn.dataset.key,
+  amount:      parseInt(btn.dataset.amount),
+  currency:    'INR',
+  order_id:    btn.dataset.orderId,
+  name:        'ISKCON Book Store',
+  description: 'Order ' + btn.dataset.orderNumber,
+  prefill: {
+    name:    btn.dataset.name,
+    contact: btn.dataset.phone,
+    email:   btn.dataset.email
+  },
+  theme: { color: '#e65c00' },
 
-    handler: function (response) {
-      paymentCaptured = true;
-      btn.textContent = '⏳ Verifying payment...';
-      fetch('/payment/verify', {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          order_number:        btn.dataset.orderNumber,
-          razorpay_order_id:   response.razorpay_order_id,
-          razorpay_payment_id: response.razorpay_payment_id,
-          razorpay_signature:  response.razorpay_signature
-        })
+  handler: function (response) {
+    paymentCaptured = true;
+    btn.disabled = true;
+    btn.textContent = '⏳ Verifying payment...';
+    fetch('/payment/verify', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        order_number:        btn.dataset.orderNumber,
+        razorpay_order_id:   response.razorpay_order_id,
+        razorpay_payment_id: response.razorpay_payment_id,
+        razorpay_signature:  response.razorpay_signature
       })
-      .then(r => r.json())
-      .then(data => { window.location.href = data.redirect; })
-      .catch(function () {
+    })
+    .then(r => r.json())
+    .then(function(data) { window.location.replace(data.redirect); })
+    .catch(function () {
+      btn.disabled = false;
+      btn.textContent = '💳 Pay ₹{{ order.total_amount|int }} via Razorpay';
+      alert('Payment received but verification failed. Please contact support with order ' + btn.dataset.orderNumber);
+    });
+  },
+
+  modal: {
+    ondismiss: function () {
+      if (!paymentCaptured) {
         btn.disabled = false;
         btn.textContent = '💳 Pay ₹{{ order.total_amount|int }} via Razorpay';
-        alert('Payment was received but verification failed. Please contact support.');
-      });
-    },
-
-    modal: {
-      ondismiss: function () {
-        if (!paymentCaptured) {
-          btn.disabled = false;
-          btn.textContent = '💳 Pay ₹{{ order.total_amount|int }} via Razorpay';
-        }
       }
     }
-  };
+  }
+};
 
-  var rzp = new Razorpay(options);
-  rzp.open();
+var rzp = new Razorpay(options);
+
+// Auto-open popup when page loads
+btn.disabled = true;
+btn.textContent = 'Opening payment...';
+rzp.open();
+
+// Retry button click reopens popup
+btn.addEventListener('click', function () {
+  if (!paymentCaptured) {
+    btn.disabled = true;
+    btn.textContent = 'Opening payment...';
+    rzp.open();
+  }
 });
 </script>
 {% endblock %}
