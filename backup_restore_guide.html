@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ISKCON Book Store — Backup & Restore Guide</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 900px;
+      margin: 40px auto;
+      padding: 0 30px 60px;
+      color: #222;
+      line-height: 1.7;
+    }
+    h1 {
+      background: #f04e23;
+      color: white;
+      padding: 20px 30px;
+      border-radius: 8px;
+      margin-bottom: 8px;
+    }
+    h1 small {
+      display: block;
+      font-size: 0.55em;
+      font-weight: normal;
+      opacity: 0.9;
+      margin-top: 4px;
+    }
+    h2 {
+      color: #f04e23;
+      border-bottom: 2px solid #f04e23;
+      padding-bottom: 5px;
+      margin-top: 40px;
+    }
+    h3 {
+      color: #333;
+      margin-top: 24px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 16px 0;
+    }
+    th {
+      background: #f04e23;
+      color: white;
+      padding: 10px 14px;
+      text-align: left;
+    }
+    td {
+      padding: 9px 14px;
+      border: 1px solid #ddd;
+    }
+    tr:nth-child(even) td {
+      background: #fff5f2;
+    }
+    code {
+      background: #f4f4f4;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      padding: 2px 7px;
+      font-size: 0.92em;
+      font-family: Consolas, monospace;
+    }
+    .step {
+      background: #fff5f2;
+      border-left: 5px solid #f04e23;
+      padding: 14px 18px;
+      margin: 14px 0;
+      border-radius: 0 6px 6px 0;
+    }
+    .step strong {
+      display: block;
+      margin-bottom: 6px;
+      color: #c0370d;
+    }
+    .checkpoint {
+      background: #e8f5e9;
+      border-left: 5px solid #2e7d32;
+      padding: 14px 18px;
+      margin: 14px 0;
+      border-radius: 0 6px 6px 0;
+    }
+    .checkpoint strong {
+      color: #2e7d32;
+    }
+    .warning {
+      background: #fff8e1;
+      border-left: 5px solid #f9a825;
+      padding: 14px 18px;
+      margin: 14px 0;
+      border-radius: 0 6px 6px 0;
+    }
+    .warning strong {
+      color: #e65100;
+    }
+    ol li, ul li {
+      margin-bottom: 7px;
+    }
+    .rules li {
+      font-weight: 500;
+    }
+    .print-btn {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: #f04e23;
+      color: white;
+      border: none;
+      padding: 10px 22px;
+      border-radius: 6px;
+      font-size: 0.95em;
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+    .print-btn:hover { background: #c0370d; }
+    @media print {
+      .print-btn { display: none; }
+      body { margin: 20px; }
+    }
+    .toc {
+      background: #f9f9f9;
+      border: 1px solid #ddd;
+      padding: 16px 24px;
+      border-radius: 8px;
+      margin: 24px 0;
+    }
+    .toc h3 { margin-top: 0; color: #555; font-size: 0.95em; text-transform: uppercase; letter-spacing: 0.05em; }
+    .toc ol { margin: 0; padding-left: 20px; }
+    .toc li { margin-bottom: 4px; }
+    .toc a { color: #f04e23; text-decoration: none; }
+    .toc a:hover { text-decoration: underline; }
+    .badge {
+      display: inline-block;
+      background: #f04e23;
+      color: white;
+      border-radius: 50%;
+      width: 26px;
+      height: 26px;
+      line-height: 26px;
+      text-align: center;
+      font-weight: bold;
+      margin-right: 6px;
+      font-size: 0.85em;
+    }
+  </style>
+</head>
+<body>
+
+<button class="print-btn" onclick="window.print()">🖨️ Print / Save as PDF</button>
+
+<h1>
+  ISKCON Book Store
+  <small>Backup &amp; Restore Guide — Complete Reference for Admins</small>
+</h1>
+
+<div class="toc">
+  <h3>Contents</h3>
+  <ol>
+    <li><a href="#s1">Understanding the System</a></li>
+    <li><a href="#s2">How Images Link to Books</a></li>
+    <li><a href="#s3">Taking a Backup (Local Computer)</a></li>
+    <li><a href="#s4">Restoring (Local Computer)</a></li>
+    <li><a href="#s5">Railway Live Site — Backup &amp; Restore</a></li>
+    <li><a href="#s6">Checkpoints After Restore</a></li>
+    <li><a href="#s7">Common Problems &amp; Solutions</a></li>
+    <li><a href="#s8">Important Rules to Remember</a></li>
+  </ol>
+</div>
+
+<!-- ─── SECTION 1 ─── -->
+<h2 id="s1">Section 1 — Understanding the System</h2>
+<p>Your book store has <strong>3 types of data</strong> that must be backed up together. If even one is missing, the restore will be incomplete.</p>
+
+<h3>1. Database (Book records, Orders, Customers)</h3>
+<p>This is the <strong>"brain"</strong> of the store. It stores every book's title, price, author, and the exact filename of its cover image. If this is lost, you lose all product info and all order history.</p>
+<table>
+  <tr><th>Location</th><th>Path / Location</th></tr>
+  <tr><td>Local computer</td><td><code>c:\Project_AI\iskon_book_store\iskcon_books.db</code></td></tr>
+  <tr><td>Railway (live site)</td><td>Managed by Railway — export from Railway dashboard → PostgreSQL → Backups</td></tr>
+</table>
+
+<h3>2. Book Cover Images</h3>
+<p>These are the <code>.jpg</code> / <code>.png</code> image files for each book. They are saved with <strong>random code names</strong> like <code>a1b2c3d4e5f6.jpg</code>. Do <strong>NOT</strong> rename them — the database uses these exact names to find the right image for each book.</p>
+<table>
+  <tr><th>Location</th><th>Path / Location</th></tr>
+  <tr><td>Local computer</td><td><code>c:\Project_AI\iskon_book_store\static\images\books\</code></td></tr>
+  <tr><td>Railway (live site)</td><td>Stored on Railway's persistent volume (survives restarts)</td></tr>
+</table>
+
+<h3>3. eBook Files (PDF / EPUB) — if any uploaded</h3>
+<p>Same principle as images — stored with random filenames, must not be renamed.</p>
+<table>
+  <tr><th>Location</th><th>Path / Location</th></tr>
+  <tr><td>Local computer</td><td><code>c:\Project_AI\iskon_book_store\ebooks\</code></td></tr>
+  <tr><td>Railway (live site)</td><td>Railway's persistent volume</td></tr>
+</table>
+
+<!-- ─── SECTION 2 ─── -->
+<h2 id="s2">Section 2 — How Images Link to Books</h2>
+<p>When you upload a book cover image in the admin panel, the system automatically:</p>
+<ol>
+  <li>Renames the file to a <strong>unique random code</strong> like <code>a1b2c3d4.jpg</code></li>
+  <li>Saves the file in the <code>static/images/books/</code> folder</li>
+  <li>Records that random filename in the database against that specific book</li>
+</ol>
+<p>This means "Bhagavad Gita" in the database has <code>image = a1b2c3d4.jpg</code>. As long as the file <code>a1b2c3d4.jpg</code> is in the images folder, the correct cover shows on the website — automatically, for the right book.</p>
+
+<div class="warning">
+  <strong>⚠️ Critical Rule:</strong> Never rename image files in the books folder. The random code name IS the permanent link between the image file and its book. Renaming breaks that link.
+</div>
+
+<!-- ─── SECTION 3 ─── -->
+<h2 id="s3">Section 3 — Taking a Backup (Local Computer)</h2>
+<p>Do this backup <strong>once a week</strong> or <strong>after making major changes</strong> (adding many books, bulk image uploads, etc.).</p>
+
+<h3><span class="badge">1</span> Backup the Images Folder</h3>
+<div class="step">
+  <ol>
+    <li>Open <strong>File Explorer</strong></li>
+    <li>Go to: <code>c:\Project_AI\iskon_book_store\static\images\books\</code></li>
+    <li>Right-click the <code>books</code> folder → <strong>Send to → Compressed (zipped) folder</strong></li>
+    <li>Name it: <code>book_images_backup_2026-04-19.zip</code> (use today's date)</li>
+    <li>Move this zip to a safe place: USB drive, Google Drive, or an external hard disk</li>
+  </ol>
+</div>
+
+<h3><span class="badge">2</span> Backup the eBooks Folder (only if you have uploaded PDFs)</h3>
+<div class="step">
+  <ol>
+    <li>Go to: <code>c:\Project_AI\iskon_book_store\ebooks\</code></li>
+    <li>Right-click → <strong>Send to → Compressed (zipped) folder</strong></li>
+    <li>Name it: <code>ebooks_backup_2026-04-19.zip</code></li>
+    <li>Move to the same safe location</li>
+  </ol>
+</div>
+
+<h3><span class="badge">3</span> Backup the Database File</h3>
+<div class="step">
+  <ol>
+    <li>Go to: <code>c:\Project_AI\iskon_book_store\</code></li>
+    <li>Find the file: <code>iskcon_books.db</code></li>
+    <li>Copy it and rename the copy: <code>iskcon_books_backup_2026-04-19.db</code></li>
+    <li>Move to the same safe location</li>
+  </ol>
+</div>
+
+<div class="checkpoint">
+  <strong>✅ Verify your backup folder contains these 3 files:</strong>
+  <ul>
+    <li><code>book_images_backup_2026-04-19.zip</code></li>
+    <li><code>ebooks_backup_2026-04-19.zip</code> (only if eBooks were uploaded)</li>
+    <li><code>iskcon_books_backup_2026-04-19.db</code></li>
+  </ul>
+</div>
+
+<!-- ─── SECTION 4 ─── -->
+<h2 id="s4">Section 4 — Restoring (Local Computer)</h2>
+<p>Use this when something goes wrong on your local computer — such as accidental deletion, corruption, or a fresh Windows install.</p>
+
+<h3><span class="badge">1</span> Restore the Database</h3>
+<div class="step">
+  <ol>
+    <li>Take your backup file: <code>iskcon_books_backup_2026-04-19.db</code></li>
+    <li>Rename it to: <code>iskcon_books.db</code></li>
+    <li>Paste it into: <code>c:\Project_AI\iskon_book_store\</code></li>
+    <li>Click <strong>Yes</strong> if asked to replace the existing file</li>
+  </ol>
+</div>
+
+<h3><span class="badge">2</span> Restore the Images</h3>
+<div class="step">
+  <ol>
+    <li>Open your backup zip: <code>book_images_backup_2026-04-19.zip</code></li>
+    <li>Extract all files from it</li>
+    <li>Copy all extracted <code>.jpg</code> / <code>.png</code> files into:<br/><code>c:\Project_AI\iskon_book_store\static\images\books\</code></li>
+    <li>Do <strong>NOT</strong> replace <code>default_book.jpg</code> if it is already there</li>
+  </ol>
+</div>
+
+<h3><span class="badge">3</span> Restore eBooks (only if applicable)</h3>
+<div class="step">
+  <ol>
+    <li>Open your backup zip: <code>ebooks_backup_2026-04-19.zip</code></li>
+    <li>Extract all files into: <code>c:\Project_AI\iskon_book_store\ebooks\</code></li>
+  </ol>
+</div>
+
+<h3><span class="badge">4</span> Restart the Application</h3>
+<div class="step">
+  <ol>
+    <li>Open a terminal / command prompt in the project folder</li>
+    <li>Run: <code>python app.py</code></li>
+    <li>Open <code>http://127.0.0.1:5000</code> in your browser</li>
+    <li>All images will show correctly for the right books — automatically</li>
+  </ol>
+</div>
+
+<!-- ─── SECTION 5 ─── -->
+<h2 id="s5">Section 5 — Railway Live Site (iskconbooks.in)</h2>
+<p>The live website runs on Railway servers. Its database (PostgreSQL) is managed by Railway automatically.</p>
+
+<h3>Backup from Railway</h3>
+<table>
+  <tr><th>What</th><th>How to backup</th></tr>
+  <tr><td>Database</td><td>Railway dashboard → your project → PostgreSQL service → <strong>Backups</strong> tab → Download</td></tr>
+  <tr><td>Images</td><td>Your local <code>static/images/books/</code> folder is the master copy — keep it backed up as per Section 3</td></tr>
+</table>
+
+<h3>Restore Images to Railway</h3>
+<p>If images ever disappear from the live site (Railway volume reset or similar issue), follow these steps:</p>
+
+<div class="step">
+  <strong>Steps to push all images back to Railway:</strong>
+  <ol>
+    <li>Make sure your local images are restored in:<br/><code>c:\Project_AI\iskon_book_store\static\images\books\</code></li>
+    <li>Open a terminal in the project folder</li>
+    <li>Run: <code>python upload_images_to_railway.py</code></li>
+    <li>Wait for it to finish — it uploads every image to the Railway server one by one</li>
+    <li>Refresh <code>iskconbooks.in</code> — all covers will appear correctly</li>
+  </ol>
+</div>
+
+<div class="checkpoint">
+  <strong>ℹ️ What the upload script does:</strong> It reads every image file from your local <code>static/images/books/</code> folder and sends each file to the live Railway server, preserving the exact filenames that the database expects. Each book's image links up automatically.
+</div>
+
+<!-- ─── SECTION 6 ─── -->
+<h2 id="s6">Section 6 — Checkpoints to Verify After Restore</h2>
+<p>After any restore, go through this checklist to confirm everything is working correctly:</p>
+
+<table>
+  <tr><th>#</th><th>What to Check</th><th>How to Check</th></tr>
+  <tr><td>1</td><td>Home page loads</td><td>Open <code>http://127.0.0.1:5000</code> (local) or <code>iskconbooks.in</code> (live)</td></tr>
+  <tr><td>2</td><td>Book covers show correctly</td><td>Browse the Books page — no broken image icons should appear</td></tr>
+  <tr><td>3</td><td>Admin panel works</td><td>Go to <code>/admin/login</code> and log in with your credentials</td></tr>
+  <tr><td>4</td><td>Books list in admin</td><td>Admin → Books — all book titles are visible</td></tr>
+  <tr><td>5</td><td>An old order is visible</td><td>Admin → Orders — check that order history is intact</td></tr>
+  <tr><td>6</td><td>Search works</td><td>Search for "Bhagavad Gita" — results appear correctly</td></tr>
+  <tr><td>7</td><td>Prices and stock correct</td><td>Open any book page and verify price is correct</td></tr>
+</table>
+
+<!-- ─── SECTION 7 ─── -->
+<h2 id="s7">Section 7 — Common Problems &amp; Solutions</h2>
+
+<table>
+  <tr><th>Problem</th><th>Likely Cause</th><th>Solution</th></tr>
+  <tr><td>Book cover shows broken image icon</td><td>Image file missing from folder</td><td>Restore from backup zip into <code>static/images/books/</code></td></tr>
+  <tr><td>All images missing on Railway live site</td><td>Volume was reset by Railway</td><td>Run <code>python upload_images_to_railway.py</code></td></tr>
+  <tr><td>"No books found" when searching</td><td>Database is missing or empty</td><td>Restore the <code>.db</code> backup file as per Section 4</td></tr>
+  <tr><td>Admin login not working</td><td><code>.env</code> file missing</td><td>Check <code>.env</code> file has <code>ADMIN_USERNAME</code> and <code>ADMIN_PASSWORD</code></td></tr>
+  <tr><td>Orders missing after restore</td><td>Used an old DB backup</td><td>Use the most recent DB backup file</td></tr>
+  <tr><td>Wrong image shows for a book</td><td>Image files were renamed</td><td>Restore original files from backup — never rename image files</td></tr>
+  <tr><td>Site loads but no books visible</td><td>Database file not found by app</td><td>Ensure <code>iskcon_books.db</code> is in <code>c:\Project_AI\iskon_book_store\</code></td></tr>
+</table>
+
+<!-- ─── SECTION 8 ─── -->
+<h2 id="s8">Section 8 — Important Rules to Remember</h2>
+
+<ul class="rules">
+  <li>🚫 <strong>Never rename image files</strong> in the <code>static/images/books/</code> folder — the random code name is the permanent link between image and book</li>
+  <li>📅 <strong>Always backup the DB and images together</strong> on the same date — they must match each other</li>
+  <li>💾 <strong>Keep at least 3 recent backups</strong> — if the latest is corrupted, you have older ones to fall back to</li>
+  <li>📸 <strong>After any bulk image upload</strong>, take a fresh backup immediately</li>
+  <li>☁️ <strong>The upload script</strong> (<code>upload_images_to_railway.py</code>) only pushes images to Railway — it does not change the database</li>
+  <li>🗄️ <strong>DB and images must match</strong> — if you restore an old DB, you may also need matching old images from the same date</li>
+  <li>🔑 <strong>Keep your <code>.env</code> file safe</strong> — it contains your admin password and payment keys; back it up separately</li>
+</ul>
+
+<hr style="margin-top:50px; border:none; border-top:1px solid #ddd;"/>
+<p style="text-align:center; color:#999; font-size:0.82em;">
+  ISKCON Book Store — Admin Guide &nbsp;|&nbsp; Generated: 2026-04-19 &nbsp;|&nbsp; iskconbooks.in
+</p>
+
+</body>
+</html>

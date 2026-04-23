@@ -627,18 +627,21 @@ def checkout():
         session.pop("coupon_discount", None)
 
         if payment == "razorpay":
-            # Create Razorpay order
+            # Create Razorpay order via direct HTTP (no SDK dependency)
             try:
-                import razorpay
-                client = razorpay.Client(auth=(
-                    app.config["RAZORPAY_KEY_ID"],
-                    app.config["RAZORPAY_KEY_SECRET"]
-                ))
-                rp_order = client.order.create({
-                    "amount":   int(order.total_amount * 100),  # paise
-                    "currency": "INR",
-                    "receipt":  order.order_number,
-                })
+                import requests as _req
+                rp_resp = _req.post(
+                    "https://api.razorpay.com/v1/orders",
+                    auth=(app.config["RAZORPAY_KEY_ID"], app.config["RAZORPAY_KEY_SECRET"]),
+                    json={
+                        "amount":   int(order.total_amount * 100),
+                        "currency": "INR",
+                        "receipt":  order.order_number,
+                    },
+                    timeout=10,
+                )
+                rp_resp.raise_for_status()
+                rp_order = rp_resp.json()
                 order.razorpay_order_id = rp_order["id"]
                 db.session.commit()
                 return render_template("payment_razorpay.html",
@@ -646,10 +649,11 @@ def checkout():
                                        rp_order=rp_order,
                                        key_id=app.config["RAZORPAY_KEY_ID"])
             except Exception as e:
-                # Roll back order and restore cart so user can try again
+                # Delete child rows first to satisfy FK constraint (PostgreSQL)
+                OrderItem.query.filter_by(order_id=order.id).delete()
                 db.session.delete(order)
                 db.session.commit()
-                # Restore cart items in session
+                # Restore cart and stock
                 restored_cart = {}
                 for item in totals["items"]:
                     key = str(item["book"].id)

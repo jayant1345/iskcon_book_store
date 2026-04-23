@@ -57,4 +57,60 @@
 
 {% block extra_js %}
 <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<script>
+document.getElementById('rzp-pay-btn').addEventListener('click', function () {
+  var btn = this;
+  btn.disabled = true;
+  btn.textContent = 'Opening payment...';
+
+  var options = {
+    key:         btn.dataset.key,
+    amount:      parseInt(btn.dataset.amount),
+    currency:    'INR',
+    order_id:    btn.dataset.orderId,
+    name:        'ISKCON Book Store',
+    description: 'Order ' + btn.dataset.orderNumber,
+    prefill: {
+      name:    btn.dataset.name,
+      contact: btn.dataset.phone,
+      email:   btn.dataset.email
+    },
+    theme: { color: '#e65c00' },
+
+    handler: function (response) {
+      // Payment captured — verify signature server-side
+      fetch('/payment/verify', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          order_number:        btn.dataset.orderNumber,
+          razorpay_order_id:   response.razorpay_order_id,
+          razorpay_payment_id: response.razorpay_payment_id,
+          razorpay_signature:  response.razorpay_signature
+        })
+      })
+      .then(r => r.json())
+      .then(data => { window.location.href = data.redirect; })
+      .catch(function () {
+        btn.disabled = false;
+        btn.textContent = '💳 Pay ₹{{ order.total_amount|int }} via Razorpay';
+        alert('Network error. Please try again.');
+      });
+    },
+
+    modal: {
+      ondismiss: function () {
+        btn.disabled = false;
+        btn.textContent = '💳 Pay ₹{{ order.total_amount|int }} via Razorpay';
+      }
+    }
+  };
+
+  var rzp = new Razorpay(options);
+  rzp.on('payment.failed', function (response) {
+    window.location.href = '/order/failed/' + btn.dataset.orderNumber;
+  });
+  rzp.open();
+});
+</script>
 {% endblock %}
