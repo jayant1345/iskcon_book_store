@@ -145,7 +145,7 @@
                                     <span class="badge bg-secondary">{{ order.order_status|capitalize }}</span>
                                 {% endif %}
                             </td>
-                            <td>{{ order.created_at.strftime('%d %b %Y') }}</td>
+                            <td>{{ order.created_at | ist('%d %b %Y') }}</td>
                         </tr>
                         {% else %}
                         <tr><td colspan="6" class="text-center text-muted py-4">No orders yet</td></tr>
@@ -228,7 +228,7 @@
                     <tbody>
                         {% for r in recent_receipts %}
                         <tr>
-                            <td>{{ r.received_date.strftime('%d %b %Y') }}</td>
+                            <td>{{ r.received_date | ist('%d %b %Y') }}</td>
                             <td class="fw-bold">{{ r.book_name[:35] }}{% if r.book_name|length > 35 %}...{% endif %}</td>
                             <td><span class="badge bg-primary">{{ r.quantity }}</span></td>
                             <td>₹{{ "%.0f"|format(r.cost_per_unit) }}</td>

@@ -18,7 +18,7 @@
             <div class="card-body">
                 <table class="table table-sm mb-0">
                     <tr><td class="text-muted">Order Number</td><td class="fw-bold">{{ order.order_number }}</td></tr>
-                    <tr><td class="text-muted">Date</td><td>{{ order.created_at.strftime('%d %b %Y, %I:%M %p') }}</td></tr>
+                    <tr><td class="text-muted">Date</td><td>{{ order.created_at | ist }}</td></tr>
                     <tr><td class="text-muted">Payment Method</td><td><span class="badge bg-secondary">{{ order.payment_method|upper }}</span></td></tr>
                     <tr><td class="text-muted">Payment Status</td><td>
                         {% if order.payment_status == 'paid' %}<span class="badge bg-success">Paid</span>

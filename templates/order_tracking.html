@@ -33,7 +33,7 @@
         <h5 style="font-family:'Cinzel',serif; color:var(--brown);">
           Order: <span style="color:var(--saffron);">{{ order.order_number }}</span>
         </h5>
-        <small class="text-muted">Placed on {{ order.created_at.strftime('%d %b %Y, %I:%M %p') }}</small>
+        <small class="text-muted">Placed on {{ order.created_at | ist }}</small>
       </div>
       <div class="text-end">
         <div><strong>₹{{ order.total_amount|int }}</strong></div>

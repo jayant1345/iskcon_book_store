@@ -12,7 +12,7 @@ import json
 import csv
 import io
 import zipfile
-from datetime import datetime
+from datetime import datetime, timedelta
 from functools import wraps
 
 from flask import (
@@ -29,6 +29,14 @@ from sqlalchemy import or_
 # ─────────────────────────────────────────────
 
 app = Flask(__name__)
+
+_IST = timedelta(hours=5, minutes=30)
+
+@app.template_filter('ist')
+def to_ist(dt, fmt='%d %b %Y, %I:%M %p'):
+    if dt is None:
+        return ''
+    return (dt + _IST).strftime(fmt)
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 

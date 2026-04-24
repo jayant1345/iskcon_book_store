@@ -135,7 +135,7 @@
                     <tbody>
                         {% for r in receipts.items %}
                         <tr>
-                            <td style="white-space:nowrap;">{{ r.received_date.strftime('%d %b %Y') }}</td>
+                            <td style="white-space:nowrap;">{{ r.received_date | ist('%d %b %Y') }}</td>
                             <td class="fw-bold">{{ r.book_name[:30] }}{% if r.book_name|length > 30 %}...{% endif %}</td>
                             <td><span class="badge bg-primary fs-6">{{ r.quantity }}</span></td>
                             <td>₹{{ "%.0f"|format(r.cost_per_unit) }}</td>

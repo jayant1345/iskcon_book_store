@@ -105,7 +105,7 @@
                             <span class="badge bg-danger ms-1">Failed</span>
                         {% endif %}
                     </td>
-                    <td><small>{{ order.created_at.strftime('%d %b %Y') }}</small></td>
+                    <td><small>{{ order.created_at | ist('%d %b %Y') }}</small></td>
                     <td>
                         <a href="{{ url_for('admin_order_detail', order_id=order.id) }}" class="btn btn-sm btn-primary">
                             <i class="fas fa-eye"></i>
