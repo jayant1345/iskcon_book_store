@@ -378,6 +378,40 @@ def inject_globals():
 
 
 # ─────────────────────────────────────────────
+# SEO — sitemap & robots
+# ─────────────────────────────────────────────
+
+@app.route("/sitemap.xml")
+def sitemap():
+    domain = "https://iskconbooks.in"
+    books  = Book.query.filter_by(active=True, deleted=False).all()
+    lines  = ['<?xml version="1.0" encoding="UTF-8"?>',
+              '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">']
+    for path in ["/", "/books", "/order/track"]:
+        lines.append(f"<url><loc>{domain}{path}</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>")
+    for book in books:
+        lines.append(f"<url><loc>{domain}/book/{book.id}</loc><changefreq>monthly</changefreq><priority>0.9</priority></url>")
+    lines.append("</urlset>")
+    return "\n".join(lines), 200, {"Content-Type": "application/xml"}
+
+
+@app.route("/robots.txt")
+def robots():
+    content = """User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /checkout
+Disallow: /cart
+Disallow: /payment/
+Disallow: /order/success/
+Disallow: /order/failed/
+
+Sitemap: https://iskconbooks.in/sitemap.xml
+"""
+    return content, 200, {"Content-Type": "text/plain"}
+
+
+# ─────────────────────────────────────────────
 # PUBLIC ROUTES
 # ─────────────────────────────────────────────
 

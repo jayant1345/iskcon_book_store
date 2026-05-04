@@ -1,5 +1,35 @@
 {% extends "base.html" %}
-{% block title %}{{ store_name }} – Vedic Wisdom for All{% endblock %}
+{% block title %}ISKCON Book Store – Buy Bhagavad Gita, Srimad Bhagavatam Online India{% endblock %}
+{% block meta_description %}Buy authentic ISKCON books online in India. Bhagavad Gita As It Is, Srimad Bhagavatam, Chaitanya Charitamrita by Srila Prabhupada. Free shipping above ₹500. Cash on delivery available.{% endblock %}
+{% block og_title %}ISKCON Book Store – Vedic Books Online India{% endblock %}
+{% block og_description %}Buy authentic Hare Krishna books online. Bhagavad Gita As It Is, Srimad Bhagavatam & more by Srila Prabhupada. Free shipping above ₹500.{% endblock %}
+
+{% block extra_js %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  "name": "ISKCON Book Store",
+  "url": "https://iskconbooks.in",
+  "logo": "https://iskconbooks.in/static/images/iskcon_logo.png",
+  "description": "Authentic ISKCON Vedic literature — Bhagavad Gita, Srimad Bhagavatam and more.",
+  "address": {
+    "@type": "PostalAddress",
+    "streetAddress": "Radha Govind Dham, ISKCON Temple, Sarkhej-Gandhinagar Highway",
+    "addressLocality": "Ahmedabad",
+    "addressRegion": "Gujarat",
+    "postalCode": "380059",
+    "addressCountry": "IN"
+  },
+  "contactPoint": {
+    "@type": "ContactPoint",
+    "telephone": "+919726122046",
+    "contactType": "customer service"
+  },
+  "sameAs": ["https://www.iskcon.org"]
+}
+</script>
+{% endblock %}
 
 {% block content %}
 
