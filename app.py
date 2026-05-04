@@ -1360,20 +1360,6 @@ def admin_update_order(order_id):
     return redirect(url_for("admin_order_detail", order_id=order_id))
 
 
-@app.route("/admin/orders/delete/<int:order_id>", methods=["POST"])
-@admin_required
-def admin_delete_order(order_id):
-    order = Order.query.get_or_404(order_id)
-    for item in order.items:
-        if item.book:
-            item.book.stock += item.quantity
-    OrderItem.query.filter_by(order_id=order.id).delete()
-    db.session.delete(order)
-    db.session.commit()
-    flash(f"Order {order.order_number} deleted.", "success")
-    return redirect(url_for("admin_orders"))
-
-
 # ── Admin: Coupons ──
 
 @app.route("/admin/coupons")
