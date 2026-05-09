@@ -893,14 +893,20 @@ def admin_dashboard():
 @app.route("/admin/books")
 @admin_required
 def admin_books():
-    page        = request.args.get("page", 1, type=int)
-    query       = request.args.get("q", "")
-    category_id = request.args.get("category_id", type=int)
-    bq          = Book.query.filter_by(deleted=False)
+    page          = request.args.get("page", 1, type=int)
+    query         = request.args.get("q", "")
+    category_id   = request.args.get("category_id", type=int)
+    sort_by       = request.args.get("sort_by", "")
+    sort_dir      = request.args.get("sort_dir", "asc")
+    lang_filter   = request.args.get("lang", "")
+    fmt_filter    = request.args.get("fmt", "")
+    status_filter = request.args.get("status", "")
+
+    bq = Book.query.filter_by(deleted=False)
     if query:
         import re
         for word in query.split():
-            word = re.sub(r"[^\w]", "", word)  # strip punctuation like parentheses
+            word = re.sub(r"[^\w]", "", word)
             if not word:
                 continue
             bq = bq.filter(or_(
@@ -909,13 +915,38 @@ def admin_books():
             ))
     if category_id:
         bq = bq.filter_by(category_id=category_id)
-    books          = bq.order_by(Book.created_at.desc()).paginate(page=page, per_page=20)
+    if lang_filter:
+        bq = bq.filter(Book.language == lang_filter)
+    if fmt_filter == 'ebook':
+        bq = bq.filter(Book.is_ebook == True)
+    elif fmt_filter == 'paper':
+        bq = bq.filter(Book.is_ebook == False)
+    if status_filter == 'active':
+        bq = bq.filter(Book.active == True)
+    elif status_filter == 'inactive':
+        bq = bq.filter(Book.active == False)
+
+    sort_col_map = {'title': Book.title, 'author': Book.author,
+                    'price': Book.price, 'stock': Book.stock}
+    if sort_by in sort_col_map:
+        col = sort_col_map[sort_by]
+        bq = bq.order_by(col.desc() if sort_dir == 'desc' else col.asc())
+    else:
+        bq = bq.order_by(Book.created_at.desc())
+
+    books          = bq.paginate(page=page, per_page=20)
     trash_count    = Book.query.filter_by(deleted=True).count()
     all_categories = Category.query.order_by(Category.sort_order).all()
     active_cat     = Category.query.get(category_id) if category_id else None
+    langs          = [r[0] for r in db.session.query(Book.language)
+                      .filter(Book.deleted == False, Book.language != None, Book.language != '')
+                      .distinct().order_by(Book.language).all()]
     return render_template("admin/books.html", books=books, query=query,
                            trash_count=trash_count, all_categories=all_categories,
-                           active_cat=active_cat, category_id=category_id)
+                           active_cat=active_cat, category_id=category_id,
+                           sort_by=sort_by, sort_dir=sort_dir,
+                           lang_filter=lang_filter, fmt_filter=fmt_filter,
+                           status_filter=status_filter, langs=langs)
 
 
 @app.route("/admin/books/export-stock-csv")
