@@ -4,19 +4,15 @@
 {% block content %}
 
 <div class="d-flex justify-content-between align-items-center mb-3">
-    <div>
-        <form class="d-flex gap-2 align-items-center" method="get" id="search-form">
-            <input type="hidden" name="sort_by"  value="{{ sort_by }}">
-            <input type="hidden" name="sort_dir" value="{{ sort_dir }}">
-            <input type="text" name="q" class="form-control" placeholder="Search books..." value="{{ query or '' }}" style="width:250px;">
-            <button type="submit" class="btn btn-warning"><i class="fas fa-search"></i></button>
-            {% if query or category_id or lang_filter or fmt_filter or status_filter %}
-            <a href="{{ url_for('admin_books') }}" class="btn btn-outline-secondary" title="Clear all filters">
-                <i class="fas fa-times"></i> Clear
-            </a>
-            {% endif %}
-        </form>
-    </div>
+    <form class="d-flex gap-2 align-items-center" method="get">
+        <input type="text" name="q" class="form-control" placeholder="Search books..." value="{{ query or '' }}" style="width:250px;">
+        <button type="submit" class="btn btn-warning"><i class="fas fa-search"></i></button>
+        {% if query or category_id or title_f or author_f or lang_filter or fmt_filter or status_filter %}
+        <a href="{{ url_for('admin_books') }}" class="btn btn-outline-secondary" title="Clear all filters">
+            <i class="fas fa-times"></i> Clear All
+        </a>
+        {% endif %}
+    </form>
     <div class="d-flex gap-2">
         <a href="{{ url_for('export_stock_csv') }}" class="btn btn-outline-success">
             <i class="fas fa-file-csv me-2"></i>Download Stock CSV
@@ -33,89 +29,41 @@
     </div>
 </div>
 
-<!-- Active filter chips -->
-{% if category_id or lang_filter or fmt_filter or status_filter %}
-<div class="d-flex gap-2 flex-wrap mb-3">
-    {% if active_cat %}
-    <span class="badge bg-warning text-dark fs-6">{{ active_cat.icon }} {{ active_cat.name }}
-        <a href="{{ url_for('admin_books', q=query, sort_by=sort_by, sort_dir=sort_dir, lang=lang_filter, fmt=fmt_filter, status=status_filter) }}" class="text-dark ms-1">✕</a>
-    </span>
-    {% endif %}
-    {% if lang_filter %}
-    <span class="badge bg-info text-dark fs-6">🌐 {{ lang_filter }}
-        <a href="{{ url_for('admin_books', q=query, sort_by=sort_by, sort_dir=sort_dir, category_id=category_id, fmt=fmt_filter, status=status_filter) }}" class="text-dark ms-1">✕</a>
-    </span>
-    {% endif %}
-    {% if fmt_filter %}
-    <span class="badge bg-primary fs-6">{{ '📱 eBook' if fmt_filter=='ebook' else '📄 Paper' }}
-        <a href="{{ url_for('admin_books', q=query, sort_by=sort_by, sort_dir=sort_dir, category_id=category_id, lang=lang_filter, status=status_filter) }}" class="text-white ms-1">✕</a>
-    </span>
-    {% endif %}
-    {% if status_filter %}
-    <span class="badge bg-secondary fs-6">{{ '✅ Active' if status_filter=='active' else '⛔ Inactive' }}
-        <a href="{{ url_for('admin_books', q=query, sort_by=sort_by, sort_dir=sort_dir, category_id=category_id, lang=lang_filter, fmt=fmt_filter) }}" class="text-white ms-1">✕</a>
-    </span>
-    {% endif %}
-</div>
-{% endif %}
-
 <div class="card table-card shadow-sm">
     <div class="table-responsive">
-        <table class="table table-hover mb-0" id="books-table">
+        <form method="get" id="filter-form">
+            <input type="hidden" name="q" value="{{ query or '' }}">
+        <table class="table table-hover mb-0">
             <thead>
-                <!-- Row 1: Sortable column headers -->
+                <!-- Column headers -->
                 <tr>
                     <th style="width:60px;">Image</th>
-                    <th>{% set nd = 'desc' if (sort_by=='title' and sort_dir=='asc') else 'asc' %}
-                        <a href="{{ url_for('admin_books', q=query, sort_by='title', sort_dir=nd, category_id=category_id, lang=lang_filter, fmt=fmt_filter, status=status_filter) }}"
-                           class="text-white text-decoration-none d-flex align-items-center gap-1">
-                            Title
-                            {% if sort_by=='title' %}
-                                <i class="fas fa-sort-{{ 'down' if sort_dir=='desc' else 'up' }} text-warning"></i>
-                            {% else %}<i class="fas fa-sort opacity-50"></i>{% endif %}
-                        </a>
-                    </th>
-                    <th>{% set nd = 'desc' if (sort_by=='author' and sort_dir=='asc') else 'asc' %}
-                        <a href="{{ url_for('admin_books', q=query, sort_by='author', sort_dir=nd, category_id=category_id, lang=lang_filter, fmt=fmt_filter, status=status_filter) }}"
-                           class="text-white text-decoration-none d-flex align-items-center gap-1">
-                            Author
-                            {% if sort_by=='author' %}
-                                <i class="fas fa-sort-{{ 'down' if sort_dir=='desc' else 'up' }} text-warning"></i>
-                            {% else %}<i class="fas fa-sort opacity-50"></i>{% endif %}
-                        </a>
-                    </th>
+                    <th>Title</th>
+                    <th>Author</th>
                     <th>Category</th>
                     <th>Language</th>
                     <th>Format</th>
-                    <th>{% set nd = 'desc' if (sort_by=='price' and sort_dir=='asc') else 'asc' %}
-                        <a href="{{ url_for('admin_books', q=query, sort_by='price', sort_dir=nd, category_id=category_id, lang=lang_filter, fmt=fmt_filter, status=status_filter) }}"
-                           class="text-white text-decoration-none d-flex align-items-center gap-1">
-                            Price
-                            {% if sort_by=='price' %}
-                                <i class="fas fa-sort-{{ 'down' if sort_dir=='desc' else 'up' }} text-warning"></i>
-                            {% else %}<i class="fas fa-sort opacity-50"></i>{% endif %}
-                        </a>
-                    </th>
-                    <th>{% set nd = 'desc' if (sort_by=='stock' and sort_dir=='asc') else 'asc' %}
-                        <a href="{{ url_for('admin_books', q=query, sort_by='stock', sort_dir=nd, category_id=category_id, lang=lang_filter, fmt=fmt_filter, status=status_filter) }}"
-                           class="text-white text-decoration-none d-flex align-items-center gap-1">
-                            Stock
-                            {% if sort_by=='stock' %}
-                                <i class="fas fa-sort-{{ 'down' if sort_dir=='desc' else 'up' }} text-warning"></i>
-                            {% else %}<i class="fas fa-sort opacity-50"></i>{% endif %}
-                        </a>
-                    </th>
+                    <th>Price</th>
+                    <th>Stock</th>
                     <th>Featured</th>
                     <th>Active</th>
                     <th>Actions</th>
                 </tr>
-                <!-- Row 2: Column filter dropdowns -->
-                <tr style="background:#a06010;">
-                    <td></td>
-                    <td></td>
+                <!-- Filter row -->
+                <tr style="background:#b8860b;">
                     <td></td>
                     <td>
-                        <select class="form-select form-select-sm col-filter" data-param="category_id" style="font-size:0.78rem;">
+                        <input type="text" name="tf" class="form-control form-control-sm"
+                               placeholder="Filter title…" value="{{ title_f or '' }}"
+                               style="font-size:0.78rem; min-width:120px;">
+                    </td>
+                    <td>
+                        <input type="text" name="af" class="form-control form-control-sm"
+                               placeholder="Filter author…" value="{{ author_f or '' }}"
+                               style="font-size:0.78rem; min-width:120px;">
+                    </td>
+                    <td>
+                        <select name="category_id" class="form-select form-select-sm col-filter" style="font-size:0.78rem;">
                             <option value="">All Categories</option>
                             {% for cat in all_categories %}
                             <option value="{{ cat.id }}" {% if category_id == cat.id %}selected{% endif %}>{{ cat.name }}</option>
@@ -123,7 +71,7 @@
                         </select>
                     </td>
                     <td>
-                        <select class="form-select form-select-sm col-filter" data-param="lang" style="font-size:0.78rem;">
+                        <select name="lang" class="form-select form-select-sm col-filter" style="font-size:0.78rem;">
                             <option value="">All Languages</option>
                             {% for l in langs %}
                             <option value="{{ l }}" {% if lang_filter == l %}selected{% endif %}>{{ l }}</option>
@@ -131,23 +79,27 @@
                         </select>
                     </td>
                     <td>
-                        <select class="form-select form-select-sm col-filter" data-param="fmt" style="font-size:0.78rem;">
+                        <select name="fmt" class="form-select form-select-sm col-filter" style="font-size:0.78rem;">
                             <option value="">All Formats</option>
-                            <option value="paper"  {% if fmt_filter=='paper'  %}selected{% endif %}>📄 Paper</option>
-                            <option value="ebook"  {% if fmt_filter=='ebook'  %}selected{% endif %}>📱 eBook</option>
+                            <option value="paper" {% if fmt_filter=='paper' %}selected{% endif %}>📄 Paper</option>
+                            <option value="ebook" {% if fmt_filter=='ebook' %}selected{% endif %}>📱 eBook</option>
                         </select>
                     </td>
                     <td></td>
                     <td></td>
                     <td></td>
                     <td>
-                        <select class="form-select form-select-sm col-filter" data-param="status" style="font-size:0.78rem;">
+                        <select name="status" class="form-select form-select-sm col-filter" style="font-size:0.78rem;">
                             <option value="">All</option>
                             <option value="active"   {% if status_filter=='active'   %}selected{% endif %}>✅ Active</option>
                             <option value="inactive" {% if status_filter=='inactive' %}selected{% endif %}>⛔ Inactive</option>
                         </select>
                     </td>
-                    <td></td>
+                    <td>
+                        <button type="submit" class="btn btn-sm btn-warning w-100" title="Apply filters">
+                            <i class="fas fa-filter"></i>
+                        </button>
+                    </td>
                 </tr>
             </thead>
             <tbody>
@@ -215,6 +167,7 @@
                 {% endfor %}
             </tbody>
         </table>
+        </form>
     </div>
 </div>
 
@@ -225,7 +178,7 @@
         {% for p in range(1, books.pages + 1) %}
         <li class="page-item {% if p == books.page %}active{% endif %}">
             <a class="page-link {% if p == books.page %}bg-warning text-dark border-warning{% endif %}"
-               href="{{ url_for('admin_books', page=p, q=query or '', sort_by=sort_by, sort_dir=sort_dir, category_id=category_id or '', lang=lang_filter, fmt=fmt_filter, status=status_filter) }}">{{ p }}</a>
+               href="{{ url_for('admin_books', page=p, q=query or '', tf=title_f, af=author_f, category_id=category_id or '', lang=lang_filter, fmt=fmt_filter, status=status_filter) }}">{{ p }}</a>
         </li>
         {% endfor %}
     </ul>
@@ -235,10 +188,7 @@
 <script>
 document.querySelectorAll('.col-filter').forEach(function(sel) {
     sel.addEventListener('change', function() {
-        var params = new URLSearchParams(window.location.search);
-        params.set(this.dataset.param, this.value);
-        params.set('page', '1');
-        window.location.search = params.toString();
+        document.getElementById('filter-form').submit();
     });
 });
 </script>

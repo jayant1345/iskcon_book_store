@@ -896,8 +896,8 @@ def admin_books():
     page          = request.args.get("page", 1, type=int)
     query         = request.args.get("q", "")
     category_id   = request.args.get("category_id", type=int)
-    sort_by       = request.args.get("sort_by", "")
-    sort_dir      = request.args.get("sort_dir", "asc")
+    title_f       = request.args.get("tf", "")
+    author_f      = request.args.get("af", "")
     lang_filter   = request.args.get("lang", "")
     fmt_filter    = request.args.get("fmt", "")
     status_filter = request.args.get("status", "")
@@ -913,6 +913,10 @@ def admin_books():
                 Book.title.ilike(f"%{word}%"),
                 Book.author.ilike(f"%{word}%"),
             ))
+    if title_f:
+        bq = bq.filter(Book.title.ilike(f"%{title_f}%"))
+    if author_f:
+        bq = bq.filter(Book.author.ilike(f"%{author_f}%"))
     if category_id:
         bq = bq.filter_by(category_id=category_id)
     if lang_filter:
@@ -926,13 +930,7 @@ def admin_books():
     elif status_filter == 'inactive':
         bq = bq.filter(Book.active == False)
 
-    sort_col_map = {'title': Book.title, 'author': Book.author,
-                    'price': Book.price, 'stock': Book.stock}
-    if sort_by in sort_col_map:
-        col = sort_col_map[sort_by]
-        bq = bq.order_by(col.desc() if sort_dir == 'desc' else col.asc())
-    else:
-        bq = bq.order_by(Book.created_at.desc())
+    bq = bq.order_by(Book.created_at.desc())
 
     books          = bq.paginate(page=page, per_page=20)
     trash_count    = Book.query.filter_by(deleted=True).count()
@@ -944,7 +942,7 @@ def admin_books():
     return render_template("admin/books.html", books=books, query=query,
                            trash_count=trash_count, all_categories=all_categories,
                            active_cat=active_cat, category_id=category_id,
-                           sort_by=sort_by, sort_dir=sort_dir,
+                           title_f=title_f, author_f=author_f,
                            lang_filter=lang_filter, fmt_filter=fmt_filter,
                            status_filter=status_filter, langs=langs)
 
