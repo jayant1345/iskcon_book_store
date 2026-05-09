@@ -1315,13 +1315,29 @@ def admin_delete_category(cat_id):
 @app.route("/admin/orders")
 @admin_required
 def admin_orders():
-    status = request.args.get("status", "")
-    page   = request.args.get("page", 1, type=int)
-    oq     = Order.query
+    page           = request.args.get("page", 1, type=int)
+    status         = request.args.get("status", "")
+    pay_status     = request.args.get("pay_status", "")
+    pay_method     = request.args.get("pay_method", "")
+    customer_f     = request.args.get("customer", "")
+
+    oq = Order.query
     if status:
         oq = oq.filter_by(order_status=status)
+    if pay_status:
+        oq = oq.filter_by(payment_status=pay_status)
+    if pay_method:
+        oq = oq.filter_by(payment_method=pay_method)
+    if customer_f:
+        oq = oq.filter(or_(
+            Order.customer_name.ilike(f"%{customer_f}%"),
+            Order.customer_phone.ilike(f"%{customer_f}%"),
+        ))
+
     orders = oq.order_by(Order.created_at.desc()).paginate(page=page, per_page=20)
-    return render_template("admin/orders.html", orders=orders, status=status)
+    return render_template("admin/orders.html", orders=orders,
+                           status=status, pay_status=pay_status,
+                           pay_method=pay_method, customer_f=customer_f)
 
 
 @app.route("/admin/orders/export-csv")
