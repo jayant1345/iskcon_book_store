@@ -1524,6 +1524,21 @@ def api_cart_count():
     return jsonify({"count": cart_item_count()})
 
 
+@app.route("/api/search-suggestions")
+def search_suggestions():
+    q = request.args.get("q", "").strip()
+    if len(q) < 2:
+        return jsonify([])
+    pattern = f"%{q}%"
+    books = Book.query.filter(
+        Book.active == True,
+        Book.deleted == False,
+        db.or_(Book.title.ilike(pattern), Book.author.ilike(pattern))
+    ).order_by(Book.title).limit(8).all()
+    results = [{"title": b.title, "author": b.author, "id": b.id} for b in books]
+    return jsonify(results)
+
+
 @app.errorhandler(404)
 def page_not_found(e):
     return render_template("404.html"), 404
