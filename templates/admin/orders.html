@@ -61,6 +61,7 @@
                         <!-- Payment method -->
                         <select name="pay_method" class="form-select form-select-sm col-filter mb-1" style="font-size:0.78rem;">
                             <option value="">All Methods</option>
+                            <option value="payu"     {% if pay_method=='payu'     %}selected{% endif %}>🏦 PayU</option>
                             <option value="razorpay" {% if pay_method=='razorpay' %}selected{% endif %}>💳 Razorpay</option>
                             <option value="upi"      {% if pay_method=='upi'      %}selected{% endif %}>📲 UPI</option>
                             <option value="cod"      {% if pay_method=='cod'      %}selected{% endif %}>💵 COD</option>

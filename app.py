@@ -827,6 +827,27 @@ def payment_payu_failure():
     return redirect(url_for("order_track"))
 
 
+@app.route("/payment/payu/webhook", methods=["POST"])
+def payment_payu_webhook():
+    """PayU S2S server-to-server webhook — fires independently of browser redirect."""
+    data = request.form.to_dict()
+    salt = app.config["PAYU_MERCHANT_SALT"]
+    txnid = data.get("txnid", "")
+    order = Order.query.filter_by(order_number=txnid).first()
+    if order:
+        expected = _payu_verify_hash(data, salt)
+        received = data.get("hash", "")
+        if expected == received:
+            if data.get("status") == "success" and order.payment_status != "paid":
+                order.payment_status = "paid"
+                order.order_status = "confirmed"
+                order.razorpay_payment_id = data.get("mihpayid", "")
+            elif data.get("status") != "success" and order.payment_status == "pending":
+                order.payment_status = "failed"
+            db.session.commit()
+    return "OK", 200
+
+
 @app.route("/order/upi-confirm/<order_number>", methods=["POST"])
 def upi_confirm(order_number):
     order = Order.query.filter_by(order_number=order_number).first_or_404()
