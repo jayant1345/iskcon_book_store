@@ -95,6 +95,17 @@
 
           <div class="payment-option">
             <label>
+              <input type="radio" name="payment_method" value="payu">
+              <span class="payment-icon">🏦</span>
+              <div>
+                <strong>Pay Online (PayU)</strong>
+                <div class="text-muted small">Credit/Debit card, Net Banking, UPI, Wallets</div>
+              </div>
+            </label>
+          </div>
+
+          <div class="payment-option">
+            <label>
               <input type="radio" name="payment_method" value="razorpay">
               <span class="payment-icon">💳</span>
               <div>
@@ -117,7 +128,7 @@
 
           <div class="mt-3 p-3" style="background:var(--cream-dark); border-radius:8px; font-size:0.82rem; color:var(--text-muted);">
             🔒 All transactions are encrypted and secured by SSL.
-            Razorpay is PCI-DSS compliant.
+            PayU and Razorpay are PCI-DSS compliant.
           </div>
         </div>
       </div>

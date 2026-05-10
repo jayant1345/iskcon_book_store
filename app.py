@@ -51,8 +51,11 @@ class Config:
     EBOOK_FOLDER = os.path.join(BASE_DIR, "ebooks")
     PREVIEW_FOLDER = os.path.join(BASE_DIR, "static", "previews")
     ALLOWED_EBOOK_EXTENSIONS = {"pdf", "epub"}
-    RAZORPAY_KEY_ID = os.environ.get("RAZORPAY_KEY_ID", "rzp_test_your_key_id")
+    RAZORPAY_KEY_ID     = os.environ.get("RAZORPAY_KEY_ID", "rzp_test_your_key_id")
     RAZORPAY_KEY_SECRET = os.environ.get("RAZORPAY_KEY_SECRET", "your_razorpay_secret")
+    PAYU_MERCHANT_KEY   = os.environ.get("PAYU_MERCHANT_KEY", "")
+    PAYU_MERCHANT_SALT  = os.environ.get("PAYU_MERCHANT_SALT", "")
+    PAYU_ENV            = os.environ.get("PAYU_ENV", "test")   # "test" or "prod"
     ADMIN_USERNAME = os.environ.get("ADMIN_USERNAME", "admin")
     ADMIN_PASSWORD_HASH = generate_password_hash(os.environ.get("ADMIN_PASSWORD", "Hare@Krishna108"))
     WHATSAPP_NUMBER = os.environ.get("WHATSAPP_NUMBER", "+919999999999")
@@ -596,6 +599,22 @@ def apply_coupon():
 # ─────────────────────────────────────────────
 # CHECKOUT & PAYMENT
 # ─────────────────────────────────────────────
+# PayU helpers
+# ─────────────────────────────────────────────
+
+def _payu_hash(key, txnid, amount, productinfo, firstname, email, salt):
+    s = f"{key}|{txnid}|{amount}|{productinfo}|{firstname}|{email}|||||||||{salt}"
+    return hashlib.sha512(s.encode("utf-8")).hexdigest()
+
+def _payu_verify_hash(data, salt):
+    s = (f"{salt}|{data.get('status')}||||||"
+         f"{data.get('udf5','')}|{data.get('udf4','')}|{data.get('udf3','')}|"
+         f"{data.get('udf2','')}|{data.get('udf1','')}|{data.get('email','')}|"
+         f"{data.get('firstname','')}|{data.get('productinfo','')}|"
+         f"{data.get('amount','')}|{data.get('txnid','')}|{data.get('key','')}")
+    return hashlib.sha512(s.encode("utf-8")).hexdigest()
+
+# ─────────────────────────────────────────────
 
 @app.route("/checkout", methods=["GET", "POST"])
 def checkout():
@@ -667,6 +686,29 @@ def checkout():
         session.pop("cart", None)
         session.pop("coupon_code", None)
         session.pop("coupon_discount", None)
+
+        if payment == "payu":
+            key  = app.config["PAYU_MERCHANT_KEY"]
+            salt = app.config["PAYU_MERCHANT_SALT"]
+            env  = app.config["PAYU_ENV"]
+            amount_str  = f"{order.total_amount:.2f}"
+            firstname   = (order.customer_name.split()[0] if order.customer_name else "Customer")[:50]
+            email_str   = order.customer_email or ""
+            hash_val    = _payu_hash(key, order.order_number, amount_str,
+                                     "ISKCON Books", firstname, email_str, salt)
+            payu_url    = ("https://test.payu.in/_payment" if env == "test"
+                           else "https://secure.payu.in/_payment")
+            return render_template("payment_payu.html",
+                                   order=order,
+                                   payu_url=payu_url,
+                                   key=key,
+                                   amount=amount_str,
+                                   firstname=firstname,
+                                   email=email_str,
+                                   phone=order.customer_phone or "",
+                                   hash_val=hash_val,
+                                   surl=url_for("payment_payu_success", _external=True),
+                                   furl=url_for("payment_payu_failure", _external=True))
 
         if payment == "razorpay":
             # Create Razorpay order via direct HTTP (no SDK dependency)
@@ -748,6 +790,41 @@ def payment_verify():
 def order_success(order_number):
     order = Order.query.filter_by(order_number=order_number).first_or_404()
     return render_template("payment_success.html", order=order)
+
+
+@app.route("/payment/payu/success", methods=["POST"])
+def payment_payu_success():
+    data = request.form.to_dict()
+    salt = app.config["PAYU_MERCHANT_SALT"]
+    txnid = data.get("txnid", "")
+    order = Order.query.filter_by(order_number=txnid).first()
+    if order:
+        expected = _payu_verify_hash(data, salt)
+        received = data.get("hash", "")
+        if expected == received and data.get("status") == "success":
+            order.payment_status = "paid"
+            order.order_status = "confirmed"
+            order.razorpay_payment_id = data.get("mihpayid", "")
+            db.session.commit()
+            flash("Payment successful! 🎉 Hare Krishna!", "success")
+            return redirect(url_for("order_success", order_number=order.order_number))
+        else:
+            order.payment_status = "failed"
+            db.session.commit()
+    flash("Payment verification failed. Please contact support.", "danger")
+    return redirect(url_for("order_track"))
+
+
+@app.route("/payment/payu/failure", methods=["POST"])
+def payment_payu_failure():
+    data = request.form.to_dict()
+    txnid = data.get("txnid", "")
+    order = Order.query.filter_by(order_number=txnid).first()
+    if order:
+        order.payment_status = "failed"
+        db.session.commit()
+    flash("Payment failed or cancelled. Please try again.", "danger")
+    return redirect(url_for("order_track"))
 
 
 @app.route("/order/upi-confirm/<order_number>", methods=["POST"])
