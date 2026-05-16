@@ -8,7 +8,9 @@
       "Bash(/c/Project_AI/iskon_book_store/venv/Scripts/python.exe /c/Project_AI/iskon_book_store/app.py)",
       "Bash(curl -s http://127.0.0.1:5000 -o /dev/null -w \"%{http_code}\")",
       "Bash(venv/Scripts/pip install *)",
-      "Bash(git commit -m ' *)"
+      "Bash(git commit -m ' *)",
+      "Bash(venv\\\\Scripts\\\\pip install *)",
+      "PowerShell(cd C:\\\\Project_AI\\\\iskon_book_store; .\\\\venv\\\\Scripts\\\\pip install qrcode==7.4.2 --quiet; Write-Host \"Done: $LASTEXITCODE\")"
     ]
   }
 }

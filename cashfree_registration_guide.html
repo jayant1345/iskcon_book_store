@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Cashfree Registration Guide — ISKCON Ahmedabad</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: #f5f0e8;
+      color: #2c2c2c;
+      padding: 30px 20px;
+    }
+
+    .page {
+      max-width: 800px;
+      margin: 0 auto;
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+      overflow: hidden;
+    }
+
+    /* Header */
+    .header {
+      background: linear-gradient(135deg, #f97316, #dc2626);
+      color: white;
+      padding: 36px 40px;
+      text-align: center;
+    }
+    .header .iskcon-label {
+      font-size: 13px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      opacity: 0.85;
+      margin-bottom: 8px;
+    }
+    .header h1 {
+      font-size: 26px;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+    .header p {
+      font-size: 14px;
+      opacity: 0.9;
+    }
+    .hare-krishna {
+      margin-top: 12px;
+      font-size: 15px;
+      font-style: italic;
+      opacity: 0.95;
+      letter-spacing: 1px;
+    }
+
+    /* Body */
+    .content {
+      padding: 36px 40px;
+    }
+
+    /* Intro box */
+    .intro-box {
+      background: #fff7ed;
+      border-left: 4px solid #f97316;
+      border-radius: 6px;
+      padding: 16px 20px;
+      margin-bottom: 32px;
+      font-size: 14.5px;
+      line-height: 1.7;
+      color: #444;
+    }
+    .intro-box strong { color: #c2410c; }
+
+    /* Section */
+    .section {
+      margin-bottom: 32px;
+    }
+    .section-title {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .step-badge {
+      background: #f97316;
+      color: white;
+      border-radius: 50%;
+      width: 34px;
+      height: 34px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 15px;
+      flex-shrink: 0;
+    }
+    .section-title h2 {
+      font-size: 17px;
+      color: #c2410c;
+      font-weight: 700;
+    }
+
+    /* Info table */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+      margin-bottom: 8px;
+    }
+    th {
+      background: #fff7ed;
+      color: #92400e;
+      text-align: left;
+      padding: 10px 14px;
+      border: 1px solid #fed7aa;
+      font-weight: 600;
+    }
+    td {
+      padding: 10px 14px;
+      border: 1px solid #fed7aa;
+      line-height: 1.5;
+    }
+    tr:nth-child(even) td { background: #fffbf7; }
+
+    /* Checklist */
+    .checklist {
+      list-style: none;
+      padding: 0;
+    }
+    .checklist li {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 10px 14px;
+      border-radius: 6px;
+      font-size: 14px;
+      line-height: 1.5;
+      margin-bottom: 6px;
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+    }
+    .checklist li .box {
+      width: 18px;
+      height: 18px;
+      border: 2px solid #f97316;
+      border-radius: 4px;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+    .checklist li strong { color: #1f2937; }
+    .checklist li span { color: #6b7280; font-size: 13px; }
+
+    /* Note box */
+    .note {
+      background: #fefce8;
+      border: 1px solid #fde68a;
+      border-radius: 6px;
+      padding: 14px 18px;
+      font-size: 13.5px;
+      color: #78350f;
+      margin-top: 10px;
+      line-height: 1.6;
+    }
+    .note strong { color: #92400e; }
+
+    /* Success box */
+    .success-box {
+      background: #f0fdf4;
+      border: 1px solid #86efac;
+      border-radius: 6px;
+      padding: 14px 18px;
+      font-size: 13.5px;
+      color: #14532d;
+      margin-top: 10px;
+      line-height: 1.6;
+    }
+
+    /* Timeline */
+    .timeline {
+      border-left: 3px solid #f97316;
+      padding-left: 20px;
+      margin-top: 6px;
+    }
+    .timeline-item {
+      position: relative;
+      margin-bottom: 16px;
+      font-size: 14px;
+    }
+    .timeline-item::before {
+      content: '';
+      position: absolute;
+      left: -27px;
+      top: 5px;
+      width: 11px;
+      height: 11px;
+      background: #f97316;
+      border-radius: 50%;
+    }
+    .timeline-item .day {
+      font-weight: 700;
+      color: #c2410c;
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .timeline-item p { color: #444; margin-top: 2px; line-height: 1.5; }
+
+    /* Path boxes */
+    .path-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+    .path-box {
+      border-radius: 8px;
+      padding: 16px;
+      font-size: 13.5px;
+      line-height: 1.6;
+    }
+    .path-box.green { background: #f0fdf4; border: 1px solid #86efac; color: #14532d; }
+    .path-box.blue  { background: #eff6ff; border: 1px solid #93c5fd; color: #1e3a5f; }
+    .path-box h4 { font-size: 14px; margin-bottom: 6px; }
+
+    /* Divider */
+    hr {
+      border: none;
+      border-top: 1px solid #fed7aa;
+      margin: 28px 0;
+    }
+
+    /* Footer */
+    .footer {
+      background: #fff7ed;
+      border-top: 2px solid #fed7aa;
+      padding: 20px 40px;
+      text-align: center;
+      font-size: 13px;
+      color: #92400e;
+    }
+    .footer .big { font-size: 16px; font-weight: 700; margin-bottom: 4px; color: #c2410c; }
+
+    @media print {
+      body { background: white; padding: 0; }
+      .page { box-shadow: none; border-radius: 0; }
+    }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="iskcon-label">ISKCON Ahmedabad — Online Book Store</div>
+    <h1>Cashfree Payment Gateway</h1>
+    <p>Step-by-Step Registration Guide for the Temple Trust</p>
+    <div class="hare-krishna">Hare Krishna! Hare Krishna! Krishna Krishna! Hare Hare!</div>
+  </div>
+
+  <div class="content">
+
+    <!-- Intro -->
+    <div class="intro-box">
+      <strong>Dear Prabhuji,</strong><br>
+      Hare Krishna! This document will guide you through the process of registering our temple trust on
+      <strong>Cashfree Payments</strong> — a trusted Indian payment platform. Once registered, devotees
+      visiting our online book store can pay directly via <strong>UPI, QR Code, Debit/Credit Card</strong>
+      and other methods. The registration is free and takes about <strong>2–3 working days</strong> to activate.
+    </div>
+
+    <!-- Step 1 -->
+    <div class="section">
+      <div class="section-title">
+        <div class="step-badge">1</div>
+        <h2>Go to Cashfree Website &amp; Sign Up</h2>
+      </div>
+      <p style="font-size:14px; margin-bottom:12px; color:#444;">Open your browser and go to:</p>
+      <div style="background:#1e293b; color:#34d399; font-family:monospace; padding:12px 18px; border-radius:6px; font-size:15px; letter-spacing:0.5px;">
+        https://merchant.cashfree.com
+      </div>
+      <br>
+      <p style="font-size:14px; color:#444; line-height:1.7;">
+        Click the <strong>"Sign Up"</strong> button. Fill in the following:
+      </p>
+      <br>
+      <table>
+        <tr><th>Field</th><th>What to Enter</th></tr>
+        <tr><td>Email Address</td><td>Temple's official email address</td></tr>
+        <tr><td>Mobile Number</td><td>Trustee's mobile number</td></tr>
+        <tr><td>Password</td><td>Create a strong password and save it safely</td></tr>
+      </table>
+      <div class="note">
+        You will receive an <strong>OTP</strong> on both email and mobile. Enter it to verify and continue.
+      </div>
+    </div>
+
+    <hr>
+
+    <!-- Step 2 -->
+    <div class="section">
+      <div class="section-title">
+        <div class="step-badge">2</div>
+        <h2>Select Business Type</h2>
+      </div>
+      <p style="font-size:14px; color:#444; line-height:1.7; margin-bottom:12px;">
+        When asked <em>"What type of business are you?"</em>, select:
+      </p>
+      <div style="background:#fff7ed; border:2px solid #f97316; border-radius:8px; padding:16px 20px; font-size:16px; font-weight:700; color:#c2410c; text-align:center;">
+        Trust / Society / NGO
+      </div>
+      <div class="note" style="margin-top:12px;">
+        This is very important. Selecting the correct category means <strong>GST is not required</strong>
+        and the KYC process is simpler for religious trusts.
+      </div>
+    </div>
+
+    <hr>
+
+    <!-- Step 3 -->
+    <div class="section">
+      <div class="section-title">
+        <div class="step-badge">3</div>
+        <h2>Enter Business Details</h2>
+      </div>
+      <table>
+        <tr><th>Field</th><th>What to Enter</th></tr>
+        <tr><td>Business Name</td><td>ISKCON Ahmedabad <em>(exactly as written in trust deed)</em></td></tr>
+        <tr><td>Business PAN</td><td>Trust's PAN card number</td></tr>
+        <tr><td>Date of Registration</td><td>As written in the trust deed / registration certificate</td></tr>
+        <tr><td>Business Category</td><td>Religious / Charitable</td></tr>
+        <tr><td>Website</td><td>Our online book store URL</td></tr>
+        <tr><td>Business Address</td><td>Temple address (full address with PIN code)</td></tr>
+      </table>
+    </div>
+
+    <hr>
+
+    <!-- Step 4 -->
+    <div class="section">
+      <div class="section-title">
+        <div class="step-badge">4</div>
+        <h2>Documents to Upload</h2>
+      </div>
+      <p style="font-size:14px; color:#444; margin-bottom:14px;">
+        Please keep the following documents ready as scanned copies or clear photographs (JPG/PDF):
+      </p>
+
+      <p style="font-size:13px; font-weight:600; color:#92400e; margin-bottom:8px; text-transform:uppercase; letter-spacing:0.5px;">
+        A) Trust / Entity Document (any ONE of these)
+      </p>
+      <ul class="checklist">
+        <li><div class="box"></div><div><strong>Registered Trust Deed</strong><br><span>Most important document — the original registration document of the trust</span></div></li>
+        <li><div class="box"></div><div><strong>Registration Certificate</strong><br><span>From Charity Commissioner Office (if separately registered)</span></div></li>
+        <li><div class="box"></div><div><strong>12A Certificate</strong><br><span>Income tax exemption certificate — very helpful to show legitimacy</span></div></li>
+      </ul>
+
+      <br>
+      <p style="font-size:13px; font-weight:600; color:#92400e; margin-bottom:8px; text-transform:uppercase; letter-spacing:0.5px;">
+        B) Trustee / Authorised Person Identity (BOTH required)
+      </p>
+      <ul class="checklist">
+        <li><div class="box"></div><div><strong>PAN Card of Trustee</strong><br><span>The trustee who is signing up must provide their personal PAN card</span></div></li>
+        <li><div class="box"></div><div><strong>Aadhaar Card of Trustee</strong><br><span>Front and back of Aadhaar card — used for identity verification</span></div></li>
+      </ul>
+
+      <br>
+      <p style="font-size:13px; font-weight:600; color:#92400e; margin-bottom:8px; text-transform:uppercase; letter-spacing:0.5px;">
+        C) Bank Account Proof (any ONE of these)
+      </p>
+      <ul class="checklist">
+        <li><div class="box"></div><div><strong>Cancelled Cheque</strong><br><span>Must show the trust's name printed on it — most preferred option</span></div></li>
+        <li><div class="box"></div><div><strong>Bank Statement (last 3 months)</strong><br><span>First page showing account number, IFSC, and trust name</span></div></li>
+        <li><div class="box"></div><div><strong>Bank Passbook (first page)</strong><br><span>Should clearly show trust name, account number, and IFSC</span></div></li>
+      </ul>
+
+      <div class="note">
+        <strong>Important:</strong> The bank account must be in the <strong>trust's name</strong>, not a personal account.
+        Payments from devotees will be settled into this account.
+      </div>
+    </div>
+
+    <hr>
+
+    <!-- Step 5 -->
+    <div class="section">
+      <div class="section-title">
+        <div class="step-badge">5</div>
+        <h2>Bank Account Setup</h2>
+      </div>
+      <p style="font-size:14px; color:#444; line-height:1.7;">
+        Enter the trust's bank account details:
+      </p>
+      <br>
+      <table>
+        <tr><th>Field</th><th>Details</th></tr>
+        <tr><td>Account Number</td><td>Temple trust's bank account number</td></tr>
+        <tr><td>IFSC Code</td><td>Available on cheque book or bank passbook</td></tr>
+        <tr><td>Account Holder Name</td><td>Exactly as in bank records</td></tr>
+      </table>
+      <div class="success-box" style="margin-top:12px;">
+        Cashfree will send a <strong>Re. 1 (one rupee) test deposit</strong> to verify the account is correct.
+        This is automatic and takes a few minutes. No action needed from your side.
+      </div>
+    </div>
+
+    <hr>
+
+    <!-- Step 6 -->
+    <div class="section">
+      <div class="section-title">
+        <div class="step-badge">6</div>
+        <h2>KYC Verification (Identity Check)</h2>
+      </div>
+      <p style="font-size:14px; color:#444; margin-bottom:14px;">
+        Cashfree will verify the trustee's identity. There are two possible paths:
+      </p>
+      <div class="path-grid">
+        <div class="path-box green">
+          <h4>Path A — Automatic (Best case)</h4>
+          If the trustee's PAN/Aadhaar is already in the government's Central KYC database,
+          Cashfree fetches details automatically.<br><br>
+          <strong>No video call needed.</strong> Verification is instant.
+        </div>
+        <div class="path-box blue">
+          <h4>Path B — Video KYC Call</h4>
+          A Cashfree agent will call on video (like a WhatsApp video call) for 2–3 minutes.<br><br>
+          They will ask the trustee to:<br>
+          • Show PAN card to camera<br>
+          • State your name<br>
+          • Confirm account details
+        </div>
+      </div>
+    </div>
+
+    <hr>
+
+    <!-- Step 7 -->
+    <div class="section">
+      <div class="section-title">
+        <div class="step-badge">7</div>
+        <h2>Wait for Approval</h2>
+      </div>
+      <div class="timeline">
+        <div class="timeline-item">
+          <div class="day">Day 1 — Today</div>
+          <p>Complete signup, upload all documents, finish bank verification</p>
+        </div>
+        <div class="timeline-item">
+          <div class="day">Day 2 — Working Day</div>
+          <p>Cashfree team reviews documents. You may receive a call or email if anything is missing.</p>
+        </div>
+        <div class="timeline-item">
+          <div class="day">Day 2–3 — Approval</div>
+          <p>Account activated via email. You can now accept real payments from devotees.</p>
+        </div>
+      </div>
+      <div class="success-box" style="margin-top:16px;">
+        <strong>Total time:</strong> Approximately 2–3 working days from the day you submit all documents.
+        The signup itself takes about 30–45 minutes.
+      </div>
+    </div>
+
+    <hr>
+
+    <!-- FAQ / Common Questions -->
+    <div class="section">
+      <div class="section-title">
+        <div class="step-badge" style="background:#6b7280;">?</div>
+        <h2>Common Questions</h2>
+      </div>
+      <table>
+        <tr>
+          <th>Question</th>
+          <th>Answer</th>
+        </tr>
+        <tr>
+          <td>Is GST number required?</td>
+          <td>No. Religious trusts are exempt. If asked, select "Not Applicable".</td>
+        </tr>
+        <tr>
+          <td>Is there any registration fee?</td>
+          <td>No. Cashfree registration is completely free.</td>
+        </tr>
+        <tr>
+          <td>When will we receive payments?</td>
+          <td>Cashfree settles money to your bank account every 1–2 working days.</td>
+        </tr>
+        <tr>
+          <td>What is the transaction fee?</td>
+          <td>Approximately 1.75%–2% per transaction. No hidden charges.</td>
+        </tr>
+        <tr>
+          <td>What if a document is rejected?</td>
+          <td>Cashfree will email the reason. Re-upload the correct document. Usually resolved in 1 day.</td>
+        </tr>
+        <tr>
+          <td>Can devotees pay by UPI / QR Code?</td>
+          <td>Yes! Once active, devotees can pay via UPI QR, Google Pay, PhonePe, Paytm, cards etc.</td>
+        </tr>
+      </table>
+    </div>
+
+    <hr>
+
+    <!-- Contact -->
+    <div class="section">
+      <div class="section-title">
+        <div class="step-badge" style="background:#0ea5e9;">i</div>
+        <h2>Need Help During Registration?</h2>
+      </div>
+      <table>
+        <tr><th>Channel</th><th>Details</th></tr>
+        <tr><td>Cashfree Support Email</td><td>support@cashfree.com</td></tr>
+        <tr><td>Cashfree Help Center</td><td>docs.cashfree.com</td></tr>
+        <tr><td>Live Chat</td><td>Available on merchant.cashfree.com after login</td></tr>
+        <tr><td>Helpline</td><td>Available on their website contact page</td></tr>
+      </table>
+    </div>
+
+  </div><!-- end content -->
+
+  <!-- Footer -->
+  <div class="footer">
+    <div class="big">Hare Krishna! Hare Rama!</div>
+    <p>This guide was prepared for ISKCON Ahmedabad Online Book Store.</p>
+    <p style="margin-top:6px;">For any technical questions about the website, please contact the development team.</p>
+  </div>
+
+</div>
+</body>
+</html>

@@ -11,6 +11,7 @@ import hashlib
 import json
 import csv
 import io
+import base64
 import zipfile
 from datetime import datetime, timedelta
 from functools import wraps
@@ -749,6 +750,9 @@ def checkout():
                 flash(f"Payment gateway error: {e}. Please try again or choose Cash on Delivery.", "danger")
                 return redirect(url_for("checkout"))
 
+        if payment == "upi":
+            return redirect(url_for("payment_upi_qr", order_number=order.order_number))
+
         flash(f"Order #{order.order_number} placed successfully! 🎉", "success")
         return redirect(url_for("order_success", order_number=order.order_number))
 
@@ -846,6 +850,33 @@ def payment_payu_webhook():
                 order.payment_status = "failed"
             db.session.commit()
     return "OK", 200
+
+
+@app.route("/payment/upi-qr/<order_number>")
+def payment_upi_qr(order_number):
+    order = Order.query.filter_by(order_number=order_number).first_or_404()
+    upi_id   = app.config.get("UPI_ID", "")
+    upi_name = app.config.get("UPI_NAME", "ISKCON Book Store")
+    amount   = f"{order.total_amount:.2f}"
+    upi_link = (
+        f"upi://pay?pa={upi_id}&pn={upi_name.replace(' ', '%20')}"
+        f"&am={amount}&tn={order.order_number}&cu=INR"
+    )
+    try:
+        import qrcode
+        qr = qrcode.QRCode(version=1, error_correction=qrcode.constants.ERROR_CORRECT_M,
+                           box_size=8, border=4)
+        qr.add_data(upi_link)
+        qr.make(fit=True)
+        img = qr.make_image(fill_color="#1a1a1a", back_color="white")
+        buf = io.BytesIO()
+        img.save(buf, format="PNG")
+        qr_b64 = base64.b64encode(buf.getvalue()).decode()
+    except Exception:
+        qr_b64 = None
+    return render_template("payment_upi_qr.html",
+                           order=order, qr_b64=qr_b64,
+                           upi_id=upi_id, upi_name=upi_name, amount=amount)
 
 
 @app.route("/order/upi-confirm/<order_number>", methods=["POST"])

@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>PayU Registration Guide — ISKCON Ahmedabad</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: #f0f4ff;
+      color: #2c2c2c;
+      padding: 30px 20px;
+    }
+
+    .page {
+      max-width: 800px;
+      margin: 0 auto;
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+      overflow: hidden;
+    }
+
+    /* Header */
+    .header {
+      background: linear-gradient(135deg, #1a56db, #6c2bd9);
+      color: white;
+      padding: 36px 40px;
+      text-align: center;
+    }
+    .header .iskcon-label {
+      font-size: 13px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      opacity: 0.85;
+      margin-bottom: 8px;
+    }
+    .header h1 { font-size: 26px; font-weight: 700; margin-bottom: 6px; }
+    .header p { font-size: 14px; opacity: 0.9; }
+    .hare-krishna {
+      margin-top: 12px;
+      font-size: 15px;
+      font-style: italic;
+      opacity: 0.95;
+      letter-spacing: 1px;
+    }
+
+    /* Body */
+    .content { padding: 36px 40px; }
+
+    /* Intro box */
+    .intro-box {
+      background: #eff6ff;
+      border-left: 4px solid #1a56db;
+      border-radius: 6px;
+      padding: 16px 20px;
+      margin-bottom: 32px;
+      font-size: 14.5px;
+      line-height: 1.7;
+      color: #444;
+    }
+    .intro-box strong { color: #1e40af; }
+
+    /* Section */
+    .section { margin-bottom: 32px; }
+    .section-title {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .step-badge {
+      background: #1a56db;
+      color: white;
+      border-radius: 50%;
+      width: 34px;
+      height: 34px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 15px;
+      flex-shrink: 0;
+    }
+    .section-title h2 { font-size: 17px; color: #1e40af; font-weight: 700; }
+
+    /* Table */
+    table { width: 100%; border-collapse: collapse; font-size: 14px; margin-bottom: 8px; }
+    th {
+      background: #eff6ff;
+      color: #1e3a8a;
+      text-align: left;
+      padding: 10px 14px;
+      border: 1px solid #bfdbfe;
+      font-weight: 600;
+    }
+    td { padding: 10px 14px; border: 1px solid #bfdbfe; line-height: 1.5; }
+    tr:nth-child(even) td { background: #f8faff; }
+
+    /* Checklist */
+    .checklist { list-style: none; padding: 0; }
+    .checklist li {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 10px 14px;
+      border-radius: 6px;
+      font-size: 14px;
+      line-height: 1.5;
+      margin-bottom: 6px;
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+    }
+    .checklist li .box {
+      width: 18px;
+      height: 18px;
+      border: 2px solid #1a56db;
+      border-radius: 4px;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+    .checklist li strong { color: #1f2937; }
+    .checklist li span { color: #6b7280; font-size: 13px; }
+
+    /* Note box */
+    .note {
+      background: #fefce8;
+      border: 1px solid #fde68a;
+      border-radius: 6px;
+      padding: 14px 18px;
+      font-size: 13.5px;
+      color: #78350f;
+      margin-top: 10px;
+      line-height: 1.6;
+    }
+    .note strong { color: #92400e; }
+
+    /* Warning box */
+    .warning {
+      background: #fff1f2;
+      border: 1px solid #fda4af;
+      border-radius: 6px;
+      padding: 14px 18px;
+      font-size: 13.5px;
+      color: #9f1239;
+      margin-top: 10px;
+      line-height: 1.6;
+    }
+    .warning strong { color: #881337; }
+
+    /* Success box */
+    .success-box {
+      background: #f0fdf4;
+      border: 1px solid #86efac;
+      border-radius: 6px;
+      padding: 14px 18px;
+      font-size: 13.5px;
+      color: #14532d;
+      margin-top: 10px;
+      line-height: 1.6;
+    }
+
+    /* Info box */
+    .info-box {
+      background: #eff6ff;
+      border: 1px solid #93c5fd;
+      border-radius: 6px;
+      padding: 14px 18px;
+      font-size: 13.5px;
+      color: #1e3a8a;
+      margin-top: 10px;
+      line-height: 1.6;
+    }
+    .info-box strong { color: #1e40af; }
+
+    /* Timeline */
+    .timeline { border-left: 3px solid #1a56db; padding-left: 20px; margin-top: 6px; }
+    .timeline-item { position: relative; margin-bottom: 16px; font-size: 14px; }
+    .timeline-item::before {
+      content: '';
+      position: absolute;
+      left: -27px;
+      top: 5px;
+      width: 11px;
+      height: 11px;
+      background: #1a56db;
+      border-radius: 50%;
+    }
+    .timeline-item .day { font-weight: 700; color: #1e40af; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .timeline-item p { color: #444; margin-top: 2px; line-height: 1.5; }
+
+    /* Special document box */
+    .doc-special {
+      background: #faf5ff;
+      border: 1px solid #d8b4fe;
+      border-radius: 8px;
+      padding: 16px 20px;
+      margin: 10px 0;
+      font-size: 13.5px;
+      color: #4c1d95;
+      line-height: 1.7;
+    }
+    .doc-special h4 { color: #6c2bd9; margin-bottom: 8px; font-size: 14px; }
+    .doc-special code {
+      display: block;
+      background: #ede9fe;
+      border-radius: 4px;
+      padding: 10px 14px;
+      font-family: monospace;
+      font-size: 13px;
+      margin-top: 8px;
+      line-height: 1.7;
+      color: #3730a3;
+    }
+
+    /* Phase banner */
+    .phase-banner {
+      background: linear-gradient(90deg, #1a56db, #6c2bd9);
+      color: white;
+      border-radius: 6px;
+      padding: 10px 18px;
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      margin-bottom: 14px;
+      text-transform: uppercase;
+    }
+
+    /* Divider */
+    hr { border: none; border-top: 1px solid #bfdbfe; margin: 28px 0; }
+
+    /* Footer */
+    .footer {
+      background: #eff6ff;
+      border-top: 2px solid #bfdbfe;
+      padding: 20px 40px;
+      text-align: center;
+      font-size: 13px;
+      color: #1e40af;
+    }
+    .footer .big { font-size: 16px; font-weight: 700; margin-bottom: 4px; color: #1e3a8a; }
+
+    /* URL box */
+    .url-box {
+      background: #1e293b;
+      color: #60a5fa;
+      font-family: monospace;
+      padding: 12px 18px;
+      border-radius: 6px;
+      font-size: 15px;
+      letter-spacing: 0.5px;
+    }
+
+    @media print {
+      body { background: white; padding: 0; }
+      .page { box-shadow: none; border-radius: 0; }
+    }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="iskcon-label">ISKCON Ahmedabad — Online Book Store</div>
+    <h1>PayU Payment Gateway</h1>
+    <p>Step-by-Step Registration Guide for the Temple Trust</p>
+    <div class="hare-krishna">Hare Krishna! Hare Krishna! Krishna Krishna! Hare Hare!</div>
+  </div>
+
+  <div class="content">
+
+    <!-- Intro -->
+    <div class="intro-box">
+      <strong>Dear Prabhuji,</strong><br>
+      Hare Krishna! This document will guide you through the process of registering our temple trust on
+      <strong>PayU India</strong> — one of India's largest and most trusted payment platforms used by
+      thousands of NGOs, trusts, and religious organisations. Once registered, devotees visiting our
+      online book store can pay via <strong>UPI, QR Code, Debit/Credit Card, Net Banking</strong> and
+      more. Registration is free and takes about <strong>2 working days</strong> to activate.
+    </div>
+
+    <!-- Step 1 -->
+    <div class="section">
+      <div class="section-title">
+        <div class="step-badge">1</div>
+        <h2>Go to PayU Website &amp; Sign Up</h2>
+      </div>
+      <p style="font-size:14px; margin-bottom:12px; color:#444;">Open your browser and go to:</p>
+      <div class="url-box">https://onboarding.payu.in/app/account/signup</div>
+      <br>
+      <p style="font-size:14px; color:#444; line-height:1.7; margin-bottom:12px;">
+        Fill in the basic signup form:
+      </p>
+      <table>
+        <tr><th>Field</th><th>What to Enter</th></tr>
+        <tr><td>Full Name</td><td>Name of the trustee doing the registration</td></tr>
+        <tr><td>Email Address</td><td>Temple's official email address</td></tr>
+        <tr><td>Mobile Number</td><td>Trustee's active mobile number</td></tr>
+        <tr><td>Password</td><td>Create a strong password — save it carefully</td></tr>
+      </table>
+      <div class="note" style="margin-top:12px;">
+        Click <strong>"Send OTP &amp; Create Account"</strong>. An OTP will be sent to your mobile number.
+        Enter it to complete signup and access the PayU dashboard.
+      </div>
+    </div>
+
+    <hr>
+
+    <!-- Step 2 -->
+    <div class="section">
+      <div class="section-title">
+        <div class="step-badge">2</div>
+        <h2>Activate Your Account — Enter Business PAN</h2>
+      </div>
+      <p style="font-size:14px; color:#444; line-height:1.7; margin-bottom:12px;">
+        After login, you will see a button at the top-right: <strong>"Activate Account"</strong>.
+        Click it to begin KYC.
+      </p>
+      <table>
+        <tr><th>Field</th><th>What to Enter</th></tr>
+        <tr><td>Business PAN Card Number</td><td>Trust's PAN (not personal PAN)</td></tr>
+      </table>
+      <p style="font-size:14px; margin-top:12px; color:#444;">Click <strong>"Proceed to Verify"</strong>. PayU will automatically verify the PAN with the Income Tax database.</p>
+      <div class="success-box" style="margin-top:10px;">
+        PAN verification is instant — usually done within a few seconds.
+      </div>
+    </div>
+
+    <hr>
+
+    <!-- Step 3 -->
+    <div class="section">
+      <div class="section-title">
+        <div class="step-badge">3</div>
+        <h2>Select Business Category</h2>
+      </div>
+      <p style="font-size:14px; color:#444; line-height:1.7; margin-bottom:12px;">
+        After PAN verification, select your business type from the dropdown:
+      </p>
+      <div style="background:#eff6ff; border:2px solid #1a56db; border-radius:8px; padding:16px 20px; font-size:16px; font-weight:700; color:#1e40af; text-align:center;">
+        Business Category: Trust / Society / NGO
+      </div>
+      <br>
+      <table>
+        <tr><th>Field</th><th>What to Select / Enter</th></tr>
+        <tr><td>Business Category</td><td>Trust / Society / NGO</td></tr>
+        <tr><td>Business Sub-Category</td><td>Religious Organisation / Charitable Trust</td></tr>
+        <tr><td>GSTIN</td><td>Leave blank or select "Not Applicable" — trusts are exempt</td></tr>
+        <tr><td>Expected Monthly Sales</td><td>Estimate based on expected book orders (e.g. ₹10,000–₹50,000)</td></tr>
+      </table>
+      <div class="note" style="margin-top:10px;">
+        <strong>GST is not required</strong> for religious trusts. Simply skip the GSTIN field
+        or mark it as not applicable. PayU supports NGOs and trusts without GST.
+      </div>
+    </div>
+
+    <hr>
+
+    <!-- Step 4 -->
+    <div class="section">
+      <div class="section-title">
+        <div class="step-badge">4</div>
+        <h2>Enter Business &amp; Website Details</h2>
+      </div>
+      <table>
+        <tr><th>Field</th><th>What to Enter</th></tr>
+        <tr><td>Legal Business Name</td><td>ISKCON Ahmedabad <em>(exactly as in trust deed)</em></td></tr>
+        <tr><td>Date of Incorporation</td><td>As written in the trust deed</td></tr>
+        <tr><td>Registered Address</td><td>Full temple address with PIN code</td></tr>
+        <tr><td>Website URL</td><td>Our online book store URL</td></tr>
+        <tr><td>Nature of Business</td><td>Online sale of religious books and spiritual literature</td></tr>
+      </table>
+      <div class="info-box" style="margin-top:10px;">
+        <strong>Website is mandatory for PayU.</strong> The team will visit and review our book store
+        website within 2 days to make sure it is active and has the required pages (home, products,
+        contact, refund policy).
+      </div>
+    </div>
+
+    <hr>
+
+    <!-- Step 5 -->
+    <div class="section">
+      <div class="section-title">
+        <div class="step-badge">5</div>
+        <h2>Bank Account Verification</h2>
+      </div>
+      <p style="font-size:14px; color:#444; line-height:1.7; margin-bottom:12px;">
+        Enter the trust's bank account where you want to receive payments from devotees:
+      </p>
+      <table>
+        <tr><th>Field</th><th>Details</th></tr>
+        <tr><td>Account Number</td><td>Temple trust's bank account number</td></tr>
+        <tr><td>Confirm Account Number</td><td>Enter again to confirm — no copy-paste</td></tr>
+        <tr><td>IFSC Code</td><td>Found on cheque book or bank passbook</td></tr>
+        <tr><td>Account Holder Name</td><td>Exactly as in bank records</td></tr>
+      </table>
+      <div class="note" style="margin-top:10px;">
+        <strong>Important:</strong> The bank account must be in the <strong>trust's name</strong>,
+        not a personal account. PayU will send a <strong>₹1 penny drop</strong> to verify the account.
+        This is automatic — no action needed from you.
+      </div>
+      <div class="warning" style="margin-top:10px;">
+        Documents can only be uploaded <strong>after</strong> the bank account is successfully verified.
+        So complete this step carefully before moving to Step 6.
+      </div>
+    </div>
+
+    <hr>
+
+    <!-- Step 6 -->
+    <div class="section">
+      <div class="section-title">
+        <div class="step-badge">6</div>
+        <h2>Upload Documents</h2>
+      </div>
+      <p style="font-size:14px; color:#444; margin-bottom:16px;">
+        Keep the following documents ready as clear scanned copies or photographs (JPG or PDF format, under 5MB each):
+      </p>
+
+      <!-- Entity docs -->
+      <div class="phase-banner">A) Trust Entity Documents</div>
+      <ul class="checklist">
+        <li>
+          <div class="box"></div>
+          <div>
+            <strong>Registered Trust Deed</strong><br>
+            <span>Must be notarized OR verified/stamped by the Registrar office. This is the most important document.</span>
+          </div>
+        </li>
+        <li>
+          <div class="box"></div>
+          <div>
+            <strong>List of Trustees</strong><br>
+            <span>Typed on temple letterhead — list all trustee names, their roles, and signatures. Must be signed and stamped by an authorised trustee.</span>
+          </div>
+        </li>
+        <li>
+          <div class="box"></div>
+          <div>
+            <strong>No Profit Declaration Letter</strong><br>
+            <span>A declaration that no individual or entity holds any shareholding or profit in the trust. See sample wording below.</span>
+          </div>
+        </li>
+        <li>
+          <div class="box"></div>
+          <div>
+            <strong>Authorization / BR Letter</strong><br>
+            <span>Letter on temple letterhead stating the trustee is authorised to sign up for payment gateway services with PayU. Must be signed and dated.</span>
+          </div>
+        </li>
+      </ul>
+
+      <!-- Special doc samples -->
+      <div class="doc-special">
+        <h4>Sample Wording — No Profit Declaration Letter</h4>
+        <em style="font-size:12px;">(Print on temple letterhead, sign and stamp)</em>
+        <code>
+We, the trustees of ISKCON Ahmedabad, hereby declare that this is a
+registered religious charitable trust. No individual or entity holds
+any shareholding or profit interest in this trust. All funds collected
+are used exclusively for religious and charitable purposes.
+
+Authorised Signatory: ___________________
+Name: ___________________
+Designation: Trustee
+Date: ___________________
+Stamp: [Temple Stamp]
+        </code>
+      </div>
+
+      <div class="doc-special" style="margin-top:12px;">
+        <h4>Sample Wording — Authorization Letter</h4>
+        <em style="font-size:12px;">(Print on temple letterhead, sign and stamp)</em>
+        <code>
+This is to certify that [Trustee Name], Trustee of ISKCON Ahmedabad,
+is hereby authorised to enter into an agreement for payment gateway
+services with PayU Payments Private Limited on behalf of the trust.
+
+Authorised Signatory: ___________________
+Name: ___________________
+Designation: Trustee
+Date: ___________________
+Stamp: [Temple Stamp]
+        </code>
+      </div>
+
+      <br>
+
+      <!-- KYC docs -->
+      <div class="phase-banner">B) Trustee / Authorised Person Identity</div>
+      <ul class="checklist">
+        <li>
+          <div class="box"></div>
+          <div>
+            <strong>PAN Card of Trustee</strong><br>
+            <span>Personal PAN of the trustee who is registering. Clear front-side photograph.</span>
+          </div>
+        </li>
+        <li>
+          <div class="box"></div>
+          <div>
+            <strong>Aadhaar Card of Trustee</strong><br>
+            <span>Front and back. Or use Voter ID / Passport / Driving License as address proof.</span>
+          </div>
+        </li>
+        <li>
+          <div class="box"></div>
+          <div>
+            <strong>Photograph of Trustee</strong><br>
+            <span>Recent passport-size photograph (may be requested separately).</span>
+          </div>
+        </li>
+      </ul>
+
+      <br>
+
+      <!-- Bank docs -->
+      <div class="phase-banner">C) Bank Account Proof (any ONE)</div>
+      <ul class="checklist">
+        <li>
+          <div class="box"></div>
+          <div>
+            <strong>Cancelled Cheque</strong><br>
+            <span>Must show trust name printed on it. Write "CANCELLED" across the cheque clearly.</span>
+          </div>
+        </li>
+        <li>
+          <div class="box"></div>
+          <div>
+            <strong>Bank Statement (last 3 months)</strong><br>
+            <span>First page showing trust name, account number, and IFSC code. Bank stamp preferred.</span>
+          </div>
+        </li>
+        <li>
+          <div class="box"></div>
+          <div>
+            <strong>Bank Passbook (first page)</strong><br>
+            <span>Clearly showing trust name, account number, branch address, and IFSC.</span>
+          </div>
+        </li>
+      </ul>
+
+      <br>
+
+      <!-- Optional docs -->
+      <div class="phase-banner" style="background: linear-gradient(90deg, #059669, #0284c7);">D) Optional but Very Helpful</div>
+      <ul class="checklist">
+        <li>
+          <div class="box"></div>
+          <div>
+            <strong>12A Certificate</strong><br>
+            <span>Income Tax exemption certificate — strongly shows trust is genuine and legitimate.</span>
+          </div>
+        </li>
+        <li>
+          <div class="box"></div>
+          <div>
+            <strong>80G Certificate</strong><br>
+            <span>Tax benefit certificate for donors — further proves legitimacy of the trust.</span>
+          </div>
+        </li>
+        <li>
+          <div class="box"></div>
+          <div>
+            <strong>Registration Certificate from Charity Commissioner</strong><br>
+            <span>If the trust is separately registered under Bombay Public Trust Act or similar.</span>
+          </div>
+        </li>
+      </ul>
+    </div>
+
+    <hr>
+
+    <!-- Step 7 -->
+    <div class="section">
+      <div class="section-title">
+        <div class="step-badge">7</div>
+        <h2>Website Compliance Check</h2>
+      </div>
+      <p style="font-size:14px; color:#444; line-height:1.7; margin-bottom:12px;">
+        PayU will review our website before giving live access. Make sure our book store has these pages:
+      </p>
+      <ul class="checklist">
+        <li><div class="box"></div><div><strong>Home Page</strong><br><span>Clearly shows ISKCON Ahmedabad name and book store purpose</span></div></li>
+        <li><div class="box"></div><div><strong>Products / Books Page</strong><br><span>Books listed with prices in Indian Rupees (₹)</span></div></li>
+        <li><div class="box"></div><div><strong>Contact Us Page</strong><br><span>Temple address, email, and phone number</span></div></li>
+        <li><div class="box"></div><div><strong>Refund / Return Policy</strong><br><span>Simple policy explaining what happens if a devotee wants to return a book</span></div></li>
+        <li><div class="box"></div><div><strong>Privacy Policy</strong><br><span>Basic statement about how customer data is used</span></div></li>
+        <li><div class="box"></div><div><strong>Shipping Policy</strong><br><span>How and when books will be delivered</span></div></li>
+      </ul>
+      <div class="info-box" style="margin-top:10px;">
+        <strong>Note:</strong> Our website already has most of these. This is just for PayU's compliance
+        team to verify the store is genuine and active.
+      </div>
+    </div>
+
+    <hr>
+
+    <!-- Step 8 -->
+    <div class="section">
+      <div class="section-title">
+        <div class="step-badge">8</div>
+        <h2>Wait for Approval &amp; Get API Keys</h2>
+      </div>
+      <div class="timeline">
+        <div class="timeline-item">
+          <div class="day">Day 1 — Today</div>
+          <p>Complete signup, verify PAN, verify bank account, upload all documents</p>
+        </div>
+        <div class="timeline-item">
+          <div class="day">Day 1–2 — Review</div>
+          <p>PayU team reviews documents and visits our website. They may call on the registered mobile number if any document needs clarification.</p>
+        </div>
+        <div class="timeline-item">
+          <div class="day">Day 2 — Approval Email</div>
+          <p>You receive an email confirming account is activated. The dashboard shows <strong>Production Keys (Merchant Key + Salt)</strong></p>
+        </div>
+        <div class="timeline-item">
+          <div class="day">Day 2 onwards — Live Payments</div>
+          <p>Devotees can now pay via UPI, QR Code, Cards, Net Banking on our book store</p>
+        </div>
+      </div>
+      <div class="note" style="margin-top:10px;">
+        <strong>Test mode</strong> is available immediately after signup — our developer can test the payment flow before going live, without waiting for full approval.
+      </div>
+    </div>
+
+    <hr>
+
+    <!-- Common Questions -->
+    <div class="section">
+      <div class="section-title">
+        <div class="step-badge" style="background:#6b7280;">?</div>
+        <h2>Common Questions</h2>
+      </div>
+      <table>
+        <tr><th>Question</th><th>Answer</th></tr>
+        <tr><td>Is GST number required?</td><td>No. Religious trusts are GST exempt. Leave the GSTIN field blank.</td></tr>
+        <tr><td>Is registration free?</td><td>Yes. PayU account registration is completely free.</td></tr>
+        <tr><td>What is the transaction fee?</td><td>Approximately 2% per transaction for UPI/Cards. No setup charges.</td></tr>
+        <tr><td>When do we receive money?</td><td>PayU settles payments to our bank account within 1–2 working days.</td></tr>
+        <tr><td>What if a document is rejected?</td><td>PayU will email the reason. Reupload the correct document. Usually resolved in 1 day.</td></tr>
+        <tr><td>Can devotees pay via UPI / QR?</td><td>Yes. Google Pay, PhonePe, Paytm, BHIM — all UPI apps work.</td></tr>
+        <tr><td>Is international payment supported?</td><td>Not by default for trusts. Only Indian payments are enabled initially.</td></tr>
+        <tr><td>What if I get stuck during signup?</td><td>Call PayU support or use live chat on the dashboard.</td></tr>
+      </table>
+    </div>
+
+    <hr>
+
+    <!-- Document summary -->
+    <div class="section">
+      <div class="section-title">
+        <div class="step-badge" style="background:#059669;">✓</div>
+        <h2>Quick Document Checklist — Arrange These First</h2>
+      </div>
+      <table>
+        <tr><th>Document</th><th>Where to Get It</th><th>Ready?</th></tr>
+        <tr><td>Trust's PAN Card</td><td>Temple records</td><td style="text-align:center;">☐</td></tr>
+        <tr><td>Registered Trust Deed</td><td>Temple records / Charity Commissioner</td><td style="text-align:center;">☐</td></tr>
+        <tr><td>List of Trustees (on letterhead)</td><td>Prepare and print fresh</td><td style="text-align:center;">☐</td></tr>
+        <tr><td>No Profit Declaration Letter</td><td>Use sample above — print on letterhead</td><td style="text-align:center;">☐</td></tr>
+        <tr><td>Authorization Letter for PayU</td><td>Use sample above — print on letterhead</td><td style="text-align:center;">☐</td></tr>
+        <tr><td>Trustee's PAN Card</td><td>Trustee personally</td><td style="text-align:center;">☐</td></tr>
+        <tr><td>Trustee's Aadhaar Card</td><td>Trustee personally</td><td style="text-align:center;">☐</td></tr>
+        <tr><td>Cancelled Cheque (trust account)</td><td>Temple bank account</td><td style="text-align:center;">☐</td></tr>
+        <tr><td>12A Certificate (if available)</td><td>Temple records</td><td style="text-align:center;">☐</td></tr>
+        <tr><td>Temple letterhead (digital)</td><td>Ask the pujari or office</td><td style="text-align:center;">☐</td></tr>
+      </table>
+    </div>
+
+    <hr>
+
+    <!-- Support -->
+    <div class="section">
+      <div class="section-title">
+        <div class="step-badge" style="background:#0ea5e9;">i</div>
+        <h2>PayU Support Contacts</h2>
+      </div>
+      <table>
+        <tr><th>Channel</th><th>Details</th></tr>
+        <tr><td>PayU Support Email</td><td>support@payu.in</td></tr>
+        <tr><td>PayU Help Center</td><td>docs.payu.in</td></tr>
+        <tr><td>Live Chat</td><td>Available after login on onboarding.payu.in dashboard</td></tr>
+        <tr><td>Signup Portal</td><td>onboarding.payu.in/app/account/signup</td></tr>
+      </table>
+    </div>
+
+  </div><!-- end content -->
+
+  <!-- Footer -->
+  <div class="footer">
+    <div class="big">Hare Krishna! Hare Rama!</div>
+    <p>This guide was prepared for ISKCON Ahmedabad Online Book Store.</p>
+    <p style="margin-top:6px; color:#1e40af;">For technical questions about the website, please contact the development team.</p>
+  </div>
+
+</div>
+</body>
+</html>
