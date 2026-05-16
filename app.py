@@ -169,6 +169,7 @@ class Order(db.Model):
     tracking_number    = db.Column(db.String(100))
     expected_delivery  = db.Column(db.Date)
     upi_transaction_id = db.Column(db.String(100))
+    is_deleted         = db.Column(db.Boolean, default=False)
     items              = db.relationship("OrderItem", backref="order", lazy=True)
 
     def __repr__(self):
@@ -1450,7 +1451,7 @@ def admin_orders():
     pay_method     = request.args.get("pay_method", "")
     customer_f     = request.args.get("customer", "")
 
-    oq = Order.query
+    oq = Order.query.filter_by(is_deleted=False)
     if status:
         oq = oq.filter_by(order_status=status)
     if pay_status:
@@ -1463,10 +1464,12 @@ def admin_orders():
             Order.customer_phone.ilike(f"%{customer_f}%"),
         ))
 
-    orders = oq.order_by(Order.created_at.desc()).paginate(page=page, per_page=20)
+    orders      = oq.order_by(Order.created_at.desc()).paginate(page=page, per_page=20)
+    trash_count = Order.query.filter_by(is_deleted=True).count()
     return render_template("admin/orders.html", orders=orders,
                            status=status, pay_status=pay_status,
-                           pay_method=pay_method, customer_f=customer_f)
+                           pay_method=pay_method, customer_f=customer_f,
+                           trash_count=trash_count)
 
 
 @app.route("/admin/orders/export-csv")
@@ -1478,7 +1481,7 @@ def export_orders_csv():
     status_filter   = request.args.get("status", "")
     payment_filter  = request.args.get("payment_status", "")
 
-    oq = Order.query
+    oq = Order.query.filter_by(is_deleted=False)
     if status_filter:
         oq = oq.filter_by(order_status=status_filter)
     if payment_filter:
@@ -1566,6 +1569,46 @@ def admin_update_order(order_id):
     db.session.commit()
     flash("Order updated.", "success")
     return redirect(url_for("admin_order_detail", order_id=order_id))
+
+
+@app.route("/admin/orders/delete/<int:order_id>", methods=["POST"])
+@admin_required
+def admin_delete_order(order_id):
+    order = Order.query.get_or_404(order_id)
+    order.is_deleted = True
+    db.session.commit()
+    flash(f"Order {order.order_number} moved to Trash. Restore it from the Trash tab if needed.", "info")
+    return redirect(url_for("admin_orders"))
+
+
+@app.route("/admin/orders/trash")
+@admin_required
+def admin_trash_orders():
+    page    = request.args.get("page", 1, type=int)
+    deleted = Order.query.filter_by(is_deleted=True).order_by(Order.created_at.desc()).paginate(page=page, per_page=20)
+    return render_template("admin/trash_orders.html", orders=deleted)
+
+
+@app.route("/admin/orders/restore/<int:order_id>", methods=["POST"])
+@admin_required
+def admin_restore_order(order_id):
+    order = Order.query.get_or_404(order_id)
+    order.is_deleted = False
+    db.session.commit()
+    flash(f"Order {order.order_number} restored successfully.", "success")
+    return redirect(url_for("admin_trash_orders"))
+
+
+@app.route("/admin/orders/hard-delete/<int:order_id>", methods=["POST"])
+@admin_required
+def admin_hard_delete_order(order_id):
+    order = Order.query.get_or_404(order_id)
+    order_number = order.order_number
+    OrderItem.query.filter_by(order_id=order.id).delete()
+    db.session.delete(order)
+    db.session.commit()
+    flash(f"Order {order_number} permanently deleted.", "danger")
+    return redirect(url_for("admin_trash_orders"))
 
 
 # ── Admin: Coupons ──

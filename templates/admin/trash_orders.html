@@ -1,0 +1,100 @@
+{% extends "admin/admin_base.html" %}
+{% block page_title %}Trash — Deleted Orders{% endblock %}
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="mb-1"><i class="fas fa-trash me-2 text-danger"></i>Order Trash</h4>
+        <small class="text-muted">
+            {{ orders.total }} deleted order{{ 's' if orders.total != 1 else '' }}
+            — restore to bring back, or permanently delete
+        </small>
+    </div>
+    <a href="{{ url_for('admin_orders') }}" class="btn btn-outline-secondary">
+        <i class="fas fa-arrow-left me-1"></i> Back to Orders
+    </a>
+</div>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% for cat, msg in messages %}
+    <div class="alert alert-{{ cat }} alert-dismissible fade show">{{ msg }}
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+  {% endfor %}
+{% endwith %}
+
+<div class="card table-card shadow-sm">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>Order #</th>
+                    <th>Customer</th>
+                    <th>Phone</th>
+                    <th>Total</th>
+                    <th>Payment</th>
+                    <th>Date</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for order in orders.items %}
+                <tr class="table-light">
+                    <td class="text-muted fw-bold">{{ order.order_number }}</td>
+                    <td class="text-muted">{{ order.customer_name }}</td>
+                    <td class="text-muted"><small>{{ order.customer_phone }}</small></td>
+                    <td class="text-muted fw-bold">₹{{ order.total_amount|int }}</td>
+                    <td>
+                        <span class="badge bg-secondary opacity-75">{{ order.payment_method|upper }}</span>
+                        {% if order.payment_status == 'paid' %}
+                            <span class="badge bg-success opacity-75 ms-1">Paid</span>
+                        {% elif order.payment_status == 'failed' %}
+                            <span class="badge bg-danger opacity-75 ms-1">Failed</span>
+                        {% else %}
+                            <span class="badge bg-warning text-dark opacity-75 ms-1">Pending</span>
+                        {% endif %}
+                    </td>
+                    <td><small class="text-muted">{{ order.created_at | ist('%d %b %Y') }}</small></td>
+                    <td>
+                        <div class="d-flex gap-2">
+                            <form method="POST" action="{{ url_for('admin_restore_order', order_id=order.id) }}">
+                                <button type="submit" class="btn btn-sm btn-success" title="Restore order">
+                                    <i class="fas fa-undo me-1"></i>Restore
+                                </button>
+                            </form>
+                            <form method="POST" action="{{ url_for('admin_hard_delete_order', order_id=order.id) }}"
+                                  onsubmit="return confirm('Permanently delete order {{ order.order_number }}? This cannot be undone.')">
+                                <button type="submit" class="btn btn-sm btn-danger" title="Delete forever">
+                                    <i class="fas fa-times me-1"></i>Delete Forever
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="7" class="text-center py-5 text-muted">
+                        <i class="fas fa-check-circle fa-2x mb-2 d-block text-success"></i>
+                        Trash is empty — no deleted orders.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% if orders.pages > 1 %}
+<nav class="mt-4">
+    <ul class="pagination justify-content-center">
+        {% for p in range(1, orders.pages + 1) %}
+        <li class="page-item {% if p == orders.page %}active{% endif %}">
+            <a class="page-link {% if p == orders.page %}bg-danger text-white border-danger{% endif %}"
+               href="{{ url_for('admin_trash_orders', page=p) }}">{{ p }}</a>
+        </li>
+        {% endfor %}
+    </ul>
+</nav>
+{% endif %}
+
+{% endblock %}
