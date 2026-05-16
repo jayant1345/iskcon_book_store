@@ -995,12 +995,14 @@ def admin_logout():
 @app.route("/admin/dashboard")
 @admin_required
 def admin_dashboard():
-    total_orders        = Order.query.count()
+    total_orders        = Order.query.filter_by(is_deleted=False).count()
     total_revenue       = db.session.query(db.func.sum(Order.total_amount))\
-                                    .filter(Order.payment_status != "failed").scalar() or 0
+                                    .filter(Order.payment_status != "failed",
+                                            Order.is_deleted == False).scalar() or 0
     total_books         = Book.query.filter_by(active=True).count()
-    pending_orders      = Order.query.filter_by(order_status="placed").count()
-    recent_orders       = Order.query.order_by(Order.created_at.desc()).limit(10).all()
+    pending_orders      = Order.query.filter_by(order_status="placed", is_deleted=False).count()
+    recent_orders       = Order.query.filter_by(is_deleted=False)\
+                                     .order_by(Order.created_at.desc()).limit(10).all()
     low_stock           = Book.query.filter(Book.stock < 5, Book.active == True).all()
     temple_books_total  = db.session.query(db.func.sum(StockReceipt.quantity)).scalar() or 0
     temple_pending_payment = db.session.query(db.func.sum(StockReceipt.total_payment))\
@@ -1575,9 +1577,14 @@ def admin_update_order(order_id):
 @admin_required
 def admin_delete_order(order_id):
     order = Order.query.get_or_404(order_id)
-    order.is_deleted = True
-    db.session.commit()
-    flash(f"Order {order.order_number} moved to Trash. Restore it from the Trash tab if needed.", "info")
+    order_number = order.order_number
+    try:
+        order.is_deleted = True
+        db.session.commit()
+        flash(f"Order {order_number} moved to Trash. Restore it from the Trash tab if needed.", "info")
+    except Exception as e:
+        db.session.rollback()
+        flash(f"Could not delete order: {e}", "danger")
     return redirect(url_for("admin_orders"))
 
 
@@ -1785,7 +1792,7 @@ def init_db():
             ("orders", "tracking_number",    "VARCHAR(100)"),
             ("orders", "expected_delivery",  "DATE"),
             ("orders", "upi_transaction_id", "VARCHAR(100)"),
-            ("orders", "is_deleted",          "BOOLEAN DEFAULT FALSE"),
+            ("orders", "is_deleted",         "BOOLEAN DEFAULT FALSE"),
             ("books",  "deleted",            "BOOLEAN DEFAULT FALSE"),
             ("books",  "is_ebook",           "BOOLEAN DEFAULT FALSE"),
             ("books",  "ebook_file",         "VARCHAR(200)"),
@@ -1801,6 +1808,14 @@ def init_db():
                     print(f"[MIGRATE] Added column {table}.{column}")
             except Exception:
                 pass  # Column already exists — ignore
+
+        # Backfill any NULL is_deleted values so filter_by(is_deleted=False) works correctly
+        try:
+            with db.engine.connect() as conn:
+                conn.execute(db.text("UPDATE orders SET is_deleted = FALSE WHERE is_deleted IS NULL"))
+                conn.commit()
+        except Exception:
+            pass
 
 
 @app.route("/admin/export-data")
