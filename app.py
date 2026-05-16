@@ -1785,6 +1785,7 @@ def init_db():
             ("orders", "tracking_number",    "VARCHAR(100)"),
             ("orders", "expected_delivery",  "DATE"),
             ("orders", "upi_transaction_id", "VARCHAR(100)"),
+            ("orders", "is_deleted",          "BOOLEAN DEFAULT FALSE"),
             ("books",  "deleted",            "BOOLEAN DEFAULT FALSE"),
             ("books",  "is_ebook",           "BOOLEAN DEFAULT FALSE"),
             ("books",  "ebook_file",         "VARCHAR(200)"),
