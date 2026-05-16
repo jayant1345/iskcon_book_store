@@ -157,6 +157,7 @@
                             <th>Cost/Copy</th>
                             <th>Total</th>
                             <th>Payment</th>
+                            <th>Batch</th>
                             <th>Notes</th>
                             <th></th>
                         </tr>
@@ -174,6 +175,15 @@
                                     <span class="badge bg-success">Paid</span>
                                 {% else %}
                                     <span class="badge bg-danger">Pending</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if r.batch_ref %}
+                                    <span class="badge text-dark" style="background:#fff3cd;font-size:0.7rem;letter-spacing:0.5px;">
+                                        {{ r.batch_ref }}
+                                    </span>
+                                {% else %}
+                                    <small class="text-muted">—</small>
                                 {% endif %}
                             </td>
                             <td><small class="text-muted">{{ r.notes[:30] if r.notes else '—' }}</small></td>

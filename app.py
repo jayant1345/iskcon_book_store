@@ -237,6 +237,7 @@ class StockReceipt(db.Model):
     payment_status = db.Column(db.String(20), default="paid")    # paid / pending
     received_date  = db.Column(db.DateTime, default=datetime.utcnow)
     notes          = db.Column(db.Text)
+    batch_ref      = db.Column(db.String(20), nullable=True)     # shared ID for bulk-upload rows
     created_at     = db.Column(db.DateTime, default=datetime.utcnow)
     book           = db.relationship("Book", backref="stock_receipts", lazy=True)
 
@@ -1477,6 +1478,8 @@ def stock_bulk_upload():
     all_books = Book.query.all()
     book_map = {b.title.strip().lower(): b for b in all_books}
 
+    batch_ref = "B-" + datetime.now().strftime("%d%m%y") + "-" + uuid.uuid4().hex[:4].upper()
+
     raw_rows = []
     if ext == "xlsx":
         from openpyxl import load_workbook
@@ -1542,6 +1545,7 @@ def stock_bulk_upload():
                 payment_status= payment_status,
                 received_date = received_date,
                 notes         = notes,
+                batch_ref     = batch_ref,
             )
             db.session.add(receipt)
             book.stock += quantity
@@ -2004,7 +2008,8 @@ def init_db():
             ("books",  "deleted",            "BOOLEAN DEFAULT FALSE"),
             ("books",  "is_ebook",           "BOOLEAN DEFAULT FALSE"),
             ("books",  "ebook_file",         "VARCHAR(200)"),
-            ("books",  "preview_file",       "VARCHAR(200)"),
+            ("books",              "preview_file", "VARCHAR(200)"),
+            ("stock_receipts",     "batch_ref",    "VARCHAR(20)"),
         ]
         for table, column, col_type in migrations:
             # Use a fresh connection per column so a failed ALTER doesn't
