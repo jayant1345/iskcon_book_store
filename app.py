@@ -1358,6 +1358,214 @@ def export_stock_receipts_csv():
     )
 
 
+@app.route("/admin/stock/download-template")
+@admin_required
+def stock_download_template():
+    """Generate an XLSX upload template with book-name dropdowns."""
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    from openpyxl.worksheet.datavalidation import DataValidation
+    from openpyxl.utils import get_column_letter
+    from flask import Response
+
+    books = Book.query.filter_by(active=True, deleted=False).order_by(Book.title).all()
+    book_titles = [b.title for b in books]
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Stock Upload"
+
+    # Hidden sheet for book names (avoids the 255-char formula limit for long lists)
+    ws_books = wb.create_sheet("BookList")
+    ws_books.sheet_state = "hidden"
+    for i, title in enumerate(book_titles, start=1):
+        ws_books.cell(row=i, column=1, value=title)
+
+    orange_fill = PatternFill("solid", fgColor="FF9933")
+    header_font = Font(bold=True, color="FFFFFF", size=11)
+    thin = Side(style="thin", color="CCCCCC")
+    border = Border(left=thin, right=thin, bottom=thin, top=thin)
+
+    headers = [
+        "Date Received (dd-mm-yyyy)",
+        "Book Name",
+        "Quantity",
+        "Cost/Copy (₹)",
+        "Payment Status (Paid / Pending)",
+        "Notes",
+    ]
+    col_widths = [28, 48, 12, 18, 34, 40]
+
+    ws.row_dimensions[1].height = 30
+    for col, (header, width) in enumerate(zip(headers, col_widths), start=1):
+        cell = ws.cell(row=1, column=col, value=header)
+        cell.fill = orange_fill
+        cell.font = header_font
+        cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+        cell.border = border
+        ws.column_dimensions[get_column_letter(col)].width = width
+
+    # Sample row so user knows the format
+    sample = [
+        datetime.now().strftime("%d-%m-%Y"),
+        book_titles[0] if book_titles else "Bhagavad Gita As It Is",
+        25,
+        80,
+        "Paid",
+        "Received from temple counter",
+    ]
+    sample_font = Font(italic=True, color="888888")
+    for col, val in enumerate(sample, start=1):
+        cell = ws.cell(row=2, column=col, value=val)
+        cell.font = sample_font
+        cell.border = border
+
+    # Book name dropdown (uses hidden BookList sheet — no char limit)
+    if book_titles:
+        n = len(book_titles)
+        dv_book = DataValidation(
+            type="list",
+            formula1=f"BookList!$A$1:$A${n}",
+            showDropDown=False,
+            showErrorMessage=True,
+            errorTitle="Invalid Book",
+            error="Please select a book name from the dropdown.",
+        )
+        ws.add_data_validation(dv_book)
+        dv_book.sqref = "B2:B500"
+
+    # Payment status dropdown
+    dv_pay = DataValidation(
+        type="list",
+        formula1='"Paid,Pending"',
+        showDropDown=False,
+        showErrorMessage=True,
+        errorTitle="Invalid Status",
+        error="Enter Paid or Pending.",
+    )
+    ws.add_data_validation(dv_pay)
+    dv_pay.sqref = "E2:E500"
+
+    ws.freeze_panes = "A2"
+
+    out = io.BytesIO()
+    wb.save(out)
+    out.seek(0)
+
+    filename = f"temple_stock_template_{datetime.now().strftime('%Y%m%d')}.xlsx"
+    return Response(
+        out.read(),
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
+    )
+
+
+@app.route("/admin/stock/upload", methods=["POST"])
+@admin_required
+def stock_bulk_upload():
+    """Bulk-insert temple stock receipts from an uploaded XLSX or CSV file."""
+    uploaded = request.files.get("stock_file")
+    if not uploaded or not uploaded.filename:
+        flash("No file selected.", "danger")
+        return redirect(url_for("admin_stock"))
+
+    ext = uploaded.filename.rsplit(".", 1)[-1].lower()
+    if ext not in ("xlsx", "csv"):
+        flash("Only .xlsx or .csv files are accepted.", "danger")
+        return redirect(url_for("admin_stock"))
+
+    all_books = Book.query.all()
+    book_map = {b.title.strip().lower(): b for b in all_books}
+
+    raw_rows = []
+    if ext == "xlsx":
+        from openpyxl import load_workbook
+        wb = load_workbook(uploaded, read_only=True, data_only=True)
+        ws = wb.active
+        for row in ws.iter_rows(min_row=2, values_only=True):
+            if not any(c for c in row if c not in (None, "")):
+                continue
+            raw_rows.append(list(row))
+    else:
+        content = uploaded.read().decode("utf-8-sig")
+        reader = csv.reader(io.StringIO(content))
+        next(reader, None)  # skip header
+        for r in reader:
+            if not any(c.strip() for c in r):
+                continue
+            raw_rows.append(r)
+
+    inserted = 0
+    skipped = []
+
+    for i, row in enumerate(raw_rows, start=2):
+        try:
+            # Pad short rows
+            while len(row) < 6:
+                row.append("")
+
+            date_raw    = str(row[0] or "").strip()
+            book_name   = str(row[1] or "").strip()
+            quantity    = int(float(str(row[2] or 0).strip() or 0))
+            cost        = float(str(row[3] or 0).strip() or 0)
+            payment_raw = str(row[4] or "paid").strip().lower()
+            notes       = str(row[5] or "").strip()
+
+            if not book_name:
+                skipped.append(f"Row {i}: no book name")
+                continue
+            if quantity <= 0:
+                skipped.append(f"Row {i}: quantity must be > 0")
+                continue
+
+            received_date = datetime.utcnow()
+            for fmt in ("%d-%m-%Y", "%Y-%m-%d", "%d/%m/%Y", "%m/%d/%Y"):
+                try:
+                    received_date = datetime.strptime(date_raw, fmt)
+                    break
+                except ValueError:
+                    pass
+
+            payment_status = "paid" if "paid" in payment_raw else "pending"
+            book = book_map.get(book_name.lower())
+
+            if not book:
+                skipped.append(f"Row {i}: \"{book_name}\" not found in store — add it via Books first")
+                continue
+
+            receipt = StockReceipt(
+                book_id       = book.id,
+                book_name     = book.title,
+                quantity      = quantity,
+                cost_per_unit = cost,
+                total_payment = round(quantity * cost, 2),
+                payment_status= payment_status,
+                received_date = received_date,
+                notes         = notes,
+            )
+            db.session.add(receipt)
+            book.stock += quantity
+            inserted += 1
+        except Exception as e:
+            skipped.append(f"Row {i}: {e}")
+
+    db.session.commit()
+
+    if inserted:
+        flash(f"Bulk upload complete: {inserted} receipt(s) imported successfully.", "success")
+    if skipped:
+        details = "; ".join(skipped[:5]) + (" …" if len(skipped) > 5 else "")
+        flash(
+            f"{len(skipped)} row(s) skipped — {details}. "
+            "Add missing books via the Books section, then re-upload.",
+            "warning",
+        )
+    if not inserted and not skipped:
+        flash("The file had no data rows to import.", "warning")
+
+    return redirect(url_for("admin_stock"))
+
+
 @app.route("/admin/stock/add", methods=["POST"])
 @admin_required
 def admin_add_stock():

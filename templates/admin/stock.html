@@ -85,6 +85,35 @@
                 </form>
             </div>
         </div>
+
+        <!-- Bulk Upload Card -->
+        <div class="card shadow-sm mt-4">
+            <div class="card-header py-3 text-white d-flex justify-content-between align-items-center"
+                 style="background:#2c1a0e;">
+                <h5 class="mb-0"><i class="fas fa-file-upload me-2"></i>Bulk Upload</h5>
+                <a href="{{ url_for('stock_download_template') }}"
+                   class="btn btn-sm btn-warning text-dark fw-semibold">
+                    <i class="fas fa-file-excel me-1"></i> Download Template
+                </a>
+            </div>
+            <div class="card-body p-4">
+                <p class="text-muted small mb-3">
+                    Download the Excel template above, fill in multiple rows (book names are in a
+                    dropdown), then upload the saved file here to import all receipts at once.
+                </p>
+                <form method="POST" action="{{ url_for('stock_bulk_upload') }}"
+                      enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Select File (.xlsx or .csv)</label>
+                        <input type="file" name="stock_file" class="form-control"
+                               accept=".xlsx,.csv" required>
+                    </div>
+                    <button type="submit" class="btn w-100 text-white" style="background:#2c1a0e;">
+                        <i class="fas fa-upload me-2"></i>Upload &amp; Import
+                    </button>
+                </form>
+            </div>
+        </div>
     </div>
 
     <!-- Receipts Table -->
