@@ -72,11 +72,8 @@ class Config:
     FREE_SHIPPING_ABOVE = float(os.environ.get("FREE_SHIPPING_ABOVE", "500"))
     DELHIVERY_API_TOKEN       = os.environ.get("DELHIVERY_API_TOKEN", "")
     DELHIVERY_DEFAULT_WEIGHT  = float(os.environ.get("DELHIVERY_DEFAULT_WEIGHT", "0.5"))
-    MAIL_SERVER   = os.environ.get("MAIL_SERVER", "smtp.gmail.com")
-    MAIL_PORT     = int(os.environ.get("MAIL_PORT", "587"))
-    MAIL_USERNAME = os.environ.get("MAIL_USERNAME", "")
-    MAIL_PASSWORD = os.environ.get("MAIL_PASSWORD", "")
-    MAIL_FROM     = os.environ.get("MAIL_FROM", "ISKCON Book Store <iskconbooks.in@gmail.com>")
+    MAIL_USERNAME = os.environ.get("MAIL_USERNAME", "iskconbooks.in@gmail.com")
+    BREVO_API_KEY = os.environ.get("BREVO_API_KEY", "")
 
 
 app.config.from_object(Config)
@@ -1060,41 +1057,40 @@ def admin_logout():
 @app.route("/admin/test-email", methods=["GET", "POST"])
 @admin_required
 def admin_test_email():
-    """Send a test email to verify SMTP config is working."""
+    """Send a test email via Brevo HTTP API to verify config is working."""
+    import requests as http_req
     result = None
     cfg = {
-        "server":   app.config.get("MAIL_SERVER", ""),
-        "port":     app.config.get("MAIL_PORT", ""),
-        "username": app.config.get("MAIL_USERNAME", ""),
-        "from":     app.config.get("MAIL_FROM", ""),
-        "password_set": bool(app.config.get("MAIL_PASSWORD", "")),
+        "api_key_set": bool(app.config.get("BREVO_API_KEY", "")),
+        "username":    app.config.get("MAIL_USERNAME", "iskconbooks.in@gmail.com"),
     }
     if request.method == "POST":
         to = request.form.get("to_email", "").strip()
         if not to:
             result = {"ok": False, "msg": "Please enter a recipient email address."}
-        elif not cfg["username"] or not cfg["password_set"]:
-            result = {"ok": False, "msg": "MAIL_USERNAME or MAIL_PASSWORD not configured in environment variables."}
+        elif not cfg["api_key_set"]:
+            result = {"ok": False, "msg": "BREVO_API_KEY not set in Railway environment variables."}
         else:
-            import smtplib, ssl
-            from email.mime.text import MIMEText
-            from email.mime.multipart import MIMEMultipart
+            payload = {
+                "sender":      {"name": "ISKCON Book Store", "email": cfg["username"]},
+                "to":          [{"email": to}],
+                "subject":     "Test Email — ISKCON Book Store",
+                "htmlContent": "<h2>Test Email</h2><p>If you received this, Brevo email is configured correctly. Hare Krishna! 🙏</p>",
+            }
+            headers = {
+                "accept":       "application/json",
+                "content-type": "application/json",
+                "api-key":      app.config.get("BREVO_API_KEY"),
+            }
             try:
-                msg = MIMEMultipart("alternative")
-                msg["Subject"] = "Test Email — ISKCON Book Store"
-                msg["From"]    = cfg["from"]
-                msg["To"]      = to
-                body = "<h2>Test Email</h2><p>If you received this, your SMTP configuration is working correctly. Hare Krishna! 🙏</p>"
-                msg.attach(MIMEText(body, "html", "utf-8"))
-                ctx = ssl.create_default_context()
-                with smtplib.SMTP(cfg["server"], int(cfg["port"])) as smtp:
-                    smtp.ehlo()
-                    smtp.starttls(context=ctx)
-                    smtp.login(cfg["username"], app.config.get("MAIL_PASSWORD"))
-                    smtp.sendmail(cfg["username"], to, msg.as_string())
-                result = {"ok": True, "msg": f"Test email sent successfully to {to}. Check inbox (and spam folder)."}
+                resp = http_req.post("https://api.brevo.com/v3/smtp/email",
+                                     json=payload, headers=headers, timeout=15)
+                if resp.status_code in (200, 201):
+                    result = {"ok": True, "msg": f"Test email sent to {to}. Check inbox and spam folder."}
+                else:
+                    result = {"ok": False, "msg": f"Brevo API error {resp.status_code}: {resp.text[:300]}"}
             except Exception as e:
-                result = {"ok": False, "msg": f"SMTP Error: {e}"}
+                result = {"ok": False, "msg": f"Request error: {e}"}
     return render_template("admin/test_email.html", cfg=cfg, result=result)
 
 
