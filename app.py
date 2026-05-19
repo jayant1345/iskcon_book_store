@@ -1829,11 +1829,15 @@ def admin_order_detail(order_id):
 @app.route("/admin/orders/update/<int:order_id>", methods=["POST"])
 @admin_required
 def admin_update_order(order_id):
-    order                = Order.query.get_or_404(order_id)
-    prev_status          = order.order_status
-    new_status           = request.form.get("order_status", order.order_status)
-    order.order_status   = new_status
-    order.payment_status = request.form.get("payment_status", order.payment_status)
+    order               = Order.query.get_or_404(order_id)
+    prev_order_status   = order.order_status
+    prev_payment_status = order.payment_status
+
+    new_order_status    = request.form.get("order_status", order.order_status)
+    new_payment_status  = request.form.get("payment_status", order.payment_status)
+
+    order.order_status   = new_order_status
+    order.payment_status = new_payment_status
     order.courier_name   = request.form.get("courier_name", "").strip() or None
     order.tracking_number = request.form.get("tracking_number", "").strip() or None
     exp_del = request.form.get("expected_delivery", "").strip()
@@ -1846,20 +1850,41 @@ def admin_update_order(order_id):
     else:
         order.expected_delivery = None
     db.session.commit()
-    # Send email notifications when status changes
-    if prev_status != new_status:
-        if new_status == "confirmed":
-            send_order_confirmation(order)
-            if order.customer_email:
-                flash(f"Confirmation email queued → {order.customer_email}", "info")
-        elif new_status == "shipped":
-            send_order_shipped(order)
-            if order.customer_email:
-                flash(f"Shipped email queued → {order.customer_email}", "info")
-        elif new_status == "delivered":
-            send_order_delivered(order)
-            if order.customer_email:
-                flash(f"Delivered email queued → {order.customer_email}", "info")
+
+    # Decide which email to fire — use flags to avoid duplicates
+    do_confirm = False
+    do_ship    = False
+    do_deliver = False
+
+    if prev_order_status != new_order_status:
+        if new_order_status == "confirmed":
+            do_confirm = True
+        elif new_order_status == "shipped":
+            do_ship = True
+        elif new_order_status == "delivered":
+            do_deliver = True
+
+    # Also fire confirmation when admin manually marks payment as Paid
+    # (covers UPI/manual cases where order_status was already "confirmed")
+    if (new_payment_status == "paid"
+            and prev_payment_status != "paid"
+            and new_order_status in ("placed", "confirmed")
+            and not do_confirm):
+        do_confirm = True
+
+    if do_confirm:
+        send_order_confirmation(order)
+        if order.customer_email:
+            flash(f"Confirmation email queued → {order.customer_email}", "info")
+    if do_ship:
+        send_order_shipped(order)
+        if order.customer_email:
+            flash(f"Shipped email queued → {order.customer_email}", "info")
+    if do_deliver:
+        send_order_delivered(order)
+        if order.customer_email:
+            flash(f"Delivered email queued → {order.customer_email}", "info")
+
     flash("Order updated.", "success")
     return redirect(url_for("admin_order_detail", order_id=order_id))
 
