@@ -16,6 +16,10 @@ import zipfile
 from datetime import datetime, timedelta
 from functools import wraps
 
+# Load .env file for local development (no-op on Railway/Render where vars are injected)
+from dotenv import load_dotenv
+load_dotenv()
+
 from flask import (
     Flask, render_template, request, session, redirect,
     url_for, flash, jsonify, abort, send_from_directory
@@ -1051,6 +1055,47 @@ def admin_logout():
     session.pop("admin_logged_in", None)
     flash("Logged out.", "info")
     return redirect(url_for("admin_login"))
+
+
+@app.route("/admin/test-email", methods=["GET", "POST"])
+@admin_required
+def admin_test_email():
+    """Send a test email to verify SMTP config is working."""
+    result = None
+    cfg = {
+        "server":   app.config.get("MAIL_SERVER", ""),
+        "port":     app.config.get("MAIL_PORT", ""),
+        "username": app.config.get("MAIL_USERNAME", ""),
+        "from":     app.config.get("MAIL_FROM", ""),
+        "password_set": bool(app.config.get("MAIL_PASSWORD", "")),
+    }
+    if request.method == "POST":
+        to = request.form.get("to_email", "").strip()
+        if not to:
+            result = {"ok": False, "msg": "Please enter a recipient email address."}
+        elif not cfg["username"] or not cfg["password_set"]:
+            result = {"ok": False, "msg": "MAIL_USERNAME or MAIL_PASSWORD not configured in environment variables."}
+        else:
+            import smtplib, ssl
+            from email.mime.text import MIMEText
+            from email.mime.multipart import MIMEMultipart
+            try:
+                msg = MIMEMultipart("alternative")
+                msg["Subject"] = "Test Email — ISKCON Book Store"
+                msg["From"]    = cfg["from"]
+                msg["To"]      = to
+                body = "<h2>Test Email</h2><p>If you received this, your SMTP configuration is working correctly. Hare Krishna! 🙏</p>"
+                msg.attach(MIMEText(body, "html", "utf-8"))
+                ctx = ssl.create_default_context()
+                with smtplib.SMTP(cfg["server"], int(cfg["port"])) as smtp:
+                    smtp.ehlo()
+                    smtp.starttls(context=ctx)
+                    smtp.login(cfg["username"], app.config.get("MAIL_PASSWORD"))
+                    smtp.sendmail(cfg["username"], to, msg.as_string())
+                result = {"ok": True, "msg": f"Test email sent successfully to {to}. Check inbox (and spam folder)."}
+            except Exception as e:
+                result = {"ok": False, "msg": f"SMTP Error: {e}"}
+    return render_template("admin/test_email.html", cfg=cfg, result=result)
 
 
 @app.route("/admin/")
