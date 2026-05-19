@@ -106,6 +106,18 @@
                         <input type="date" name="expected_delivery" class="form-control form-control-sm"
                                value="{{ order.expected_delivery.strftime('%Y-%m-%d') if order.expected_delivery else '' }}">
                     </div>
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" name="send_email"
+                               value="1" id="sendEmailCheck"
+                               {% if order.customer_email %}checked{% endif %}>
+                        <label class="form-check-label small" for="sendEmailCheck">
+                            <i class="fas fa-envelope me-1 text-muted"></i>
+                            Send email notification to customer
+                            {% if not order.customer_email %}
+                            <span class="text-danger">(no email on file)</span>
+                            {% endif %}
+                        </label>
+                    </div>
                     <button type="submit" class="btn btn-warning w-100">
                         <i class="fas fa-save me-2"></i>Update Order
                     </button>

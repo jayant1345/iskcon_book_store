@@ -1851,39 +1851,46 @@ def admin_update_order(order_id):
         order.expected_delivery = None
     db.session.commit()
 
-    # Decide which email to fire — use flags to avoid duplicates
-    do_confirm = False
-    do_ship    = False
-    do_deliver = False
+    # Respect the admin's "Send email notification" checkbox
+    notify = request.form.get("send_email") == "1"
 
-    if prev_order_status != new_order_status:
-        if new_order_status == "confirmed":
-            do_confirm = True
-        elif new_order_status == "shipped":
-            do_ship = True
-        elif new_order_status == "delivered":
-            do_deliver = True
+    if notify:
+        try:
+            do_confirm = False
+            do_ship    = False
+            do_deliver = False
 
-    # Also fire confirmation when admin manually marks payment as Paid
-    # (covers UPI/manual cases where order_status was already "confirmed")
-    if (new_payment_status == "paid"
-            and prev_payment_status != "paid"
-            and new_order_status in ("placed", "confirmed")
-            and not do_confirm):
-        do_confirm = True
+            if prev_order_status != new_order_status:
+                if new_order_status == "confirmed":
+                    do_confirm = True
+                elif new_order_status == "shipped":
+                    do_ship = True
+                elif new_order_status == "delivered":
+                    do_deliver = True
 
-    if do_confirm:
-        send_order_confirmation(order)
-        if order.customer_email:
-            flash(f"Confirmation email queued → {order.customer_email}", "info")
-    if do_ship:
-        send_order_shipped(order)
-        if order.customer_email:
-            flash(f"Shipped email queued → {order.customer_email}", "info")
-    if do_deliver:
-        send_order_delivered(order)
-        if order.customer_email:
-            flash(f"Delivered email queued → {order.customer_email}", "info")
+            # Also fire confirmation when admin manually marks payment as Paid
+            # (covers UPI/manual cases where order_status was already "confirmed")
+            if (new_payment_status == "paid"
+                    and prev_payment_status != "paid"
+                    and new_order_status in ("placed", "confirmed")
+                    and not do_confirm):
+                do_confirm = True
+
+            if do_confirm:
+                send_order_confirmation(order)
+                if order.customer_email:
+                    flash(f"Confirmation email queued for {order.customer_email}", "info")
+            if do_ship:
+                send_order_shipped(order)
+                if order.customer_email:
+                    flash(f"Shipped email queued for {order.customer_email}", "info")
+            if do_deliver:
+                send_order_delivered(order)
+                if order.customer_email:
+                    flash(f"Delivered email queued for {order.customer_email}", "info")
+        except Exception as e:
+            app.logger.error(f"[EMAIL] Unexpected error in admin_update_order: {e}")
+            flash("Order saved, but email notification failed. Check logs.", "warning")
 
     flash("Order updated.", "success")
     return redirect(url_for("admin_order_detail", order_id=order_id))
