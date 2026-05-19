@@ -1326,7 +1326,8 @@ def admin_edit_book(book_id):
 
         db.session.commit()
         flash("Book updated!", "success")
-        return redirect(url_for("admin_books"))
+        page = request.form.get("page", 1, type=int)
+        return redirect(url_for("admin_books", page=page))
 
     return render_template("admin/book_form.html", book=book, categories=categories)
 
