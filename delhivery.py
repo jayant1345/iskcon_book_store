@@ -91,8 +91,12 @@ def create_shipment(order):
     Book a Prepaid Delhivery shipment for an Order object.
     Returns (waybill_str, error_str).  waybill is None on failure.
     """
-    total_qty    = sum(item.quantity for item in order.items)
-    weight_kg    = max(total_qty * _WEIGHT_KG, 0.5)
+    total_qty = sum(item.quantity for item in order.items)
+    weight_kg = max(
+        sum(item.quantity * (item.book.weight_kg if item.book and item.book.weight_kg else _WEIGHT_KG)
+            for item in order.items),
+        0.5
+    )
     products     = ", ".join(item.book_title for item in order.items)[:100]
 
     payload = {

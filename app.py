@@ -119,6 +119,7 @@ class Book(db.Model):
     isbn           = db.Column(db.String(30))
     language       = db.Column(db.String(50), default="English")
     pages          = db.Column(db.Integer)
+    weight_kg      = db.Column(db.Float, default=0.5)   # shipping weight
     publisher      = db.Column(db.String(200), default="The Bhaktivedanta Book Trust")
     stock          = db.Column(db.Integer, default=100)
     featured       = db.Column(db.Boolean, default=False)
@@ -401,8 +402,11 @@ def api_shipping_rate(pincode):
     if not svc.get("pre_paid"):
         return jsonify({"serviceable": False, "error": "Prepaid delivery not available at this pincode"})
     totals = cart_totals()
-    total_qty    = sum(item["qty"] for item in totals["items"]) or 1
-    weight_grams = max(int(total_qty * app.config["DELHIVERY_DEFAULT_WEIGHT"] * 1000), 500)
+    weight_grams = max(
+        int(sum(item["qty"] * (item["book"].weight_kg or app.config["DELHIVERY_DEFAULT_WEIGHT"]) * 1000
+                for item in totals["items"])),
+        500
+    )
     rate, zone, err = get_shipping_rate(pincode, weight_grams)
     if err or rate is None:
         return jsonify({"serviceable": False, "error": err or "Rate unavailable"})
@@ -676,8 +680,11 @@ def checkout():
 
         # Calculate Delhivery shipping rate for this pincode
         from delhivery import get_shipping_rate
-        total_qty    = sum(item["qty"] for item in totals["items"]) or 1
-        weight_grams = max(int(total_qty * app.config["DELHIVERY_DEFAULT_WEIGHT"] * 1000), 500)
+        weight_grams = max(
+            int(sum(item["qty"] * (item["book"].weight_kg or app.config["DELHIVERY_DEFAULT_WEIGHT"]) * 1000
+                    for item in totals["items"])),
+            500
+        )
         delhivery_rate, _, _ = get_shipping_rate(pincode, weight_grams)
         shipping_charge = delhivery_rate if delhivery_rate is not None else totals["shipping"]
         subtotal    = totals["subtotal"]
@@ -1192,6 +1199,7 @@ def admin_add_book():
             isbn           = request.form.get("isbn", "").strip(),
             language       = request.form.get("language", "English").strip(),
             pages          = int(request.form["pages"]) if request.form.get("pages") else None,
+            weight_kg      = float(request.form["weight_kg"]) if request.form.get("weight_kg") else 0.5,
             publisher      = request.form.get("publisher", "The Bhaktivedanta Book Trust").strip(),
             stock          = int(request.form.get("stock", 100)),
             featured       = bool(request.form.get("featured")),
@@ -1234,6 +1242,7 @@ def admin_edit_book(book_id):
         book.isbn           = request.form.get("isbn", "").strip()
         book.language       = request.form.get("language", "English").strip()
         book.pages          = int(request.form["pages"]) if request.form.get("pages") else None
+        book.weight_kg      = float(request.form["weight_kg"]) if request.form.get("weight_kg") else 0.5
         book.publisher      = request.form.get("publisher", "").strip()
         book.stock          = int(request.form.get("stock", 100))
         book.featured       = bool(request.form.get("featured"))

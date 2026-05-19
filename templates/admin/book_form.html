@@ -82,15 +82,22 @@
                                 </div>
                             </div>
                             <div class="row">
-                                <div class="col-md-4 mb-3">
+                                <div class="col-md-3 mb-3">
                                     <label class="form-label">ISBN</label>
                                     <input type="text" name="isbn" class="form-control" value="{{ book.isbn if book else '' }}">
                                 </div>
-                                <div class="col-md-4 mb-3">
+                                <div class="col-md-3 mb-3">
                                     <label class="form-label">Pages</label>
                                     <input type="number" name="pages" class="form-control" value="{{ book.pages if book else '' }}">
                                 </div>
-                                <div class="col-md-4 mb-3">
+                                <div class="col-md-3 mb-3">
+                                    <label class="form-label">Weight (kg) *</label>
+                                    <input type="number" step="0.01" min="0.05" max="5" name="weight_kg" class="form-control"
+                                           value="{{ book.weight_kg if book and book.weight_kg else '0.50' }}"
+                                           placeholder="e.g. 0.30" required>
+                                    <div class="form-text">Used for shipping rate</div>
+                                </div>
+                                <div class="col-md-3 mb-3">
                                     <label class="form-label">Publisher</label>
                                     <input type="text" name="publisher" class="form-control" value="{{ book.publisher if book else 'The Bhaktivedanta Book Trust' }}">
                                 </div>
