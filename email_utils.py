@@ -16,13 +16,14 @@ from flask import current_app, render_template
 def _do_send(app, to_email, subject, html_body):
     """Runs in background thread — opens SMTP connection and sends."""
     with app.app_context():
-        username = app.config.get("MAIL_USERNAME", "")
-        password = app.config.get("MAIL_PASSWORD", "")
+        username  = app.config.get("MAIL_USERNAME", "")
+        password  = app.config.get("MAIL_PASSWORD", "")
         from_addr = app.config.get("MAIL_FROM", username)
-        server   = app.config.get("MAIL_SERVER", "smtp.gmail.com")
-        port     = int(app.config.get("MAIL_PORT", 587))
+        server    = app.config.get("MAIL_SERVER", "smtp.gmail.com")
+        port      = int(app.config.get("MAIL_PORT", 587))
 
         if not username or not password:
+            print("[EMAIL] Credentials not set — skipping send.")
             app.logger.warning("[EMAIL] Credentials not set — skipping send.")
             return
 
@@ -40,16 +41,15 @@ def _do_send(app, to_email, subject, html_body):
                 smtp.login(username, password)
                 smtp.sendmail(username, to_email, msg.as_string())
 
+            print(f"[EMAIL] OK — '{subject}' → {to_email}")
             app.logger.info(f"[EMAIL] '{subject}' → {to_email}")
         except Exception as exc:
+            print(f"[EMAIL] FAILED to send to {to_email}: {exc}")
             app.logger.error(f"[EMAIL] Failed to send to {to_email}: {exc}")
 
 
-def _send_async(to_email, subject, html_body):
-    """Fire-and-forget: renders template synchronously, sends SMTP in background."""
-    if not to_email:
-        return
-    app = current_app._get_current_object()
+def _send_async(app, to_email, subject, html_body):
+    """Fire-and-forget: sends SMTP in a background daemon thread."""
     t = threading.Thread(
         target=_do_send,
         args=(app, to_email, subject, html_body),
@@ -63,25 +63,46 @@ def _send_async(to_email, subject, html_body):
 def send_order_confirmation(order):
     """Email customer when their order is confirmed / payment received."""
     if not order.customer_email:
+        print(f"[EMAIL] Skipping confirmation for {order.order_number} — no email on record.")
         return
-    subject   = f"Order Confirmed #{order.order_number} — Hare Krishna! 🙏"
-    html_body = render_template("emails/order_confirmation.html", order=order)
-    _send_async(order.customer_email, subject, html_body)
+    try:
+        app       = current_app._get_current_object()
+        subject   = f"Order Confirmed #{order.order_number} — Hare Krishna!"
+        html_body = render_template("emails/order_confirmation.html", order=order)
+        print(f"[EMAIL] Queuing confirmation → {order.customer_email}")
+        _send_async(app, order.customer_email, subject, html_body)
+    except Exception as exc:
+        print(f"[EMAIL] send_order_confirmation error: {exc}")
+        current_app.logger.error(f"[EMAIL] send_order_confirmation error: {exc}")
 
 
 def send_order_shipped(order):
     """Email customer when order is shipped with tracking details."""
     if not order.customer_email:
+        print(f"[EMAIL] Skipping shipped for {order.order_number} — no email on record.")
         return
-    subject   = f"Your Order #{order.order_number} Has Been Shipped! 📦"
-    html_body = render_template("emails/order_shipped.html", order=order)
-    _send_async(order.customer_email, subject, html_body)
+    try:
+        app       = current_app._get_current_object()
+        subject   = f"Your Order #{order.order_number} Has Been Shipped!"
+        html_body = render_template("emails/order_shipped.html", order=order)
+        print(f"[EMAIL] Queuing shipped → {order.customer_email}")
+        _send_async(app, order.customer_email, subject, html_body)
+    except Exception as exc:
+        print(f"[EMAIL] send_order_shipped error: {exc}")
+        current_app.logger.error(f"[EMAIL] send_order_shipped error: {exc}")
 
 
 def send_order_delivered(order):
     """Email customer when order is marked delivered."""
     if not order.customer_email:
+        print(f"[EMAIL] Skipping delivered for {order.order_number} — no email on record.")
         return
-    subject   = f"Your Order #{order.order_number} Has Been Delivered! ✅"
-    html_body = render_template("emails/order_delivered.html", order=order)
-    _send_async(order.customer_email, subject, html_body)
+    try:
+        app       = current_app._get_current_object()
+        subject   = f"Your Order #{order.order_number} Has Been Delivered!"
+        html_body = render_template("emails/order_delivered.html", order=order)
+        print(f"[EMAIL] Queuing delivered → {order.customer_email}")
+        _send_async(app, order.customer_email, subject, html_body)
+    except Exception as exc:
+        print(f"[EMAIL] send_order_delivered error: {exc}")
+        current_app.logger.error(f"[EMAIL] send_order_delivered error: {exc}")

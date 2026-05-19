@@ -1850,10 +1850,16 @@ def admin_update_order(order_id):
     if prev_status != new_status:
         if new_status == "confirmed":
             send_order_confirmation(order)
+            if order.customer_email:
+                flash(f"Confirmation email queued → {order.customer_email}", "info")
         elif new_status == "shipped":
             send_order_shipped(order)
+            if order.customer_email:
+                flash(f"Shipped email queued → {order.customer_email}", "info")
         elif new_status == "delivered":
             send_order_delivered(order)
+            if order.customer_email:
+                flash(f"Delivered email queued → {order.customer_email}", "info")
     flash("Order updated.", "success")
     return redirect(url_for("admin_order_detail", order_id=order_id))
 
