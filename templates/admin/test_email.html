@@ -9,19 +9,23 @@
       </div>
       <div class="card-body">
 
-        <!-- Info banner -->
         <div class="alert alert-info py-2 small mb-3">
-          <strong>Using Brevo HTTP API</strong> — Railway blocks direct SMTP (port 587/465).
-          Brevo works via HTTPS and is free up to 300 emails/day.
+          <strong>Using Brevo HTTP API</strong> — Railway blocks direct SMTP.
+          Brevo works via HTTPS, free up to 300 emails/day.
         </div>
 
-        <!-- Current Config -->
         <h6 class="text-muted mb-3">Current Settings</h6>
         <table class="table table-sm mb-4">
           <tr>
             <td class="text-muted">Brevo API Key</td>
-            <td><code>{{ '••••••••' if cfg.api_key_set else 'NOT SET' }}</code></td>
-            <td>{% if cfg.api_key_set %}<span class="badge bg-success">Set</span>{% else %}<span class="badge bg-danger">Missing</span>{% endif %}</td>
+            <td><code>{{ '(set)' if cfg.api_key_set else 'NOT SET' }}</code></td>
+            <td>
+              {% if cfg.api_key_set %}
+                <span class="badge bg-success">Set</span>
+              {% else %}
+                <span class="badge bg-danger">Missing</span>
+              {% endif %}
+            </td>
           </tr>
           <tr>
             <td class="text-muted">Sender Email</td>
@@ -32,36 +36,33 @@
 
         {% if not cfg.api_key_set %}
         <div class="alert alert-danger small">
-          <strong>BREVO_API_KEY missing.</strong> Steps to fix:
-          <ol class="mb-0 mt-2">
-            <li>Sign up free at <strong>brevo.com</strong></li>
-            <li>Settings → API Keys → Create API key → copy it</li>
-            <li>Senders &amp; Domains → Add <code>{{ cfg.username }}</code> → verify via email</li>
-            <li>Railway → your service → Variables → add:<br>
-              <code>BREVO_API_KEY = xkeysib-...</code></li>
-          </ol>
+          <strong>BREVO_API_KEY missing.</strong> Add in Railway Variables:
+          <code>BREVO_API_KEY = xkeysib-...</code>
         </div>
         {% endif %}
 
-        <!-- Result -->
         {% if result %}
           {% if result.ok %}
-          <div class="alert alert-success"><i class="fas fa-check-circle me-2"></i>{{ result.msg }}</div>
+          <div class="alert alert-success">
+            <i class="fas fa-check-circle me-2"></i>{{ result.msg }}
+          </div>
           {% else %}
-          <div class="alert alert-danger"><i class="fas fa-times-circle me-2"></i>{{ result.msg }}</div>
+          <div class="alert alert-danger">
+            <i class="fas fa-times-circle me-2"></i>{{ result.msg }}
+          </div>
           {% endif %}
         {% endif %}
 
-        <!-- Send Test -->
         <form method="POST">
           <div class="mb-3">
             <label class="form-label fw-bold">Send test email to</label>
             <input type="email" name="to_email" class="form-control"
                    placeholder="your@email.com"
-                   value="{{ request.form.get('to_email', cfg.username) }}">
+                   value="{{ to_email }}">
             <div class="form-text">Enter any email to receive the test message.</div>
           </div>
-          <button type="submit" class="btn btn-warning w-100" {% if not cfg.api_key_set %}disabled{% endif %}>
+          <button type="submit" class="btn btn-warning w-100"
+                  {% if not cfg.api_key_set %}disabled{% endif %}>
             <i class="fas fa-paper-plane me-2"></i>Send Test Email
           </button>
         </form>

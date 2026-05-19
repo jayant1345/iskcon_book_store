@@ -1091,7 +1091,8 @@ def admin_test_email():
                     result = {"ok": False, "msg": f"Brevo API error {resp.status_code}: {resp.text[:300]}"}
             except Exception as e:
                 result = {"ok": False, "msg": f"Request error: {e}"}
-    return render_template("admin/test_email.html", cfg=cfg, result=result)
+    to_email = request.form.get("to_email", cfg["username"]) if request.method == "POST" else cfg["username"]
+    return render_template("admin/test_email.html", cfg=cfg, result=result, to_email=to_email)
 
 
 @app.route("/admin/")
