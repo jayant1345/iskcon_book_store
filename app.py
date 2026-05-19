@@ -2116,6 +2116,7 @@ def init_db():
             ("books",  "is_ebook",           "BOOLEAN DEFAULT FALSE"),
             ("books",  "ebook_file",         "VARCHAR(200)"),
             ("books",              "preview_file", "VARCHAR(200)"),
+            ("books",              "weight_kg",    "FLOAT DEFAULT 0.5"),
             ("stock_receipts",     "batch_ref",    "VARCHAR(20)"),
         ]
         for table, column, col_type in migrations:
