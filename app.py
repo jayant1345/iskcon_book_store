@@ -72,7 +72,7 @@ class Config:
     FREE_SHIPPING_ABOVE = float(os.environ.get("FREE_SHIPPING_ABOVE", "500"))
     DELHIVERY_API_TOKEN       = os.environ.get("DELHIVERY_API_TOKEN", "")
     DELHIVERY_DEFAULT_WEIGHT  = float(os.environ.get("DELHIVERY_DEFAULT_WEIGHT", "0.5"))
-    MAIL_USERNAME = os.environ.get("MAIL_USERNAME", "iskconbooks.in@gmail.com")
+    MAIL_USERNAME = os.environ.get("MAIL_USERNAME", "noreply@iskconbooks.in")
     BREVO_API_KEY = os.environ.get("BREVO_API_KEY", "")
 
 
