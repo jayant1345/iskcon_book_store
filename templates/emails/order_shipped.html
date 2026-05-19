@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Order Shipped — ISKCON Book Store</title>
+</head>
+<body style="margin:0;padding:0;background:#f8f5f0;font-family:Arial,Helvetica,sans-serif;color:#333;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f8f5f0;padding:20px 0;">
+  <tr><td align="center">
+    <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:10px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);">
+
+      <!-- Header -->
+      <tr>
+        <td style="background:linear-gradient(135deg,#f97316,#ea580c);padding:32px 24px;text-align:center;">
+          <p style="margin:0 0 6px;font-size:28px;">🙏</p>
+          <h1 style="margin:0;color:#ffffff;font-size:22px;letter-spacing:1px;">ISKCON Book Store</h1>
+          <p style="margin:8px 0 0;color:#ffe8d6;font-size:13px;">Spreading Krishna Consciousness Through Books</p>
+        </td>
+      </tr>
+
+      <!-- Shipped Badge -->
+      <tr>
+        <td style="padding:28px 24px 0;text-align:center;">
+          <div style="display:inline-block;background:#eff6ff;border:2px solid #3b82f6;border-radius:50px;padding:8px 22px;">
+            <span style="color:#1d4ed8;font-weight:bold;font-size:15px;">📦 Your Order is On Its Way!</span>
+          </div>
+          <h2 style="margin:16px 0 4px;color:#1e3a5f;font-size:20px;">Great news, {{ order.customer_name }}!</h2>
+          <p style="margin:0;color:#666;font-size:14px;">Order <strong style="color:#f97316;">{{ order.order_number }}</strong> has been handed over to the courier.</p>
+        </td>
+      </tr>
+
+      <!-- Tracking Info -->
+      {% if order.tracking_number %}
+      <tr>
+        <td style="padding:24px;">
+          <div style="background:#eff6ff;border-radius:10px;padding:20px;text-align:center;">
+            <p style="margin:0 0 6px;font-size:13px;color:#555;text-transform:uppercase;letter-spacing:1px;">Tracking Number</p>
+            <p style="margin:0;font-size:24px;font-weight:bold;color:#1d4ed8;letter-spacing:2px;">{{ order.tracking_number }}</p>
+            {% if order.courier_name %}
+            <p style="margin:8px 0 0;font-size:13px;color:#666;">via <strong>{{ order.courier_name }}</strong></p>
+            {% endif %}
+            {% if order.expected_delivery %}
+            <p style="margin:12px 0 0;font-size:13px;color:#555;">
+              Expected Delivery: <strong style="color:#1e3a5f;">{{ order.expected_delivery.strftime('%d %b %Y') }}</strong>
+            </p>
+            {% endif %}
+          </div>
+        </td>
+      </tr>
+      {% endif %}
+
+      <!-- Order Summary -->
+      <tr>
+        <td style="padding:{% if not order.tracking_number %}24px{% else %}0 24px 24px{% endif %};">
+          <h3 style="margin:0 0 12px;color:#1e3a5f;font-size:16px;border-bottom:2px solid #f97316;padding-bottom:8px;">📚 Books in This Shipment</h3>
+          <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
+            {% for item in order.items %}
+            <tr>
+              <td style="padding:9px 10px;font-size:14px;color:#333;border-bottom:1px solid #f5f5f5;">{{ item.book_title }}</td>
+              <td style="padding:9px 10px;font-size:14px;color:#555;text-align:center;border-bottom:1px solid #f5f5f5;width:50px;">× {{ item.quantity }}</td>
+            </tr>
+            {% endfor %}
+          </table>
+        </td>
+      </tr>
+
+      <!-- Delivery Address -->
+      <tr>
+        <td style="padding:0 24px 24px;">
+          <div style="background:#fff8f0;border-radius:8px;padding:16px;">
+            <h4 style="margin:0 0 10px;color:#1e3a5f;font-size:13px;text-transform:uppercase;letter-spacing:1px;">📍 Shipping To</h4>
+            <p style="margin:0;font-size:14px;color:#555;line-height:1.7;">
+              {{ order.customer_name }}<br>
+              {{ order.address }}<br>
+              {{ order.city }}{% if order.state %}, {{ order.state }}{% endif %} — {{ order.pincode }}
+            </p>
+          </div>
+        </td>
+      </tr>
+
+      <!-- Spiritual Message -->
+      <tr>
+        <td style="padding:0 24px 24px;">
+          <div style="background:#fffbeb;border-left:4px solid #f97316;border-radius:0 8px 8px 0;padding:16px;">
+            <p style="margin:0;font-size:13px;color:#92400e;line-height:1.8;font-style:italic;">
+              "Simply by reading these books one can get liberation."<br>
+              <strong>— Srila Prabhupada</strong>
+            </p>
+          </div>
+        </td>
+      </tr>
+
+      <!-- Support -->
+      <tr>
+        <td style="padding:0 24px 24px;text-align:center;">
+          <p style="margin:0;font-size:13px;color:#666;">For any queries, reach us at:</p>
+          <p style="margin:6px 0 0;font-size:13px;color:#666;">
+            📧 <a href="mailto:iskconbooks.in@gmail.com" style="color:#f97316;text-decoration:none;">iskconbooks.in@gmail.com</a>
+          </p>
+        </td>
+      </tr>
+
+      <!-- Footer -->
+      <tr>
+        <td style="background:#1e3a5f;padding:20px 24px;text-align:center;">
+          <p style="margin:0;color:#93c5fd;font-size:13px;letter-spacing:1px;">Hare Krishna, Hare Krishna, Krishna Krishna, Hare Hare</p>
+          <p style="margin:6px 0 0;color:#64748b;font-size:11px;">Hare Rama, Hare Rama, Rama Rama, Hare Hare</p>
+        </td>
+      </tr>
+
+    </table>
+  </td></tr>
+</table>
+</body>
+</html>

@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Order Delivered — ISKCON Book Store</title>
+</head>
+<body style="margin:0;padding:0;background:#f8f5f0;font-family:Arial,Helvetica,sans-serif;color:#333;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f8f5f0;padding:20px 0;">
+  <tr><td align="center">
+    <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:10px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);">
+
+      <!-- Header -->
+      <tr>
+        <td style="background:linear-gradient(135deg,#f97316,#ea580c);padding:32px 24px;text-align:center;">
+          <p style="margin:0 0 6px;font-size:28px;">🙏</p>
+          <h1 style="margin:0;color:#ffffff;font-size:22px;letter-spacing:1px;">ISKCON Book Store</h1>
+          <p style="margin:8px 0 0;color:#ffe8d6;font-size:13px;">Spreading Krishna Consciousness Through Books</p>
+        </td>
+      </tr>
+
+      <!-- Delivered Badge -->
+      <tr>
+        <td style="padding:28px 24px 16px;text-align:center;">
+          <div style="display:inline-block;background:#ecfdf5;border:2px solid #16a34a;border-radius:50px;padding:8px 22px;">
+            <span style="color:#16a34a;font-weight:bold;font-size:15px;">✅ Delivered Successfully!</span>
+          </div>
+          <h2 style="margin:16px 0 4px;color:#1e3a5f;font-size:20px;">Your books have arrived, {{ order.customer_name }}!</h2>
+          <p style="margin:0;color:#666;font-size:14px;">Order <strong style="color:#f97316;">{{ order.order_number }}</strong> has been delivered.</p>
+        </td>
+      </tr>
+
+      <!-- Books Delivered -->
+      <tr>
+        <td style="padding:8px 24px 24px;">
+          <h3 style="margin:0 0 12px;color:#1e3a5f;font-size:16px;border-bottom:2px solid #f97316;padding-bottom:8px;">📚 Books Delivered</h3>
+          <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
+            {% for item in order.items %}
+            <tr>
+              <td style="padding:10px 12px;font-size:14px;color:#333;border-bottom:1px solid #f5f5f5;">{{ item.book_title }}</td>
+              <td style="padding:10px 12px;font-size:14px;color:#555;text-align:center;border-bottom:1px solid #f5f5f5;width:50px;">× {{ item.quantity }}</td>
+              <td style="padding:10px 12px;font-size:14px;color:#333;text-align:right;border-bottom:1px solid #f5f5f5;">₹{{ "%.0f"|format(item.subtotal) }}</td>
+            </tr>
+            {% endfor %}
+            <tr style="background:#fff8f0;">
+              <td colspan="2" style="padding:10px 12px;text-align:right;font-weight:bold;color:#333;">Total Paid</td>
+              <td style="padding:10px 12px;text-align:right;font-weight:bold;color:#f97316;font-size:16px;">₹{{ "%.0f"|format(order.total_amount) }}</td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+
+      <!-- Thank You Message -->
+      <tr>
+        <td style="padding:0 24px 24px;text-align:center;">
+          <div style="background:#ecfdf5;border-radius:10px;padding:24px;">
+            <p style="margin:0 0 10px;font-size:26px;">🕉️</p>
+            <p style="margin:0;font-size:15px;color:#1e3a5f;font-weight:bold;line-height:1.6;">Thank you for supporting the distribution of Srila Prabhupada's books!</p>
+            <p style="margin:10px 0 0;font-size:13px;color:#555;line-height:1.8;">By reading these transcendental books, you are directly associating with Srila Prabhupada and advancing in spiritual life. We pray that these books bring immense joy and spiritual benefit to you and everyone you share them with.</p>
+          </div>
+        </td>
+      </tr>
+
+      <!-- Spiritual Quote -->
+      <tr>
+        <td style="padding:0 24px 24px;">
+          <div style="background:#fffbeb;border-left:4px solid #f97316;border-radius:0 8px 8px 0;padding:16px;">
+            <p style="margin:0;font-size:13px;color:#92400e;line-height:1.8;font-style:italic;">
+              "If you want to become Krishna conscious very quickly, read all our books every day as many times as possible."<br>
+              <strong>— Srila Prabhupada</strong>
+            </p>
+          </div>
+        </td>
+      </tr>
+
+      <!-- Order Again CTA -->
+      <tr>
+        <td style="padding:0 24px 24px;text-align:center;">
+          <p style="margin:0 0 14px;font-size:14px;color:#555;">Wish to gift these books to a friend or family member?</p>
+          <a href="mailto:iskconbooks.in@gmail.com" style="display:inline-block;background:#f97316;color:#fff;text-decoration:none;padding:12px 28px;border-radius:6px;font-weight:bold;font-size:14px;">Contact Us to Order More</a>
+        </td>
+      </tr>
+
+      <!-- Support -->
+      <tr>
+        <td style="padding:0 24px 24px;text-align:center;border-top:1px solid #f0ebe3;">
+          <p style="margin:16px 0 4px;font-size:13px;color:#666;">For any concerns about your delivery:</p>
+          <p style="margin:0;font-size:13px;color:#666;">
+            📧 <a href="mailto:iskconbooks.in@gmail.com" style="color:#f97316;text-decoration:none;">iskconbooks.in@gmail.com</a>
+          </p>
+        </td>
+      </tr>
+
+      <!-- Footer -->
+      <tr>
+        <td style="background:#1e3a5f;padding:20px 24px;text-align:center;">
+          <p style="margin:0;color:#93c5fd;font-size:13px;letter-spacing:1px;">Hare Krishna, Hare Krishna, Krishna Krishna, Hare Hare</p>
+          <p style="margin:6px 0 0;color:#64748b;font-size:11px;">Hare Rama, Hare Rama, Rama Rama, Hare Hare</p>
+        </td>
+      </tr>
+
+    </table>
+  </td></tr>
+</table>
+</body>
+</html>

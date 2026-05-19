@@ -24,6 +24,7 @@ from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from sqlalchemy import or_
+from email_utils import send_order_confirmation, send_order_shipped, send_order_delivered
 
 # ─────────────────────────────────────────────
 # App & Configuration
@@ -67,6 +68,11 @@ class Config:
     FREE_SHIPPING_ABOVE = float(os.environ.get("FREE_SHIPPING_ABOVE", "500"))
     DELHIVERY_API_TOKEN       = os.environ.get("DELHIVERY_API_TOKEN", "")
     DELHIVERY_DEFAULT_WEIGHT  = float(os.environ.get("DELHIVERY_DEFAULT_WEIGHT", "0.5"))
+    MAIL_SERVER   = os.environ.get("MAIL_SERVER", "smtp.gmail.com")
+    MAIL_PORT     = int(os.environ.get("MAIL_PORT", "587"))
+    MAIL_USERNAME = os.environ.get("MAIL_USERNAME", "")
+    MAIL_PASSWORD = os.environ.get("MAIL_PASSWORD", "")
+    MAIL_FROM     = os.environ.get("MAIL_FROM", "ISKCON Book Store <iskconbooks.in@gmail.com>")
 
 
 app.config.from_object(Config)
@@ -832,6 +838,7 @@ def payment_verify():
             order.razorpay_payment_id = rp_payment_id
             order.order_status      = "confirmed"
             db.session.commit()
+            send_order_confirmation(order)
             return jsonify({"success": True, "redirect": url_for("order_success", order_number=order.order_number)})
     except Exception:
         pass
@@ -861,6 +868,7 @@ def payment_payu_success():
             order.order_status = "confirmed"
             order.razorpay_payment_id = data.get("mihpayid", "")
             db.session.commit()
+            send_order_confirmation(order)
             flash("Payment successful! 🎉 Hare Krishna!", "success")
             return redirect(url_for("order_success", order_number=order.order_number))
         else:
@@ -893,13 +901,17 @@ def payment_payu_webhook():
         expected = _payu_verify_hash(data, salt)
         received = data.get("hash", "")
         if expected == received:
+            newly_confirmed = False
             if data.get("status") == "success" and order.payment_status != "paid":
                 order.payment_status = "paid"
                 order.order_status = "confirmed"
                 order.razorpay_payment_id = data.get("mihpayid", "")
+                newly_confirmed = True
             elif data.get("status") != "success" and order.payment_status == "pending":
                 order.payment_status = "failed"
             db.session.commit()
+            if newly_confirmed:
+                send_order_confirmation(order)
     return "OK", 200
 
 
@@ -1818,7 +1830,9 @@ def admin_order_detail(order_id):
 @admin_required
 def admin_update_order(order_id):
     order                = Order.query.get_or_404(order_id)
-    order.order_status   = request.form.get("order_status", order.order_status)
+    prev_status          = order.order_status
+    new_status           = request.form.get("order_status", order.order_status)
+    order.order_status   = new_status
     order.payment_status = request.form.get("payment_status", order.payment_status)
     order.courier_name   = request.form.get("courier_name", "").strip() or None
     order.tracking_number = request.form.get("tracking_number", "").strip() or None
@@ -1832,6 +1846,14 @@ def admin_update_order(order_id):
     else:
         order.expected_delivery = None
     db.session.commit()
+    # Send email notifications when status changes
+    if prev_status != new_status:
+        if new_status == "confirmed":
+            send_order_confirmation(order)
+        elif new_status == "shipped":
+            send_order_shipped(order)
+        elif new_status == "delivered":
+            send_order_delivered(order)
     flash("Order updated.", "success")
     return redirect(url_for("admin_order_detail", order_id=order_id))
 
@@ -1866,6 +1888,7 @@ def admin_delhivery_book(order_id):
         order.tracking_number = waybill
         order.order_status    = "shipped"
         db.session.commit()
+        send_order_shipped(order)
         flash(f"Delhivery pickup booked! Waybill: {waybill}", "success")
     else:
         flash(f"Delhivery booking failed: {err}", "danger")
