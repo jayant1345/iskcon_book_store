@@ -190,9 +190,24 @@ def cancel_shipment(waybill):
             headers=_auth(),
             timeout=_TIMEOUT,
         )
-        data = r.json()
+        body = r.text.strip() if r.text else ""
+
+        # Delhivery sometimes returns empty body or plain text instead of JSON
+        if not body:
+            if r.status_code == 200:
+                return True, "Shipment cancellation request sent (no response body)"
+            return False, f"Delhivery returned empty response (HTTP {r.status_code})"
+
+        try:
+            data = r.json()
+        except ValueError:
+            # Plain-text or HTML response — treat 200 as success
+            if r.status_code == 200:
+                return True, body[:200]
+            return False, f"Unexpected response (HTTP {r.status_code}): {body[:200]}"
+
         if data.get("status"):
-            return True, "Shipment cancelled successfully"
+            return True, data.get("message", "Shipment cancelled successfully")
         return False, data.get("message", "Cancellation failed")
     except Exception as e:
         return False, str(e)
