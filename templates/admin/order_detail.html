@@ -113,6 +113,49 @@
             </div>
         </div>
 
+        <!-- Delhivery Courier -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-header py-3" style="background:#e63329; color:#fff;">
+                <h5 class="mb-0"><i class="fas fa-truck me-2"></i>Delhivery Courier</h5>
+            </div>
+            <div class="card-body">
+                {% if order.courier_name == 'Delhivery' and order.tracking_number %}
+                    <p class="mb-1"><strong>Waybill:</strong> <code>{{ order.tracking_number }}</code></p>
+                    <p class="mb-3 small text-muted">Booked via Delhivery API</p>
+
+                    <button class="btn btn-outline-primary btn-sm w-100 mb-2" onclick="loadTracking()">
+                        <i class="fas fa-satellite-dish me-1"></i> Refresh Live Tracking
+                    </button>
+                    <div id="delhivery-tracking" class="mt-2" style="display:none;"></div>
+
+                    <hr class="my-3">
+                    <form method="POST" action="{{ url_for('admin_delhivery_cancel', order_id=order.id) }}"
+                          onsubmit="return confirm('Cancel Delhivery waybill {{ order.tracking_number }}? This cannot be undone once picked up.')">
+                        <button type="submit" class="btn btn-outline-danger btn-sm w-100">
+                            <i class="fas fa-times-circle me-1"></i> Cancel Delhivery Shipment
+                        </button>
+                    </form>
+                {% else %}
+                    {% if order.order_status in ['confirmed', 'placed'] and order.payment_status == 'paid' %}
+                        <p class="small text-muted mb-3">Book Delhivery pickup — their agent will collect from the ISKCON centre.</p>
+                        <form method="POST" action="{{ url_for('admin_delhivery_book', order_id=order.id) }}"
+                              onsubmit="return confirm('Book Delhivery Prepaid pickup for order {{ order.order_number }}?')">
+                            <button type="submit" class="btn w-100" style="background:#e63329; color:#fff;">
+                                <i class="fas fa-truck me-2"></i>Book Delhivery Pickup
+                            </button>
+                        </form>
+                    {% elif order.payment_status != 'paid' %}
+                        <p class="small text-muted mb-0">
+                            <i class="fas fa-lock me-1 text-warning"></i>
+                            Payment must be confirmed before booking Delhivery.
+                        </p>
+                    {% else %}
+                        <p class="small text-muted mb-0">Delhivery booking is available for Confirmed or Placed orders.</p>
+                    {% endif %}
+                {% endif %}
+            </div>
+        </div>
+
         <!-- WhatsApp Integration -->
         {% if order.customer_phone %}
         {% set clean_phone = order.customer_phone.replace('+','').replace(' ','').replace('-','') %}
@@ -294,4 +337,45 @@
         {% endif %}
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function loadTracking() {
+    const box = document.getElementById('delhivery-tracking');
+    if (!box) return;
+    box.style.display = 'block';
+    box.innerHTML = '<div class="text-center py-2"><span class="spinner-border spinner-border-sm"></span> Fetching live status&hellip;</div>';
+    fetch('{{ url_for("admin_delhivery_track", order_id=order.id) }}')
+        .then(r => r.json())
+        .then(data => {
+            if (data.error) {
+                box.innerHTML = '<div class="alert alert-danger py-2 small">' + data.error + '</div>';
+                return;
+            }
+            let html = '<div class="alert alert-info py-2 mb-2 small"><strong>' + (data.status || '—') + '</strong>';
+            if (data.instructions) html += ' — ' + data.instructions;
+            html += '</div>';
+            if (data.scans && data.scans.length) {
+                html += '<table class="table table-sm table-bordered mb-0" style="font-size:.78rem;">';
+                html += '<thead class="table-light"><tr><th>Event</th><th>Location</th><th>Time</th></tr></thead><tbody>';
+                data.scans.slice(0, 8).forEach(s => {
+                    html += '<tr><td>' + (s.scan || '—')
+                          + (s.instructions ? '<br><small class="text-muted">' + s.instructions + '</small>' : '')
+                          + '</td><td>' + (s.location || '—') + '</td>'
+                          + '<td style="white-space:nowrap;">'
+                          + (s.datetime ? s.datetime.replace('T',' ').slice(0,16) : '—')
+                          + '</td></tr>';
+                });
+                html += '</tbody></table>';
+            } else {
+                html += '<p class="small text-muted mb-0">No scan events yet.</p>';
+            }
+            box.innerHTML = html;
+        })
+        .catch(() => {
+            box.innerHTML = '<div class="alert alert-danger py-2 small">Could not fetch tracking. Try again.</div>';
+        });
+}
+</script>
 {% endblock %}

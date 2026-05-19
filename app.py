@@ -65,6 +65,8 @@ class Config:
     STORE_NAME = "ISKCON Book Store"
     SHIPPING_CHARGE = float(os.environ.get("SHIPPING_CHARGE", "50"))
     FREE_SHIPPING_ABOVE = float(os.environ.get("FREE_SHIPPING_ABOVE", "500"))
+    DELHIVERY_API_TOKEN       = os.environ.get("DELHIVERY_API_TOKEN", "")
+    DELHIVERY_DEFAULT_WEIGHT  = float(os.environ.get("DELHIVERY_DEFAULT_WEIGHT", "0.5"))
 
 
 app.config.from_object(Config)
@@ -387,6 +389,32 @@ def inject_globals():
 # SEO — sitemap & robots
 # ─────────────────────────────────────────────
 
+@app.route("/api/shipping-rate/<pincode>")
+def api_shipping_rate(pincode):
+    """AJAX: return Delhivery Prepaid rate for a destination pincode."""
+    if not pincode.isdigit() or len(pincode) != 6:
+        return jsonify({"serviceable": False, "error": "Invalid pincode"})
+    from delhivery import get_shipping_rate, check_serviceability
+    svc = check_serviceability(pincode)
+    if not svc.get("serviceable"):
+        return jsonify({"serviceable": False, "error": "Delhivery does not deliver to this pincode"})
+    if not svc.get("pre_paid"):
+        return jsonify({"serviceable": False, "error": "Prepaid delivery not available at this pincode"})
+    totals = cart_totals()
+    total_qty    = sum(item["qty"] for item in totals["items"]) or 1
+    weight_grams = max(int(total_qty * app.config["DELHIVERY_DEFAULT_WEIGHT"] * 1000), 500)
+    rate, zone, err = get_shipping_rate(pincode, weight_grams)
+    if err or rate is None:
+        return jsonify({"serviceable": False, "error": err or "Rate unavailable"})
+    return jsonify({
+        "serviceable": True,
+        "rate":  rate,
+        "zone":  zone,
+        "city":  svc.get("city", ""),
+        "oda":   svc.get("oda", False),
+    })
+
+
 @app.route("/sitemap.xml")
 def sitemap():
     domain = "https://iskconbooks.in"
@@ -642,6 +670,20 @@ def checkout():
             flash("Please fill all required fields.", "danger")
             return render_template("checkout.html", **totals)
 
+        if payment == "cod":
+            flash("Cash on Delivery is not available. Please choose an online payment method.", "danger")
+            return render_template("checkout.html", **totals)
+
+        # Calculate Delhivery shipping rate for this pincode
+        from delhivery import get_shipping_rate
+        total_qty    = sum(item["qty"] for item in totals["items"]) or 1
+        weight_grams = max(int(total_qty * app.config["DELHIVERY_DEFAULT_WEIGHT"] * 1000), 500)
+        delhivery_rate, _, _ = get_shipping_rate(pincode, weight_grams)
+        shipping_charge = delhivery_rate if delhivery_rate is not None else totals["shipping"]
+        subtotal    = totals["subtotal"]
+        discount    = totals["discount"]
+        total_amount = max(0, subtotal + shipping_charge - discount)
+
         # Create order
         order = Order(
             order_number    = generate_order_number(),
@@ -652,10 +694,10 @@ def checkout():
             city            = city,
             state           = state,
             pincode         = pincode,
-            subtotal        = totals["subtotal"],
-            shipping_charge = totals["shipping"],
-            discount_amount = totals["discount"],
-            total_amount    = totals["total"],
+            subtotal        = subtotal,
+            shipping_charge = shipping_charge,
+            discount_amount = discount,
+            total_amount    = total_amount,
             payment_method  = payment,
             coupon_code     = session.get("coupon_code"),
             notes           = notes,
@@ -1798,6 +1840,62 @@ def admin_delete_order(order_id):
         db.session.rollback()
         flash(f"Could not delete order: {e}", "danger")
     return redirect(url_for("admin_orders"))
+
+
+@app.route("/admin/orders/<int:order_id>/delhivery/book", methods=["POST"])
+@admin_required
+def admin_delhivery_book(order_id):
+    """Book a Delhivery Prepaid pickup for this order."""
+    from delhivery import create_shipment
+    order = Order.query.get_or_404(order_id)
+    if order.tracking_number and order.courier_name == "Delhivery":
+        flash(f"Delhivery shipment already booked: {order.tracking_number}", "info")
+        return redirect(url_for("admin_order_detail", order_id=order_id))
+    waybill, err = create_shipment(order)
+    if waybill:
+        order.courier_name    = "Delhivery"
+        order.tracking_number = waybill
+        order.order_status    = "shipped"
+        db.session.commit()
+        flash(f"Delhivery pickup booked! Waybill: {waybill}", "success")
+    else:
+        flash(f"Delhivery booking failed: {err}", "danger")
+    return redirect(url_for("admin_order_detail", order_id=order_id))
+
+
+@app.route("/admin/orders/<int:order_id>/delhivery/track")
+@admin_required
+def admin_delhivery_track(order_id):
+    """AJAX: return live tracking JSON for this order's Delhivery waybill."""
+    from delhivery import track_shipment
+    order = Order.query.get_or_404(order_id)
+    if not order.tracking_number:
+        return jsonify({"error": "No Delhivery waybill on this order"})
+    result, err = track_shipment(order.tracking_number)
+    if err:
+        return jsonify({"error": err})
+    return jsonify(result)
+
+
+@app.route("/admin/orders/<int:order_id>/delhivery/cancel", methods=["POST"])
+@admin_required
+def admin_delhivery_cancel(order_id):
+    """Cancel a booked Delhivery shipment and revert order status."""
+    from delhivery import cancel_shipment
+    order = Order.query.get_or_404(order_id)
+    if not order.tracking_number:
+        flash("No Delhivery waybill to cancel.", "warning")
+        return redirect(url_for("admin_order_detail", order_id=order_id))
+    success, msg = cancel_shipment(order.tracking_number)
+    if success:
+        order.courier_name    = None
+        order.tracking_number = None
+        order.order_status    = "confirmed"
+        db.session.commit()
+        flash("Delhivery shipment cancelled. Order reverted to Confirmed.", "success")
+    else:
+        flash(f"Cancellation failed: {msg}", "danger")
+    return redirect(url_for("admin_order_detail", order_id=order_id))
 
 
 @app.route("/admin/orders/trash")
