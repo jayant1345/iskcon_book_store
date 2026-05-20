@@ -440,6 +440,7 @@ def get_current_customer():
         try:
             return Customer.query.get(cid)
         except Exception:
+            db.session.rollback()   # clear aborted-transaction state so other queries still work
             session.pop("customer_id", None)
     return None
 
