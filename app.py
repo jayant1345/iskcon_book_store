@@ -918,9 +918,32 @@ def checkout():
         return redirect(url_for("order_success", order_number=order.order_number))
 
     cust = get_current_customer()
+    prefill = None
+    if cust:
+        if cust.saved_address:
+            prefill = cust
+        else:
+            # No saved address yet — pull from most recent linked order
+            from types import SimpleNamespace
+            last_order = cust.orders.filter(
+                Order.address.isnot(None)
+            ).order_by(Order.created_at.desc()).first()
+            if last_order:
+                prefill = SimpleNamespace(
+                    name          = cust.name,
+                    email         = cust.email,
+                    phone         = cust.phone,
+                    saved_address = last_order.address,
+                    saved_city    = last_order.city    or '',
+                    saved_state   = last_order.state   or '',
+                    saved_pincode = last_order.pincode or '',
+                )
+            else:
+                prefill = cust
+
     return render_template("checkout.html", **totals,
                            razorpay_key=app.config["RAZORPAY_KEY_ID"],
-                           prefill=cust)
+                           prefill=prefill)
 
 
 @app.route("/payment/verify", methods=["POST"])
@@ -1176,6 +1199,16 @@ def customer_register():
             o.customer_id = customer.id
         db.session.flush()
         customer.update_tier()
+
+        # Pre-populate address from the most recent linked order
+        if linked:
+            last = max(linked, key=lambda o: o.created_at)
+            if last.address:
+                customer.saved_address = last.address
+                customer.saved_city    = last.city
+                customer.saved_state   = last.state
+                customer.saved_pincode = last.pincode
+
         db.session.commit()
 
         session["customer_id"] = customer.id
