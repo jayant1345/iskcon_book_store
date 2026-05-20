@@ -60,34 +60,33 @@
             <div class="col-12">
               <label class="form-label">Full Address *</label>
               <textarea name="address" class="form-control" rows="3" required
-                        placeholder="House No., Street, Area"></textarea>
+                        placeholder="House No., Street, Area">{{ prefill.saved_address if prefill and prefill.saved_address else '' }}</textarea>
             </div>
             <div class="col-md-4">
               <label class="form-label">City *</label>
               <input type="text" name="city" class="form-control" required
-                     placeholder="Mumbai" maxlength="100">
+                     placeholder="Mumbai" maxlength="100"
+                     value="{{ prefill.saved_city if prefill and prefill.saved_city else '' }}">
             </div>
             <div class="col-md-4">
               <label class="form-label">State</label>
+              {% set _state = prefill.saved_state if prefill and prefill.saved_state else '' %}
               <select name="state" class="form-select">
                 <option value="">Select State</option>
-                <option>Andhra Pradesh</option><option>Assam</option>
-                <option>Bihar</option><option>Delhi</option>
-                <option>Goa</option><option>Gujarat</option>
-                <option>Haryana</option><option>Himachal Pradesh</option>
-                <option>Jharkhand</option><option>Karnataka</option>
-                <option>Kerala</option><option>Madhya Pradesh</option>
-                <option>Maharashtra</option><option>Manipur</option>
-                <option>Odisha</option><option>Punjab</option>
-                <option>Rajasthan</option><option>Tamil Nadu</option>
-                <option>Telangana</option><option>Uttar Pradesh</option>
-                <option>Uttarakhand</option><option>West Bengal</option>
+                {% for s in ['Andhra Pradesh','Assam','Bihar','Delhi','Goa','Gujarat',
+                             'Haryana','Himachal Pradesh','Jharkhand','Karnataka','Kerala',
+                             'Madhya Pradesh','Maharashtra','Manipur','Odisha','Punjab',
+                             'Rajasthan','Tamil Nadu','Telangana','Uttar Pradesh',
+                             'Uttarakhand','West Bengal'] %}
+                <option {% if s == _state %}selected{% endif %}>{{ s }}</option>
+                {% endfor %}
               </select>
             </div>
             <div class="col-md-4">
               <label class="form-label">PIN Code *</label>
               <input type="text" name="pincode" id="pincode-input" class="form-control" required
-                     placeholder="400001" pattern="[0-9]{6}" maxlength="6" autocomplete="postal-code">
+                     placeholder="400001" pattern="[0-9]{6}" maxlength="6" autocomplete="postal-code"
+                     value="{{ prefill.saved_pincode if prefill and prefill.saved_pincode else '' }}">
               <div id="pincode-status" class="form-text mt-1"></div>
             </div>
             <div class="col-12">

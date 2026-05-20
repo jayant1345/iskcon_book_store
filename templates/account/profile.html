@@ -29,6 +29,32 @@
         </div>
 
         <hr>
+        <p class="fw-semibold mb-2">Saved Delivery Address</p>
+        <div class="mb-3">
+          <label class="form-label">Full Address</label>
+          <textarea name="saved_address" class="form-control" rows="2"
+                    placeholder="House No., Street, Area">{{ customer.saved_address or '' }}</textarea>
+        </div>
+        <div class="row g-2 mb-3">
+          <div class="col-5">
+            <label class="form-label">City</label>
+            <input type="text" name="saved_city" class="form-control"
+                   value="{{ customer.saved_city or '' }}" placeholder="Mumbai">
+          </div>
+          <div class="col-4">
+            <label class="form-label">State</label>
+            <input type="text" name="saved_state" class="form-control"
+                   value="{{ customer.saved_state or '' }}" placeholder="Maharashtra">
+          </div>
+          <div class="col-3">
+            <label class="form-label">PIN Code</label>
+            <input type="text" name="saved_pincode" class="form-control"
+                   value="{{ customer.saved_pincode or '' }}" placeholder="400001"
+                   pattern="[0-9]{6}" maxlength="6">
+          </div>
+        </div>
+
+        <hr>
         <p class="fw-semibold mb-2">Change Password <small class="text-muted fw-normal">(leave blank to keep current)</small></p>
         <div class="mb-3">
           <label class="form-label">New Password</label>

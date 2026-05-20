@@ -285,6 +285,11 @@ class Customer(db.Model):
     created_at          = db.Column(db.DateTime, default=datetime.utcnow)
     reset_token         = db.Column(db.String(64), nullable=True)
     reset_token_expires = db.Column(db.DateTime, nullable=True)
+    # Saved delivery address (updated after every order)
+    saved_address       = db.Column(db.Text, nullable=True)
+    saved_city          = db.Column(db.String(100), nullable=True)
+    saved_state         = db.Column(db.String(100), nullable=True)
+    saved_pincode       = db.Column(db.String(10), nullable=True)
     orders        = db.relationship("Order", backref="customer", lazy="dynamic",
                                     foreign_keys="Order.customer_id")
 
@@ -826,11 +831,15 @@ def checkout():
             if coupon:
                 coupon.used_count += 1
 
-        # Update customer tier if logged in
+        # Update customer tier and save latest delivery address
         if cust_id:
             cust = Customer.query.get(cust_id)
             if cust:
                 cust.update_tier()
+                cust.saved_address = address
+                cust.saved_city    = city
+                cust.saved_state   = state
+                cust.saved_pincode = pincode
 
         db.session.commit()
 
@@ -1292,8 +1301,12 @@ def customer_profile():
         elif new_password and new_password != confirm:
             flash("Passwords do not match.", "danger")
         else:
-            customer.name  = name
-            customer.phone = phone
+            customer.name          = name
+            customer.phone         = phone
+            customer.saved_address = request.form.get("saved_address", "").strip() or None
+            customer.saved_city    = request.form.get("saved_city", "").strip() or None
+            customer.saved_state   = request.form.get("saved_state", "").strip() or None
+            customer.saved_pincode = request.form.get("saved_pincode", "").strip() or None
             if new_password:
                 customer.set_password(new_password)
             db.session.commit()
@@ -2557,6 +2570,10 @@ def init_db():
             ("orders",             "customer_id",        "INTEGER"),
             ("customers",          "reset_token",        "VARCHAR(64)"),
             ("customers",          "reset_token_expires","TIMESTAMP"),
+            ("customers",          "saved_address",      "TEXT"),
+            ("customers",          "saved_city",         "VARCHAR(100)"),
+            ("customers",          "saved_state",        "VARCHAR(100)"),
+            ("customers",          "saved_pincode",      "VARCHAR(10)"),
         ]
         for table, column, col_type in migrations:
             # Use a fresh connection per column so a failed ALTER doesn't
