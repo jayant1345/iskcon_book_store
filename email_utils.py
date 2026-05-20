@@ -93,3 +93,18 @@ def send_order_delivered(order):
     except Exception as exc:
         print(f"[EMAIL] send_order_delivered error: {exc}")
         current_app.logger.error(f"[EMAIL] send_order_delivered error: {exc}")
+
+
+def send_password_reset(customer):
+    """Email customer a password reset link."""
+    try:
+        from flask import url_for
+        reset_url = url_for("customer_reset_password",
+                            token=customer.reset_token, _external=True)
+        subject   = "Reset your ISKCON Book Store password"
+        html_body = render_template("emails/password_reset.html",
+                                    customer=customer, reset_url=reset_url)
+        _send(customer.email, subject, html_body)
+    except Exception as exc:
+        print(f"[EMAIL] send_password_reset error: {exc}")
+        current_app.logger.error(f"[EMAIL] send_password_reset error: {exc}")

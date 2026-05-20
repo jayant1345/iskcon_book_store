@@ -280,9 +280,11 @@ class Customer(db.Model):
     email         = db.Column(db.String(200), unique=True, nullable=False, index=True)
     phone         = db.Column(db.String(20), nullable=False)
     password_hash = db.Column(db.String(256), nullable=False)
-    tier          = db.Column(db.String(20), default="regular")  # regular / loyal / vip
-    is_active     = db.Column(db.Boolean, default=True)
-    created_at    = db.Column(db.DateTime, default=datetime.utcnow)
+    tier                = db.Column(db.String(20), default="regular")  # regular / loyal / vip
+    is_active           = db.Column(db.Boolean, default=True)
+    created_at          = db.Column(db.DateTime, default=datetime.utcnow)
+    reset_token         = db.Column(db.String(64), nullable=True)
+    reset_token_expires = db.Column(db.DateTime, nullable=True)
     orders        = db.relationship("Order", backref="customer", lazy="dynamic",
                                     foreign_keys="Order.customer_id")
 
@@ -1215,6 +1217,58 @@ def customer_dashboard():
     customer = get_current_customer()
     orders = customer.orders.order_by(Order.created_at.desc()).all()
     return render_template("account/dashboard.html", customer=customer, orders=orders)
+
+
+@app.route("/account/forgot-password", methods=["GET", "POST"])
+def customer_forgot_password():
+    if session.get("customer_id"):
+        return redirect(url_for("customer_dashboard"))
+
+    if request.method == "POST":
+        email    = request.form.get("email", "").strip().lower()
+        customer = Customer.query.filter_by(email=email, is_active=True).first()
+
+        if customer:
+            import secrets as _sec
+            customer.reset_token         = _sec.token_urlsafe(32)
+            customer.reset_token_expires = datetime.utcnow() + timedelta(hours=1)
+            db.session.commit()
+            from email_utils import send_password_reset
+            send_password_reset(customer)
+
+        # Always show same message — don't reveal if email exists
+        flash("If that email is registered, a password reset link has been sent.", "info")
+        return redirect(url_for("customer_login"))
+
+    return render_template("account/forgot_password.html")
+
+
+@app.route("/account/reset-password/<token>", methods=["GET", "POST"])
+def customer_reset_password(token):
+    customer = Customer.query.filter_by(reset_token=token).first()
+
+    if not customer or not customer.reset_token_expires \
+            or datetime.utcnow() > customer.reset_token_expires:
+        flash("This reset link is invalid or has expired. Please request a new one.", "danger")
+        return redirect(url_for("customer_forgot_password"))
+
+    if request.method == "POST":
+        password = request.form.get("password", "")
+        confirm  = request.form.get("confirm_password", "")
+
+        if len(password) < 8:
+            flash("Password must be at least 8 characters.", "danger")
+        elif password != confirm:
+            flash("Passwords do not match.", "danger")
+        else:
+            customer.set_password(password)
+            customer.reset_token         = None
+            customer.reset_token_expires = None
+            db.session.commit()
+            flash("Password updated successfully. Please log in.", "success")
+            return redirect(url_for("customer_login"))
+
+    return render_template("account/reset_password.html", token=token)
 
 
 @app.route("/account/profile", methods=["GET", "POST"])
@@ -2497,7 +2551,9 @@ def init_db():
             ("books",              "preview_file", "VARCHAR(200)"),
             ("books",              "weight_kg",    "FLOAT DEFAULT 0.5"),
             ("stock_receipts",     "batch_ref",    "VARCHAR(20)"),
-            ("orders",             "customer_id",  "INTEGER"),
+            ("orders",             "customer_id",        "INTEGER"),
+            ("customers",          "reset_token",        "VARCHAR(64)"),
+            ("customers",          "reset_token_expires","DATETIME"),
         ]
         for table, column, col_type in migrations:
             # Use a fresh connection per column so a failed ALTER doesn't

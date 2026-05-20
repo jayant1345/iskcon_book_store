@@ -158,11 +158,6 @@
           <span>₹{{ total|int }}</span>
         </div>
 
-        {% if subtotal < 500 %}
-        <div class="mt-3 p-2 text-center" style="background:var(--cream-dark); border-radius:8px; font-size:0.82rem;">
-          Add ₹{{ (500 - subtotal)|int }} more for <strong style="color:#28a745;">free shipping!</strong>
-        </div>
-        {% endif %}
 
         <a href="{{ url_for('checkout') }}" class="btn btn-saffron w-100 mt-4 btn-lg">
           Proceed to Checkout →

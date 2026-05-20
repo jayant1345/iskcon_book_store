@@ -16,8 +16,12 @@
           <input type="email" name="email" class="form-control" value="{{ email }}" required autofocus>
         </div>
         <div class="mb-4">
-          <label class="form-label fw-semibold">Password</label>
-          <input type="password" name="password" class="form-control" required>
+          <div class="d-flex justify-content-between align-items-center">
+            <label class="form-label fw-semibold mb-0">Password</label>
+            <a href="{{ url_for('customer_forgot_password') }}"
+               class="text-muted" style="font-size:.85rem;">Forgot password?</a>
+          </div>
+          <input type="password" name="password" class="form-control mt-1" required>
         </div>
 
         <button type="submit" class="btn btn-warning w-100 fw-bold py-2">
