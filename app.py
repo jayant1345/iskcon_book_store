@@ -52,7 +52,8 @@ class Config:
     SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URL", f"sqlite:///{os.path.join(BASE_DIR, 'iskcon_books.db')}")
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     UPLOAD_FOLDER = os.path.join(BASE_DIR, "static", "images", "books")
-    MAX_CONTENT_LENGTH = 16 * 1024 * 1024          # 16 MB
+    MAX_CONTENT_LENGTH = 500 * 1024 * 1024         # 500 MB (ebooks can be large)
+    MAX_IMAGE_SIZE     = 16 * 1024 * 1024          # 16 MB cap for book cover images
     ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "webp"}
     EBOOK_FOLDER = os.path.join(BASE_DIR, "ebooks")
     PREVIEW_FOLDER = os.path.join(BASE_DIR, "static", "previews")
@@ -336,6 +337,11 @@ def allowed_file(filename):
 def save_image(file):
     """Save uploaded image and return filename."""
     if file and allowed_file(file.filename):
+        file.seek(0, 2)
+        size = file.tell()
+        file.seek(0)
+        if size > app.config["MAX_IMAGE_SIZE"]:
+            return None
         ext = file.filename.rsplit(".", 1)[1].lower()
         filename = f"{uuid.uuid4().hex}.{ext}"
         file.save(os.path.join(app.config["UPLOAD_FOLDER"], filename))
