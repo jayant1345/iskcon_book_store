@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block title %}{{ book.title }} by {{ book.author }} — Buy Online | {{ store_name }}{% endblock %}
-{% block meta_description %}Buy {{ book.title }} by {{ book.author }} online. {{ (book.short_desc or book.description or '')[:150] }} Price: ₹{{ book.price|int }}. Free shipping above ₹500.{% endblock %}
+{% block meta_description %}Buy {{ book.title }} by {{ book.author }} online. {{ (book.short_desc or book.description or '')[:150] }} Price: ₹{{ book.price|int }}.{% endblock %}
 {% block og_type %}product{% endblock %}
 {% block og_title %}{{ book.title }} by {{ book.author }} | ISKCON Book Store{% endblock %}
 {% block og_description %}{{ (book.short_desc or book.description or 'Authentic Vedic literature from ISKCON.')[:200] }}{% endblock %}

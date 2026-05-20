@@ -414,10 +414,7 @@ def cart_totals():
         })
 
     all_ebooks = all(item["book"].is_ebook for item in items)
-    if all_ebooks:
-        shipping = 0
-    else:
-        shipping = 0 if subtotal >= app.config["FREE_SHIPPING_ABOVE"] else app.config["SHIPPING_CHARGE"]
+    shipping = 0 if all_ebooks else app.config["SHIPPING_CHARGE"]
     discount = session.get("coupon_discount", 0)
     total = max(0, subtotal + shipping - discount)
 
