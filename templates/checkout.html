@@ -70,7 +70,7 @@
             </div>
             <div class="col-md-4">
               <label class="form-label">State</label>
-              {% set _state = prefill.saved_state if prefill and prefill.saved_state else '' %}
+              {% set _state = (prefill.saved_state if prefill and prefill.saved_state else '') | lower | trim %}
               <select name="state" class="form-select">
                 <option value="">Select State</option>
                 {% for s in ['Andhra Pradesh','Assam','Bihar','Delhi','Goa','Gujarat',
@@ -78,7 +78,7 @@
                              'Madhya Pradesh','Maharashtra','Manipur','Odisha','Punjab',
                              'Rajasthan','Tamil Nadu','Telangana','Uttar Pradesh',
                              'Uttarakhand','West Bengal'] %}
-                <option {% if s == _state %}selected{% endif %}>{{ s }}</option>
+                <option {% if s | lower == _state %}selected{% endif %}>{{ s }}</option>
                 {% endfor %}
               </select>
             </div>
@@ -273,6 +273,12 @@ pincodeInput.addEventListener('input', function() {
     resetSummary('Enter PIN code');
   }
 });
+
+// Auto-check Delhivery if pincode is pre-filled (logged-in customer)
+(function() {
+  const prePin = pincodeInput.value.replace(/\D/g, '');
+  if (prePin.length === 6) fetchRate(prePin);
+})();
 
 document.getElementById('checkout-form').addEventListener('submit', function(e) {
   if (!shippingRate && shippingRate !== 0) {
