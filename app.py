@@ -413,7 +413,11 @@ def cart_totals():
             "line_total": line_total,
         })
 
-    shipping = 0 if subtotal >= app.config["FREE_SHIPPING_ABOVE"] else app.config["SHIPPING_CHARGE"]
+    all_ebooks = all(item["book"].is_ebook for item in items)
+    if all_ebooks:
+        shipping = 0
+    else:
+        shipping = 0 if subtotal >= app.config["FREE_SHIPPING_ABOVE"] else app.config["SHIPPING_CHARGE"]
     discount = session.get("coupon_discount", 0)
     total = max(0, subtotal + shipping - discount)
 
@@ -780,15 +784,20 @@ def checkout():
             flash("Cash on Delivery is not available. Please choose an online payment method.", "danger")
             return render_template("checkout.html", **totals)
 
-        # Calculate Delhivery shipping rate for this pincode
-        from delhivery import get_shipping_rate
-        weight_grams = max(
-            int(sum(item["qty"] * (item["book"].weight_kg or app.config["DELHIVERY_DEFAULT_WEIGHT"]) * 1000
-                    for item in totals["items"])),
-            500
-        )
-        delhivery_rate, _, _ = get_shipping_rate(pincode, weight_grams)
-        shipping_charge = delhivery_rate if delhivery_rate is not None else totals["shipping"]
+        # Ebook-only orders have no shipping
+        all_ebooks = all(item["book"].is_ebook for item in totals["items"])
+        if all_ebooks:
+            shipping_charge = 0
+        else:
+            # Calculate Delhivery shipping rate for this pincode
+            from delhivery import get_shipping_rate
+            weight_grams = max(
+                int(sum(item["qty"] * (item["book"].weight_kg or app.config["DELHIVERY_DEFAULT_WEIGHT"]) * 1000
+                        for item in totals["items"])),
+                500
+            )
+            delhivery_rate, _, _ = get_shipping_rate(pincode, weight_grams)
+            shipping_charge = delhivery_rate if delhivery_rate is not None else totals["shipping"]
         subtotal    = totals["subtotal"]
         discount    = totals["discount"]
         total_amount = max(0, subtotal + shipping_charge - discount)
