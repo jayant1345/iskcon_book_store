@@ -180,6 +180,7 @@ class Order(db.Model):
     expected_delivery  = db.Column(db.Date)
     upi_transaction_id = db.Column(db.String(100))
     is_deleted         = db.Column(db.Boolean, default=False)
+    customer_id        = db.Column(db.Integer, db.ForeignKey("customers.id"), nullable=True)
     items              = db.relationship("OrderItem", backref="order", lazy=True)
 
     def __repr__(self):
@@ -270,6 +271,51 @@ class Setting(db.Model):
         else:
             db.session.add(Setting(key=key, value=value))
         db.session.commit()
+
+
+class Customer(db.Model):
+    __tablename__ = "customers"
+    id            = db.Column(db.Integer, primary_key=True)
+    name          = db.Column(db.String(200), nullable=False)
+    email         = db.Column(db.String(200), unique=True, nullable=False, index=True)
+    phone         = db.Column(db.String(20), nullable=False)
+    password_hash = db.Column(db.String(256), nullable=False)
+    tier          = db.Column(db.String(20), default="regular")  # regular / loyal / vip
+    is_active     = db.Column(db.Boolean, default=True)
+    created_at    = db.Column(db.DateTime, default=datetime.utcnow)
+    orders        = db.relationship("Order", backref="customer", lazy="dynamic",
+                                    foreign_keys="Order.customer_id")
+
+    def set_password(self, password):
+        self.password_hash = generate_password_hash(password)
+
+    def check_password(self, password):
+        return check_password_hash(self.password_hash, password)
+
+    @property
+    def total_orders(self):
+        return self.orders.filter(Order.order_status != "cancelled").count()
+
+    @property
+    def total_spent(self):
+        from sqlalchemy import func
+        result = db.session.query(func.sum(Order.total_amount)).filter(
+            Order.customer_id == self.id,
+            Order.order_status != "cancelled",
+        ).scalar()
+        return result or 0.0
+
+    def update_tier(self):
+        n, s = self.total_orders, self.total_spent
+        if n >= 10 or s >= 5000:
+            self.tier = "vip"
+        elif n >= 3 or s >= 1000:
+            self.tier = "loyal"
+        else:
+            self.tier = "regular"
+
+    def __repr__(self):
+        return f"<Customer {self.email}>"
 
 
 # ─────────────────────────────────────────────
@@ -379,17 +425,37 @@ def admin_required(f):
     return decorated
 
 
+# ── Customer auth ──
+
+def get_current_customer():
+    cid = session.get("customer_id")
+    if cid:
+        return Customer.query.get(cid)
+    return None
+
+
+def customer_login_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if not session.get("customer_id"):
+            flash("Please log in to access your account.", "warning")
+            return redirect(url_for("customer_login", next=request.full_path))
+        return f(*args, **kwargs)
+    return decorated
+
+
 # ── Context processors ──
 
 @app.context_processor
 def inject_globals():
     return {
-        "cart_count":   cart_item_count(),
-        "categories":   Category.query.order_by(Category.sort_order).all(),
-        "store_name":   app.config["STORE_NAME"],
-        "whatsapp_num": app.config["WHATSAPP_NUMBER"],
-        "upi_id":       app.config["UPI_ID"],
-        "upi_name":     app.config["UPI_NAME"],
+        "cart_count":       cart_item_count(),
+        "categories":       Category.query.order_by(Category.sort_order).all(),
+        "store_name":       app.config["STORE_NAME"],
+        "whatsapp_num":     app.config["WHATSAPP_NUMBER"],
+        "upi_id":           app.config["UPI_ID"],
+        "upi_name":         app.config["UPI_NAME"],
+        "current_customer": get_current_customer(),
     }
 
 
@@ -710,6 +776,9 @@ def checkout():
         discount    = totals["discount"]
         total_amount = max(0, subtotal + shipping_charge - discount)
 
+        # Link to customer account if logged in
+        cust_id = session.get("customer_id")
+
         # Create order
         order = Order(
             order_number    = generate_order_number(),
@@ -729,6 +798,7 @@ def checkout():
             notes           = notes,
             payment_status  = "pending",
             order_status    = "placed",
+            customer_id     = cust_id,
         )
         db.session.add(order)
         db.session.flush()  # get order.id
@@ -750,6 +820,12 @@ def checkout():
             coupon = Coupon.query.filter_by(code=order.coupon_code).first()
             if coupon:
                 coupon.used_count += 1
+
+        # Update customer tier if logged in
+        if cust_id:
+            cust = Customer.query.get(cust_id)
+            if cust:
+                cust.update_tier()
 
         db.session.commit()
 
@@ -826,8 +902,10 @@ def checkout():
         flash(f"Order #{order.order_number} placed successfully! 🎉", "success")
         return redirect(url_for("order_success", order_number=order.order_number))
 
+    cust = get_current_customer()
     return render_template("checkout.html", **totals,
-                           razorpay_key=app.config["RAZORPAY_KEY_ID"])
+                           razorpay_key=app.config["RAZORPAY_KEY_ID"],
+                           prefill=cust)
 
 
 @app.route("/payment/verify", methods=["POST"])
@@ -1036,6 +1114,136 @@ def order_track():
         if not order:
             flash("No order found with that order number or phone.", "warning")
     return render_template("order_tracking.html", order=order)
+
+
+# ─────────────────────────────────────────────
+# CUSTOMER ACCOUNT ROUTES
+# ─────────────────────────────────────────────
+
+@app.route("/account/register", methods=["GET", "POST"])
+def customer_register():
+    if session.get("customer_id"):
+        return redirect(url_for("customer_dashboard"))
+
+    if request.method == "POST":
+        name     = request.form.get("name", "").strip()
+        email    = request.form.get("email", "").strip().lower()
+        phone    = request.form.get("phone", "").strip()
+        password = request.form.get("password", "")
+        confirm  = request.form.get("confirm_password", "")
+
+        error = None
+        if not all([name, email, phone, password]):
+            error = "All fields are required."
+        elif len(password) < 8:
+            error = "Password must be at least 8 characters."
+        elif password != confirm:
+            error = "Passwords do not match."
+        elif Customer.query.filter_by(email=email).first():
+            error = "An account with this email already exists."
+
+        if error:
+            flash(error, "danger")
+            return render_template("account/register.html",
+                                   name=name, email=email, phone=phone)
+
+        customer = Customer(name=name, email=email, phone=phone)
+        customer.set_password(password)
+        db.session.add(customer)
+        db.session.flush()  # get customer.id
+
+        # Auto-link existing orders placed with same email or phone
+        linked = Order.query.filter(
+            Order.customer_id.is_(None),
+            or_(Order.customer_email == email, Order.customer_phone == phone),
+        ).all()
+        for o in linked:
+            o.customer_id = customer.id
+        db.session.flush()
+        customer.update_tier()
+        db.session.commit()
+
+        session["customer_id"] = customer.id
+        flash(f"Welcome, {customer.name}! Your account has been created.", "success")
+        if linked:
+            flash(f"{len(linked)} previous order(s) have been linked to your account.", "info")
+        return redirect(url_for("customer_dashboard"))
+
+    return render_template("account/register.html",
+                           name=request.args.get("name", ""),
+                           email=request.args.get("email", ""),
+                           phone=request.args.get("phone", ""))
+
+
+@app.route("/account/login", methods=["GET", "POST"])
+def customer_login():
+    if session.get("customer_id"):
+        return redirect(url_for("customer_dashboard"))
+
+    if request.method == "POST":
+        email    = request.form.get("email", "").strip().lower()
+        password = request.form.get("password", "")
+        customer = Customer.query.filter_by(email=email, is_active=True).first()
+
+        if customer and customer.check_password(password):
+            session["customer_id"] = customer.id
+            raw_next = request.form.get("next", "")
+            # Only allow local redirects — reject absolute URLs to prevent open redirect
+            from urllib.parse import urlparse
+            next_url = raw_next if raw_next and not urlparse(raw_next).netloc else url_for("customer_dashboard")
+            flash(f"Welcome back, {customer.name}!", "success")
+            return redirect(next_url)
+
+        flash("Invalid email or password.", "danger")
+        return render_template("account/login.html", email=email,
+                               next=request.form.get("next", ""))
+
+    return render_template("account/login.html", email="",
+                           next=request.args.get("next", ""))
+
+
+@app.route("/account/logout")
+def customer_logout():
+    session.pop("customer_id", None)
+    flash("You have been logged out.", "info")
+    return redirect(url_for("index"))
+
+
+@app.route("/account/")
+@customer_login_required
+def customer_dashboard():
+    customer = get_current_customer()
+    orders = customer.orders.order_by(Order.created_at.desc()).all()
+    return render_template("account/dashboard.html", customer=customer, orders=orders)
+
+
+@app.route("/account/profile", methods=["GET", "POST"])
+@customer_login_required
+def customer_profile():
+    customer = get_current_customer()
+
+    if request.method == "POST":
+        name         = request.form.get("name", "").strip()
+        phone        = request.form.get("phone", "").strip()
+        new_password = request.form.get("new_password", "")
+        confirm      = request.form.get("confirm_password", "")
+
+        if not name or not phone:
+            flash("Name and phone are required.", "danger")
+        elif new_password and len(new_password) < 8:
+            flash("New password must be at least 8 characters.", "danger")
+        elif new_password and new_password != confirm:
+            flash("Passwords do not match.", "danger")
+        else:
+            customer.name  = name
+            customer.phone = phone
+            if new_password:
+                customer.set_password(new_password)
+            db.session.commit()
+            flash("Profile updated successfully.", "success")
+            return redirect(url_for("customer_profile"))
+
+    return render_template("account/profile.html", customer=customer)
 
 
 # ─────────────────────────────────────────────
@@ -2236,6 +2444,34 @@ def server_error(e):
 
 
 # ─────────────────────────────────────────────
+# ADMIN — CUSTOMERS
+# ─────────────────────────────────────────────
+
+@app.route("/admin/customers")
+@admin_required
+def admin_customers():
+    q    = request.args.get("q", "").strip()
+    tier = request.args.get("tier", "")
+
+    cq = Customer.query
+    if q:
+        pattern = f"%{q}%"
+        cq = cq.filter(
+            or_(Customer.name.ilike(pattern),
+                Customer.email.ilike(pattern),
+                Customer.phone.ilike(pattern))
+        )
+    if tier:
+        cq = cq.filter_by(tier=tier)
+
+    customers = cq.order_by(Customer.created_at.desc()).all()
+    return render_template("admin/customers.html",
+                           customers=customers,
+                           q=q, tier=tier,
+                           active_page="customers")
+
+
+# ─────────────────────────────────────────────
 # INIT DB & RUN
 # ─────────────────────────────────────────────
 
@@ -2261,6 +2497,7 @@ def init_db():
             ("books",              "preview_file", "VARCHAR(200)"),
             ("books",              "weight_kg",    "FLOAT DEFAULT 0.5"),
             ("stock_receipts",     "batch_ref",    "VARCHAR(20)"),
+            ("orders",             "customer_id",  "INTEGER"),
         ]
         for table, column, col_type in migrations:
             # Use a fresh connection per column so a failed ALTER doesn't

@@ -13,6 +13,22 @@
 
   <h2 class="section-title mb-4">Checkout</h2>
 
+  {% if not current_customer %}
+  <div class="alert alert-warning d-flex align-items-center gap-3 py-2 mb-4" style="border-radius:10px;">
+    <i class="bi bi-person-circle fs-4 text-warning"></i>
+    <div>
+      <span class="fw-semibold">Returning customer?</span>
+      <a href="{{ url_for('customer_login', next=request.full_path) }}" class="ms-1 fw-bold text-warning text-decoration-underline">
+        Log in
+      </a>
+      to auto-fill your details &amp; track all your orders in one place.
+      <span class="text-muted ms-2" style="font-size:.85rem;">
+        New here? <a href="{{ url_for('customer_register') }}" class="text-muted">Create a free account</a>
+      </span>
+    </div>
+  </div>
+  {% endif %}
+
   <form method="post" action="{{ url_for('checkout') }}" id="checkout-form">
     <div class="row g-4">
 
@@ -26,17 +42,20 @@
             <div class="col-12">
               <label class="form-label">Full Name *</label>
               <input type="text" name="name" class="form-control" required
-                     placeholder="Your full name" maxlength="200">
+                     placeholder="Your full name" maxlength="200"
+                     value="{{ prefill.name if prefill else '' }}">
             </div>
             <div class="col-md-6">
               <label class="form-label">Email</label>
               <input type="email" name="email" class="form-control"
-                     placeholder="you@example.com" maxlength="200">
+                     placeholder="you@example.com" maxlength="200"
+                     value="{{ prefill.email if prefill else '' }}">
             </div>
             <div class="col-md-6">
               <label class="form-label">Phone Number *</label>
               <input type="tel" name="phone" class="form-control" required
-                     placeholder="+91 9876543210" maxlength="20">
+                     placeholder="+91 9876543210" maxlength="20"
+                     value="{{ prefill.phone if prefill else '' }}">
             </div>
             <div class="col-12">
               <label class="form-label">Full Address *</label>

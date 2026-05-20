@@ -1,0 +1,83 @@
+{% extends "admin/admin_base.html" %}
+{% block page_title %}Customers{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+  <div>
+    <h4 class="mb-0">Customers</h4>
+    <small class="text-muted">{{ customers|length }} result(s)</small>
+  </div>
+</div>
+
+{# ── Filters ── #}
+<form method="get" action="{{ url_for('admin_customers') }}" class="row g-2 mb-4">
+  <div class="col-sm-5">
+    <input type="text" name="q" class="form-control" placeholder="Search name / email / phone…"
+           value="{{ q }}">
+  </div>
+  <div class="col-sm-3">
+    <select name="tier" class="form-select">
+      <option value="">All Tiers</option>
+      <option value="regular"  {% if tier=='regular'  %}selected{% endif %}>Regular</option>
+      <option value="loyal"    {% if tier=='loyal'    %}selected{% endif %}>Loyal</option>
+      <option value="vip"      {% if tier=='vip'      %}selected{% endif %}>VIP</option>
+    </select>
+  </div>
+  <div class="col-sm-2">
+    <button type="submit" class="btn btn-warning w-100">Filter</button>
+  </div>
+  {% if q or tier %}
+  <div class="col-sm-2">
+    <a href="{{ url_for('admin_customers') }}" class="btn btn-outline-secondary w-100">Clear</a>
+  </div>
+  {% endif %}
+</form>
+
+{% if customers %}
+<div class="card table-card shadow-sm">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Name</th>
+          <th>Email</th>
+          <th>Phone</th>
+          <th>Tier</th>
+          <th class="text-end">Orders</th>
+          <th class="text-end">Total Spent</th>
+          <th>Joined</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in customers %}
+        <tr>
+          <td class="text-muted" style="font-size:.85rem;">{{ c.id }}</td>
+          <td class="fw-semibold">{{ c.name }}</td>
+          <td>{{ c.email }}</td>
+          <td>{{ c.phone }}</td>
+          <td>
+            {% if c.tier == 'vip' %}
+              <span class="badge bg-warning text-dark">🏆 VIP</span>
+            {% elif c.tier == 'loyal' %}
+              <span class="badge bg-primary">⭐ Loyal</span>
+            {% else %}
+              <span class="badge bg-secondary">Regular</span>
+            {% endif %}
+          </td>
+          <td class="text-end">{{ c.total_orders }}</td>
+          <td class="text-end">₹{{ "%.0f"|format(c.total_spent) }}</td>
+          <td style="font-size:.85rem; color:#666;">{{ c.created_at | ist('%d %b %Y') }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% else %}
+<div class="text-center py-5 text-muted">
+  <i class="fas fa-users fa-3x mb-3"></i>
+  <p>No customers found.</p>
+</div>
+{% endif %}
+{% endblock %}
