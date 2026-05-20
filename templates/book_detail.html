@@ -108,6 +108,29 @@
         </span>
       </div>
 
+      <!-- Other Language Editions -->
+      {% if other_lang_books %}
+      <div class="mb-3 p-3" style="background:#fff8f0; border:1px solid #f0d9b5; border-radius:10px;">
+        <span style="font-size:0.82rem; color:var(--text-muted); font-weight:600; text-transform:uppercase; letter-spacing:0.05em;">
+          <i class="bi bi-translate me-1"></i>Also available in
+        </span>
+        <div class="d-flex flex-wrap gap-2 mt-2">
+          {% for alt in other_lang_books %}
+          <a href="{{ url_for('book_detail', book_id=alt.id) }}"
+             class="text-decoration-none"
+             title="{{ alt.title }}">
+            <span style="display:inline-block; padding:5px 14px; border-radius:20px;
+                         background:var(--saffron); color:white; font-size:0.85rem; font-weight:600;
+                         transition:opacity .15s;"
+                  onmouseover="this.style.opacity='.8'" onmouseout="this.style.opacity='1'">
+              {{ alt.language }}
+            </span>
+          </a>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
       <!-- Price -->
       <div class="mb-4">
         <span class="product-price-big">₹{{ book.price|int }}</span>

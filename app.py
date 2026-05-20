@@ -540,10 +540,22 @@ def books():
 
 @app.route("/book/<int:book_id>")
 def book_detail(book_id):
+    import re
     book    = Book.query.get_or_404(book_id)
     related = Book.query.filter_by(category_id=book.category_id, active=True)\
                         .filter(Book.id != book_id).limit(4).all()
-    return render_template("book_detail.html", book=book, related=related)
+
+    # Find same book in other languages by stripping trailing "(Language)" from title
+    base_title = re.sub(r'\s*\(\s*[^)]+\)\s*$', '', book.title).strip()
+    other_lang_books = Book.query.filter(
+        Book.active == True,
+        Book.id != book_id,
+        Book.title.ilike(f'{base_title}%'),
+        Book.language != book.language,
+    ).order_by(Book.language).all() if base_title else []
+
+    return render_template("book_detail.html", book=book, related=related,
+                           other_lang_books=other_lang_books)
 
 
 # ─────────────────────────────────────────────
