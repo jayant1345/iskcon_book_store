@@ -93,10 +93,10 @@
                                 </div>
                                 <div class="col-md-3 mb-3">
                                     <label class="form-label">Weight (kg) *</label>
-                                    <input type="number" step="0.01" min="0.05" max="5" name="weight_kg" class="form-control"
+                                    <input type="number" step="0.01" min="0.05" max="50" name="weight_kg" class="form-control"
                                            value="{{ book.weight_kg if book and book.weight_kg else '0.50' }}"
                                            placeholder="e.g. 0.30" required>
-                                    <div class="form-text">Used for shipping rate</div>
+                                    <div class="form-text">Used for shipping rate (max 50 kg for sets)</div>
                                 </div>
                                 <div class="col-md-3 mb-3">
                                     <label class="form-label">Publisher</label>
