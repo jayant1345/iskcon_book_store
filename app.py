@@ -1355,6 +1355,20 @@ def admin_delete_book(book_id):
     return redirect(url_for("admin_books"))
 
 
+@app.route("/admin/books/quick-update/<int:book_id>", methods=["POST"])
+@admin_required
+def admin_quick_update_book(book_id):
+    book  = Book.query.get_or_404(book_id)
+    price = request.form.get("price", type=float)
+    stock = request.form.get("stock", type=int)
+    if price is not None and price >= 0:
+        book.price = price
+    if stock is not None and stock >= 0:
+        book.stock = stock
+    db.session.commit()
+    return jsonify({"success": True})
+
+
 @app.route("/admin/books/reset-weights", methods=["POST"])
 @admin_required
 def admin_reset_book_weights():

@@ -131,17 +131,24 @@
                         {% endif %}
                     </td>
                     <td>
-                        <span class="fw-bold text-success">₹{{ "%.0f"|format(book.price) }}</span>
+                        <div class="input-group input-group-sm" style="width:95px;">
+                            <span class="input-group-text px-1">₹</span>
+                            <input type="number" class="form-control quick-field" min="0" step="1"
+                                   data-book-id="{{ book.id }}" data-field="price"
+                                   value="{{ book.price|int }}"
+                                   title="Edit price — press Enter to save"
+                                   style="font-weight:700; color:#198754;">
+                        </div>
                         {% if book.original_price %}
-                            <br><small class="text-muted text-decoration-line-through">₹{{ "%.0f"|format(book.original_price) }}</small>
+                        <small class="text-muted text-decoration-line-through">₹{{ "%.0f"|format(book.original_price) }}</small>
                         {% endif %}
                     </td>
                     <td>
-                        {% if book.stock < 5 %}
-                            <span class="badge bg-danger">{{ book.stock }}</span>
-                        {% else %}
-                            <span class="badge bg-secondary">{{ book.stock }}</span>
-                        {% endif %}
+                        <input type="number" class="form-control form-control-sm quick-field" min="0"
+                               data-book-id="{{ book.id }}" data-field="stock"
+                               value="{{ book.stock }}"
+                               title="Edit stock — press Enter to save"
+                               style="width:65px; {% if book.stock < 5 %}border-color:#dc3545; color:#dc3545;{% endif %}">
                     </td>
                     <td>
                         <form method="POST" action="{{ url_for('toggle_featured', book_id=book.id) }}" class="d-inline">
@@ -195,6 +202,40 @@
 document.querySelectorAll('.col-filter').forEach(function(sel) {
     sel.addEventListener('change', function() {
         document.getElementById('filter-form').submit();
+    });
+});
+
+// Inline price / stock editing
+document.querySelectorAll('.quick-field').forEach(function(input) {
+    input.dataset.orig = input.value;
+
+    input.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter')  { e.preventDefault(); this.blur(); }
+        if (e.key === 'Escape') { this.value = this.dataset.orig; this.blur(); }
+    });
+
+    input.addEventListener('blur', function() {
+        if (this.value === this.dataset.orig) return;
+        var el    = this;
+        var body  = el.dataset.field + '=' + encodeURIComponent(el.value);
+        fetch('/admin/books/quick-update/' + el.dataset.bookId, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+            body: body
+        })
+        .then(function(r){ return r.json(); })
+        .then(function(data) {
+            if (data.success) {
+                el.dataset.orig       = el.value;
+                el.style.borderColor  = '#28a745';
+                el.style.boxShadow    = '0 0 0 2px rgba(40,167,69,.25)';
+                setTimeout(function() {
+                    el.style.borderColor = el.dataset.field === 'stock' && parseInt(el.value) < 5 ? '#dc3545' : '';
+                    el.style.boxShadow   = '';
+                    el.style.color       = el.dataset.field === 'stock' && parseInt(el.value) < 5 ? '#dc3545' : '';
+                }, 1200);
+            }
+        });
     });
 });
 </script>
