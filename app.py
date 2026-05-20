@@ -923,20 +923,26 @@ def checkout():
         if cust.saved_address:
             prefill = cust
         else:
-            # No saved address yet — pull from most recent linked order
+            # No saved address yet — pull from most recent linked orders
             from types import SimpleNamespace
-            last_order = cust.orders.filter(
+            last_addr = cust.orders.filter(
                 Order.address.isnot(None)
             ).order_by(Order.created_at.desc()).first()
-            if last_order:
+
+            if last_addr:
+                # State may be empty on old orders — find the most recent one that has it
+                last_state = cust.orders.filter(
+                    Order.state.isnot(None), Order.state != ''
+                ).order_by(Order.created_at.desc()).first()
+
                 prefill = SimpleNamespace(
                     name          = cust.name,
                     email         = cust.email,
                     phone         = cust.phone,
-                    saved_address = last_order.address,
-                    saved_city    = last_order.city    or '',
-                    saved_state   = last_order.state   or '',
-                    saved_pincode = last_order.pincode or '',
+                    saved_address = last_addr.address,
+                    saved_city    = last_addr.city    or '',
+                    saved_state   = (last_state.state if last_state else '') ,
+                    saved_pincode = last_addr.pincode or '',
                 )
             else:
                 prefill = cust
@@ -1200,14 +1206,20 @@ def customer_register():
         db.session.flush()
         customer.update_tier()
 
-        # Pre-populate address from the most recent linked order
+        # Pre-populate address from linked orders
         if linked:
             last = max(linked, key=lambda o: o.created_at)
             if last.address:
                 customer.saved_address = last.address
                 customer.saved_city    = last.city
-                customer.saved_state   = last.state
                 customer.saved_pincode = last.pincode
+                # Use state from this order, or find any linked order that has one
+                if last.state:
+                    customer.saved_state = last.state
+                else:
+                    state_order = next((o for o in sorted(linked, key=lambda o: o.created_at, reverse=True)
+                                        if o.state), None)
+                    customer.saved_state = state_order.state if state_order else None
 
         db.session.commit()
 
