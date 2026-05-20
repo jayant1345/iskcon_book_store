@@ -9,7 +9,7 @@ import requests
 _BASE        = "https://track.delhivery.com"
 _ORIGIN_PIN  = os.environ.get("DELHIVERY_RETURN_PINCODE", "380054")
 _TOKEN       = os.environ.get("DELHIVERY_API_TOKEN", "")
-_WEIGHT_KG   = float(os.environ.get("DELHIVERY_DEFAULT_WEIGHT", "0.5"))
+_WEIGHT_KG   = float(os.environ.get("DELHIVERY_DEFAULT_WEIGHT", "0.1"))
 _SHIP_MODE   = os.environ.get("DELHIVERY_SHIPPING_MODE", "Surface")
 _PICKUP_LOC  = os.environ.get("DELHIVERY_PICKUP_LOCATION", "bhavesh")
 _RETURN_NAME = os.environ.get("DELHIVERY_RETURN_NAME", "ISKCON Book Store")

@@ -71,7 +71,7 @@ class Config:
     SHIPPING_CHARGE = float(os.environ.get("SHIPPING_CHARGE", "50"))
     FREE_SHIPPING_ABOVE = float(os.environ.get("FREE_SHIPPING_ABOVE", "500"))
     DELHIVERY_API_TOKEN       = os.environ.get("DELHIVERY_API_TOKEN", "")
-    DELHIVERY_DEFAULT_WEIGHT  = float(os.environ.get("DELHIVERY_DEFAULT_WEIGHT", "0.5"))
+    DELHIVERY_DEFAULT_WEIGHT  = float(os.environ.get("DELHIVERY_DEFAULT_WEIGHT", "0.1"))
     MAIL_USERNAME = os.environ.get("MAIL_USERNAME", "noreply@iskconbooks.in")
     BREVO_API_KEY = os.environ.get("BREVO_API_KEY", "")
 
@@ -126,7 +126,7 @@ class Book(db.Model):
     isbn           = db.Column(db.String(30))
     language       = db.Column(db.String(50), default="English")
     pages          = db.Column(db.Integer)
-    weight_kg      = db.Column(db.Float, default=0.5)   # shipping weight
+    weight_kg      = db.Column(db.Float, default=0.1)   # shipping weight
     publisher      = db.Column(db.String(200), default="The Bhaktivedanta Book Trust")
     stock          = db.Column(db.Integer, default=100)
     featured       = db.Column(db.Boolean, default=False)
@@ -1253,7 +1253,7 @@ def admin_add_book():
             isbn           = request.form.get("isbn", "").strip(),
             language       = request.form.get("language", "English").strip(),
             pages          = int(request.form["pages"]) if request.form.get("pages") else None,
-            weight_kg      = float(request.form["weight_kg"]) if request.form.get("weight_kg") else 0.5,
+            weight_kg      = float(request.form["weight_kg"]) if request.form.get("weight_kg") else 0.1,
             publisher      = request.form.get("publisher", "The Bhaktivedanta Book Trust").strip(),
             stock          = int(request.form.get("stock", 100)),
             featured       = bool(request.form.get("featured")),
@@ -1296,7 +1296,7 @@ def admin_edit_book(book_id):
         book.isbn           = request.form.get("isbn", "").strip()
         book.language       = request.form.get("language", "English").strip()
         book.pages          = int(request.form["pages"]) if request.form.get("pages") else None
-        book.weight_kg      = float(request.form["weight_kg"]) if request.form.get("weight_kg") else 0.5
+        book.weight_kg      = float(request.form["weight_kg"]) if request.form.get("weight_kg") else 0.1
         book.publisher      = request.form.get("publisher", "").strip()
         book.stock          = int(request.form.get("stock", 100))
         book.featured       = bool(request.form.get("featured"))
