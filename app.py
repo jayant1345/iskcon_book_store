@@ -1343,6 +1343,19 @@ def admin_delete_book(book_id):
     return redirect(url_for("admin_books"))
 
 
+@app.route("/admin/books/reset-weights", methods=["POST"])
+@admin_required
+def admin_reset_book_weights():
+    """Bulk reset all books with weight=0.5 (old default) to 0.1 kg."""
+    updated = Book.query.filter(
+        Book.deleted == False,
+        Book.weight_kg == 0.5
+    ).update({"weight_kg": 0.1}, synchronize_session=False)
+    db.session.commit()
+    flash(f"Done! {updated} book(s) reset from 0.5 kg to 0.1 kg. Update individual books with correct weights as needed.", "success")
+    return redirect(url_for("admin_books"))
+
+
 @app.route("/admin/books/trash")
 @admin_required
 def admin_trash_books():

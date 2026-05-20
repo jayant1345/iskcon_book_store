@@ -41,6 +41,23 @@
                         {% elif order.order_status == 'cancelled' %}<span class="badge bg-danger">Cancelled</span>
                         {% else %}<span class="badge bg-secondary">{{ order.order_status|capitalize }}</span>{% endif %}
                     </td></tr>
+                    {% set total_weight = namespace(kg=0) %}
+                    {% for item in order.items %}
+                        {% if item.book and item.book.weight_kg %}
+                            {% set total_weight.kg = total_weight.kg + (item.quantity * item.book.weight_kg) %}
+                        {% endif %}
+                    {% endfor %}
+                    {% if total_weight.kg > 0 %}
+                    <tr>
+                        <td class="text-muted">Shipment Weight</td>
+                        <td>
+                            <span class="fw-bold">{{ "%.2f"|format(total_weight.kg) }} kg</span>
+                            {% if total_weight.kg < 0.5 %}
+                            <span class="badge bg-info ms-1" title="Delhivery min 0.5 kg">billed at 0.5 kg</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endif %}
                     {% if order.coupon_code %}
                     <tr><td class="text-muted">Coupon</td><td><span class="badge bg-success">{{ order.coupon_code }}</span></td></tr>
                     {% endif %}

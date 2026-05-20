@@ -17,6 +17,12 @@
         <a href="{{ url_for('export_stock_csv') }}" class="btn btn-outline-success">
             <i class="fas fa-file-csv me-2"></i>Download Stock CSV
         </a>
+        <form method="POST" action="{{ url_for('admin_reset_book_weights') }}"
+              onsubmit="return confirm('Reset all books currently at 0.5 kg to 0.1 kg? You can correct individual books after.');">
+            <button type="submit" class="btn btn-outline-secondary" title="Bulk reset weights from 0.5 to 0.1 kg">
+                <i class="fas fa-weight-hanging me-1"></i>Reset Weights
+            </button>
+        </form>
         <a href="{{ url_for('admin_trash_books') }}" class="btn btn-outline-danger position-relative">
             <i class="fas fa-trash me-1"></i> Trash
             {% if trash_count %}
