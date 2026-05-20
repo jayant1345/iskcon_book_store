@@ -70,6 +70,9 @@
                     {% if order.expected_delivery %}
                     <tr><td class="text-muted">Exp. Delivery</td><td>{{ order.expected_delivery.strftime('%d %b %Y') }}</td></tr>
                     {% endif %}
+                    {% if order.status_note %}
+                    <tr><td class="text-muted">Admin Note</td><td><em class="text-secondary">{{ order.status_note }}</em></td></tr>
+                    {% endif %}
                 </table>
             </div>
         </div>
@@ -95,6 +98,8 @@
                             <option value="delivered" {% if order.order_status=='delivered' %}selected{% endif %}>Delivered</option>
                             <option value="cancelled" {% if order.order_status=='cancelled' %}selected{% endif %}>Cancelled</option>
                         </select>
+                        <textarea name="status_note" class="form-control form-control-sm mt-1"
+                                  rows="2" placeholder="Optional note (e.g. delayed due to holiday, customer requested change…)">{{ order.status_note or '' }}</textarea>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Payment Status</label>

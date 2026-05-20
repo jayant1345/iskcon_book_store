@@ -180,6 +180,7 @@ class Order(db.Model):
     tracking_number    = db.Column(db.String(100))
     expected_delivery  = db.Column(db.Date)
     upi_transaction_id = db.Column(db.String(100))
+    status_note        = db.Column(db.Text)
     is_deleted         = db.Column(db.Boolean, default=False)
     customer_id        = db.Column(db.Integer, db.ForeignKey("customers.id"), nullable=True)
     items              = db.relationship("OrderItem", backref="order", lazy=True)
@@ -2256,6 +2257,7 @@ def admin_update_order(order_id):
 
     order.order_status   = new_order_status
     order.payment_status = new_payment_status
+    order.status_note    = request.form.get("status_note", "").strip() or None
     order.courier_name   = request.form.get("courier_name", "").strip() or None
     order.tracking_number = request.form.get("tracking_number", "").strip() or None
     exp_del = request.form.get("expected_delivery", "").strip()
@@ -2632,6 +2634,7 @@ def init_db():
             ("customers",          "saved_city",         "VARCHAR(100)"),
             ("customers",          "saved_state",        "VARCHAR(100)"),
             ("customers",          "saved_pincode",      "VARCHAR(10)"),
+            ("orders",             "status_note",        "TEXT"),
         ]
         for table, column, col_type in migrations:
             # Use a fresh connection per column so a failed ALTER doesn't
