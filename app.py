@@ -432,7 +432,10 @@ def admin_required(f):
 def get_current_customer():
     cid = session.get("customer_id")
     if cid:
-        return Customer.query.get(cid)
+        try:
+            return Customer.query.get(cid)
+        except Exception:
+            session.pop("customer_id", None)
     return None
 
 
@@ -2553,7 +2556,7 @@ def init_db():
             ("stock_receipts",     "batch_ref",    "VARCHAR(20)"),
             ("orders",             "customer_id",        "INTEGER"),
             ("customers",          "reset_token",        "VARCHAR(64)"),
-            ("customers",          "reset_token_expires","DATETIME"),
+            ("customers",          "reset_token_expires","TIMESTAMP"),
         ]
         for table, column, col_type in migrations:
             # Use a fresh connection per column so a failed ALTER doesn't
