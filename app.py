@@ -250,6 +250,16 @@ class Coupon(db.Model):
         return min(self.discount_value, cart_total)
 
 
+class WhatsAppInquiry(db.Model):
+    __tablename__ = "whatsapp_inquiries"
+    id             = db.Column(db.Integer, primary_key=True)
+    book_id        = db.Column(db.Integer, db.ForeignKey("books.id"), nullable=True)
+    book_title     = db.Column(db.String(250))
+    customer_name  = db.Column(db.String(200))
+    customer_phone = db.Column(db.String(20))
+    created_at     = db.Column(db.DateTime, default=datetime.utcnow)
+
+
 class StockReceipt(db.Model):
     """Records each batch of books received from the ISKCON temple main store."""
     __tablename__ = "stock_receipts"
@@ -1251,6 +1261,24 @@ def payment_payu_webhook():
     return "OK", 200
 
 
+@app.route("/whatsapp/log", methods=["POST"])
+def whatsapp_log():
+    data       = request.get_json() or request.form.to_dict()
+    name       = (data.get("name") or "").strip()
+    phone      = (data.get("phone") or "").strip()
+    book_id    = data.get("book_id")
+    book_title = (data.get("book_title") or "").strip()
+    if name or phone:
+        db.session.add(WhatsAppInquiry(
+            book_id       = int(book_id) if book_id else None,
+            book_title    = book_title,
+            customer_name = name,
+            customer_phone= phone,
+        ))
+        db.session.commit()
+    return jsonify({"success": True})
+
+
 @app.route("/payment/upi-qr/<order_number>")
 def payment_upi_qr(order_number):
     order = Order.query.filter_by(order_number=order_number).first_or_404()
@@ -1589,6 +1617,18 @@ def admin_logout():
     session.pop("admin_logged_in", None)
     flash("Logged out.", "info")
     return redirect(url_for("admin_login"))
+
+
+@app.route("/admin/whatsapp-inquiries")
+@admin_required
+def admin_whatsapp_inquiries():
+    page = request.args.get("page", 1, type=int)
+    inquiries = (WhatsAppInquiry.query
+                 .order_by(WhatsAppInquiry.created_at.desc())
+                 .paginate(page=page, per_page=50, error_out=False))
+    return render_template("admin/whatsapp_inquiries.html",
+                           inquiries=inquiries,
+                           active_page="whatsapp")
 
 
 @app.route("/admin/test-email", methods=["GET", "POST"])

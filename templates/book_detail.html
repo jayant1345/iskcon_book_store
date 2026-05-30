@@ -199,16 +199,87 @@
 
       <!-- WhatsApp -->
       <div class="d-flex gap-3 flex-wrap mb-4">
-        <button id="whatsapp-order-btn"
-                class="whatsapp-btn"
-                data-phone="{{ whatsapp_num }}"
-                data-order="Enquiry: {{ book.title }}">
+        <button class="whatsapp-btn"
+                data-bs-toggle="modal" data-bs-target="#waEnquiryModal">
           💬 Order via WhatsApp
         </button>
         <a href="{{ url_for('books') }}" class="btn btn-outline-saffron">
           ← Continue Shopping
         </a>
       </div>
+
+      <!-- WhatsApp Enquiry Modal -->
+      <div class="modal fade" id="waEnquiryModal" tabindex="-1" aria-labelledby="waModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+          <div class="modal-content" style="border-radius:16px; overflow:hidden;">
+            <div class="modal-header" style="background:#25d366; color:white;">
+              <h5 class="modal-title" id="waModalLabel">
+                <i class="fab fa-whatsapp me-2"></i>Order via WhatsApp
+              </h5>
+              <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+              <p class="text-muted mb-3" style="font-size:0.9rem;">
+                Share your name and phone so we can help you better. Then we'll open WhatsApp for you.
+              </p>
+              <div class="mb-3">
+                <label class="form-label fw-bold small">Your Name</label>
+                <input type="text" id="wa-name" class="form-control"
+                       placeholder="Your full name"
+                       value="{{ current_customer.name if current_customer else '' }}">
+              </div>
+              <div class="mb-3">
+                <label class="form-label fw-bold small">Phone Number</label>
+                <input type="tel" id="wa-phone" class="form-control"
+                       placeholder="+91 98765 43210"
+                       value="{{ current_customer.phone if current_customer else '' }}">
+              </div>
+              <div class="p-2 rounded" style="background:#e7f5ff; font-size:0.82rem; color:#555;">
+                📖 Enquiring about: <strong>{{ book.title }}</strong>
+              </div>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+              <button type="button" id="wa-go-btn"
+                      class="btn fw-bold px-4"
+                      style="background:#25d366; color:white; border:none;"
+                      data-phone="{{ whatsapp_num }}"
+                      data-book-id="{{ book.id }}"
+                      data-book-title="{{ book.title|replace('"', '&quot;') }}">
+                <i class="fab fa-whatsapp me-2"></i>Open WhatsApp
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <script>
+      document.getElementById('wa-go-btn').addEventListener('click', function () {
+        var name      = document.getElementById('wa-name').value.trim();
+        var phone     = document.getElementById('wa-phone').value.trim();
+        var bookId    = this.dataset.bookId;
+        var bookTitle = this.dataset.bookTitle;
+        var waPhone   = this.dataset.phone.replace(/\D/g, '');
+        var message   = encodeURIComponent(
+          '🙏 Hare Krishna!\nI would like to order: ' + bookTitle +
+          '\nMy name: ' + (name || '—') +
+          '\nPhone: ' + (phone || '—')
+        );
+
+        // Log the enquiry silently
+        fetch('/whatsapp/log', {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: name, phone: phone, book_id: bookId, book_title: bookTitle })
+        }).catch(function(){});  // fire-and-forget
+
+        // Open WhatsApp
+        window.open('https://wa.me/' + waPhone + '?text=' + message, '_blank');
+
+        // Close modal
+        bootstrap.Modal.getInstance(document.getElementById('waEnquiryModal')).hide();
+      });
+      </script>
 
       <!-- Trust Badges -->
       <div class="row g-2 mt-2">
