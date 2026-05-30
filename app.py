@@ -1756,6 +1756,24 @@ def admin_edit_book(book_id):
     return render_template("admin/book_form.html", book=book, categories=categories)
 
 
+@app.route("/admin/books/bulk-video", methods=["GET", "POST"])
+@admin_required
+def admin_bulk_video():
+    books = Book.query.filter_by(deleted=False).order_by(Book.title).all()
+    if request.method == "POST":
+        updated = 0
+        for book in books:
+            raw = request.form.get(f"url_{book.id}", "").strip()
+            new_url = _make_embed_url(raw) if raw else None
+            if new_url != book.review_video_url:
+                book.review_video_url = new_url
+                updated += 1
+        db.session.commit()
+        flash(f"{updated} book(s) updated.", "success")
+        return redirect(url_for("admin_bulk_video"))
+    return render_template("admin/bulk_video.html", books=books)
+
+
 @app.route("/admin/books/delete/<int:book_id>", methods=["POST"])
 @admin_required
 def admin_delete_book(book_id):

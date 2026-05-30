@@ -29,6 +29,9 @@
             <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">{{ trash_count }}</span>
             {% endif %}
         </a>
+        <a href="{{ url_for('admin_bulk_video') }}" class="btn btn-danger">
+            <i class="fab fa-youtube me-2"></i>Bulk Video Update
+        </a>
         <a href="{{ url_for('admin_add_book') }}" class="btn btn-warning">
             <i class="fas fa-plus-circle me-2"></i>Add Book
         </a>

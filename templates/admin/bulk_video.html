@@ -1,0 +1,83 @@
+{% extends "admin/admin_base.html" %}
+{% set active_page = 'books' %}
+{% block page_title %}Bulk Video Update{% endblock %}
+{% block content %}
+
+<div class="d-flex align-items-center gap-3 mb-4">
+    <a href="{{ url_for('admin_books') }}" class="btn btn-outline-secondary btn-sm">
+        <i class="fas fa-arrow-left me-1"></i>Back to Books
+    </a>
+    <div>
+        <h4 class="mb-0"><i class="fab fa-youtube me-2 text-danger"></i>Bulk Video Update</h4>
+        <small class="text-muted">Paste YouTube links for all books at once — then click Save All</small>
+    </div>
+</div>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% for cat, msg in messages %}
+    <div class="alert alert-{{ cat }}">{{ msg }}</div>
+  {% endfor %}
+{% endwith %}
+
+<div class="card shadow-sm mb-3">
+    <div class="card-body py-2 px-3" style="background:#fff8e1;">
+        <small class="text-muted">
+            <i class="fas fa-info-circle text-warning me-1"></i>
+            Paste the YouTube link next to each book. Leave blank to keep existing / no video.
+            Supports YouTube watch URLs, Shorts links, and youtu.be links — all are auto-converted.
+        </small>
+    </div>
+</div>
+
+<form method="POST">
+<div class="card shadow-sm">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0 align-middle">
+            <thead class="table-warning">
+                <tr>
+                    <th style="width:5%">#</th>
+                    <th style="width:30%">Book Title</th>
+                    <th style="width:10%">Status</th>
+                    <th style="width:55%">YouTube Link</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for book in books %}
+                <tr>
+                    <td class="text-muted small">{{ loop.index }}</td>
+                    <td>
+                        <div class="fw-bold" style="font-size:0.9rem;">{{ book.title }}</div>
+                        <small class="text-muted">{{ book.author }}</small>
+                    </td>
+                    <td>
+                        {% if book.review_video_url %}
+                        <span class="badge bg-success"><i class="fas fa-check me-1"></i>Video set</span>
+                        {% elif book.review_video %}
+                        <span class="badge bg-info">File uploaded</span>
+                        {% else %}
+                        <span class="badge bg-secondary">No video</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <input type="text"
+                               name="url_{{ book.id }}"
+                               class="form-control form-control-sm"
+                               value="{{ book.review_video_url or '' }}"
+                               placeholder="https://youtube.com/shorts/... or https://youtube.com/watch?v=...">
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="d-flex justify-content-between align-items-center mt-4">
+    <small class="text-muted">{{ books|length }} books total</small>
+    <button type="submit" class="btn btn-warning btn-lg fw-bold px-5">
+        <i class="fas fa-save me-2"></i>Save All
+    </button>
+</div>
+</form>
+
+{% endblock %}
