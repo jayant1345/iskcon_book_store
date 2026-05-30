@@ -380,6 +380,62 @@ def save_preview(file):
 
 ALLOWED_VIDEO_EXTENSIONS = {"mp4", "webm", "mov", "avi", "mkv", "m4v"}
 
+_VIDEO_MIME = {
+    "mp4":  "video/mp4",
+    "m4v":  "video/mp4",
+    "mov":  "video/mp4",
+    "webm": "video/webm",
+    "avi":  "video/x-msvideo",
+    "mkv":  "video/x-matroska",
+}
+
+
+@app.route("/video/review/<path:filename>")
+def serve_review_video_stream(filename):
+    """Stream book review videos with HTTP Range request support so browsers can play them."""
+    import re as _re
+    video_path = os.path.join(app.config["REVIEW_VIDEO_FOLDER"], filename)
+    if not os.path.isfile(video_path):
+        abort(404)
+
+    ext  = filename.rsplit(".", 1)[-1].lower() if "." in filename else "mp4"
+    mime = _VIDEO_MIME.get(ext, "video/mp4")
+    file_size = os.path.getsize(video_path)
+
+    range_header = request.headers.get("Range")
+    if range_header:
+        m = _re.search(r"bytes=(\d+)-(\d*)", range_header)
+        if m:
+            byte1 = int(m.group(1))
+            byte2 = int(m.group(2)) if m.group(2) else file_size - 1
+            byte2 = min(byte2, file_size - 1)
+            length = byte2 - byte1 + 1
+
+            def _generate():
+                with open(video_path, "rb") as f:
+                    f.seek(byte1)
+                    remaining = length
+                    chunk = 1024 * 256   # 256 KB chunks
+                    while remaining > 0:
+                        data = f.read(min(chunk, remaining))
+                        if not data:
+                            break
+                        remaining -= len(data)
+                        yield data
+
+            resp = Response(_generate(), status=206, mimetype=mime)
+            resp.headers["Content-Range"]  = f"bytes {byte1}-{byte2}/{file_size}"
+            resp.headers["Accept-Ranges"]  = "bytes"
+            resp.headers["Content-Length"] = str(length)
+            return resp
+
+    # No Range header — serve whole file
+    resp = Response(open(video_path, "rb"), status=200, mimetype=mime)
+    resp.headers["Accept-Ranges"]  = "bytes"
+    resp.headers["Content-Length"] = str(file_size)
+    return resp
+
+
 def save_review_video(file):
     """Save uploaded book review video and return filename (stored in static/videos/book_reviews/)."""
     if file and file.filename:

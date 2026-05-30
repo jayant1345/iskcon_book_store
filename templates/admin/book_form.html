@@ -209,8 +209,10 @@
                             <label class="form-label">Review Video (MP4 / WebM / MOV)</label>
                             {% if book and book.review_video %}
                             <div class="mb-2">
-                                <video src="{{ url_for('static', filename='videos/book_reviews/' + book.review_video) }}"
-                                       controls style="max-width:100%; border-radius:6px; max-height:160px;"></video>
+                                <video controls playsinline style="max-width:100%; border-radius:6px; max-height:160px;">
+                                    <source src="{{ url_for('serve_review_video_stream', filename=book.review_video) }}"
+                                            type="video/mp4">
+                                </video>
                                 <div class="form-check mt-1">
                                     <input class="form-check-input" type="checkbox" name="remove_review_video" value="1" id="removeVideo">
                                     <label class="form-check-label text-danger small" for="removeVideo">Remove current video</label>
