@@ -1037,7 +1037,8 @@ def donate_book(book_id):
     donor_phone   = request.form.get("donor_phone", "").strip()
     donor_email   = request.form.get("donor_email", "").strip()
     donor_message = request.form.get("donor_message", "").strip()
-    donation_type = request.form.get("donation_type", "iskcon")
+    donation_type  = request.form.get("donation_type", "iskcon")
+    payment_method = request.form.get("payment_method", "upi")
     try:
         quantity = max(1, int(request.form.get("quantity") or 1))
     except ValueError:
@@ -1070,7 +1071,7 @@ def donate_book(book_id):
         shipping_charge           = 0,
         discount_amount           = 0,
         total_amount              = total_amount,
-        payment_method            = "razorpay",
+        payment_method            = payment_method,
         payment_status            = "pending",
         order_status              = "placed",
         notes                     = donor_message or None,
@@ -1094,6 +1095,32 @@ def donate_book(book_id):
     db.session.add(oi)
     db.session.commit()
 
+    if payment_method == "upi":
+        return redirect(url_for("payment_upi_qr", order_number=order.order_number))
+
+    if payment_method == "payu":
+        key         = app.config["PAYU_MERCHANT_KEY"]
+        salt        = app.config["PAYU_MERCHANT_SALT"]
+        env         = app.config["PAYU_ENV"]
+        amount_str  = f"{order.total_amount:.2f}"
+        firstname   = (order.customer_name.split()[0] if order.customer_name else "Donor")[:50]
+        email_str   = order.customer_email or ""
+        hash_val    = _payu_hash(key, order.order_number, amount_str,
+                                 "ISKCON Book Donation", firstname, email_str, salt)
+        payu_url    = ("https://test.payu.in/_payment" if env == "test"
+                       else "https://secure.payu.in/_payment")
+        return render_template("payment_payu.html",
+                               order=order,
+                               payu_url=payu_url,
+                               payu_key=key,
+                               amount_str=amount_str,
+                               firstname=firstname,
+                               email_str=email_str,
+                               hash_val=hash_val,
+                               surl=url_for("payment_payu_success", _external=True),
+                               furl=url_for("payment_payu_failure", _external=True))
+
+    # Razorpay
     try:
         import requests as _req
         rp_resp = _req.post(

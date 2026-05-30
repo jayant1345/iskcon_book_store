@@ -132,6 +132,44 @@
       </div>
     </div>
 
+    <!-- Payment Method -->
+    <div class="mb-4">
+      <label class="form-label fw-bold">Payment Method</label>
+      <div class="payment-option">
+        <label>
+          <input type="radio" name="payment_method" value="upi" checked>
+          <span class="payment-icon">📲</span>
+          <div>
+            <strong>UPI Payment</strong>
+            <div class="text-muted small">Pay via any UPI app — GPay, PhonePe, Paytm</div>
+          </div>
+        </label>
+      </div>
+      <div class="payment-option">
+        <label>
+          <input type="radio" name="payment_method" value="payu">
+          <span class="payment-icon">🏦</span>
+          <div>
+            <strong>Pay Online (PayU)</strong>
+            <div class="text-muted small">Credit/Debit card, Net Banking, UPI, Wallets</div>
+          </div>
+        </label>
+      </div>
+      <div class="payment-option">
+        <label>
+          <input type="radio" name="payment_method" value="razorpay">
+          <span class="payment-icon">💳</span>
+          <div>
+            <strong>Pay Online (Razorpay)</strong>
+            <div class="text-muted small">Credit/Debit card, Net Banking, UPI, Wallets</div>
+          </div>
+        </label>
+      </div>
+      <div class="mt-2 p-2" style="background:var(--cream-dark); border-radius:8px; font-size:0.8rem; color:var(--text-muted);">
+        🔒 All transactions are encrypted and secured by SSL.
+      </div>
+    </div>
+
     <!-- Total summary -->
     <div class="d-flex justify-content-between align-items-center p-3 mb-4"
          style="background:#fff3e0; border-radius:12px; border:1px solid #ffcc80;">
@@ -149,7 +187,7 @@
     </button>
 
     <p class="text-center text-muted small mt-3">
-      🔒 Secure payment via Razorpay &nbsp;·&nbsp; UPI · Cards · Net Banking accepted
+      🔒 Secure payment &nbsp;·&nbsp; UPI · Cards · Net Banking accepted
     </p>
 
     <div class="text-center mt-2">
