@@ -22,7 +22,7 @@ load_dotenv()
 
 from flask import (
     Flask, render_template, request, session, redirect,
-    url_for, flash, jsonify, abort, send_from_directory
+    url_for, flash, jsonify, abort, send_from_directory, send_file
 )
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -138,8 +138,9 @@ class Book(db.Model):
     is_ebook       = db.Column(db.Boolean, default=False)
     ebook_file     = db.Column(db.String(200), nullable=True)
     preview_file   = db.Column(db.String(200), nullable=True)
-    review_text    = db.Column(db.Text, nullable=True)
-    review_video   = db.Column(db.String(200), nullable=True)
+    review_text      = db.Column(db.Text, nullable=True)
+    review_video     = db.Column(db.String(200), nullable=True)
+    review_video_url = db.Column(db.String(500), nullable=True)
     created_at     = db.Column(db.DateTime, default=datetime.utcnow)
     order_items    = db.relationship("OrderItem", backref="book", lazy=True)
 
@@ -392,52 +393,15 @@ _VIDEO_MIME = {
 
 @app.route("/video/review/<path:filename>")
 def serve_review_video_stream(filename):
-    """Stream book review videos with HTTP Range request support so browsers can play them."""
-    import re as _re
     video_path = os.path.join(app.config["REVIEW_VIDEO_FOLDER"], filename)
     if not os.path.isfile(video_path):
         abort(404)
-
     ext  = filename.rsplit(".", 1)[-1].lower() if "." in filename else "mp4"
     mime = _VIDEO_MIME.get(ext, "video/mp4")
-    file_size = os.path.getsize(video_path)
-
-    range_header = request.headers.get("Range")
-    if range_header:
-        m = _re.search(r"bytes=(\d+)-(\d*)", range_header)
-        if m:
-            byte1 = int(m.group(1))
-            byte2 = int(m.group(2)) if m.group(2) else file_size - 1
-            byte2 = min(byte2, file_size - 1)
-            length = byte2 - byte1 + 1
-
-            def _generate():
-                with open(video_path, "rb") as f:
-                    f.seek(byte1)
-                    remaining = length
-                    chunk = 1024 * 256   # 256 KB chunks
-                    while remaining > 0:
-                        data = f.read(min(chunk, remaining))
-                        if not data:
-                            break
-                        remaining -= len(data)
-                        yield data
-
-            resp = Response(_generate(), status=206, mimetype=mime)
-            resp.headers["Content-Range"]  = f"bytes {byte1}-{byte2}/{file_size}"
-            resp.headers["Accept-Ranges"]  = "bytes"
-            resp.headers["Content-Length"] = str(length)
-            return resp
-
-    # No Range header — serve whole file
-    resp = Response(open(video_path, "rb"), status=200, mimetype=mime)
-    resp.headers["Accept-Ranges"]  = "bytes"
-    resp.headers["Content-Length"] = str(file_size)
-    return resp
+    return send_file(video_path, mimetype=mime, conditional=True)
 
 
 def save_review_video(file):
-    """Save uploaded book review video and return filename (stored in static/videos/book_reviews/)."""
     if file and file.filename:
         ext = file.filename.rsplit(".", 1)[-1].lower() if "." in file.filename else ""
         if ext in ALLOWED_VIDEO_EXTENSIONS:
@@ -445,6 +409,18 @@ def save_review_video(file):
             file.save(os.path.join(app.config["REVIEW_VIDEO_FOLDER"], filename))
             return filename
     return None
+
+
+def _make_embed_url(url):
+    """Convert YouTube watch/short URL to embed URL. Returns other URLs as-is."""
+    import re as _re
+    if not url:
+        return None
+    url = url.strip()
+    m = _re.search(r"(?:youtube\.com/watch\?(?:.*&)?v=|youtu\.be/)([A-Za-z0-9_-]{11})", url)
+    if m:
+        return f"https://www.youtube.com/embed/{m.group(1)}?rel=0"
+    return url
 
 
 def generate_order_number():
@@ -1684,8 +1660,9 @@ def admin_add_book():
             is_ebook       = is_ebook,
             ebook_file     = ebook_filename,
             preview_file   = preview_filename,
-            review_text    = request.form.get("review_text", "").strip() or None,
-            review_video   = review_video_filename,
+            review_text      = request.form.get("review_text", "").strip() or None,
+            review_video     = review_video_filename,
+            review_video_url = _make_embed_url(request.form.get("review_video_url", "").strip()),
         )
         db.session.add(book)
         db.session.commit()
@@ -1750,6 +1727,7 @@ def admin_edit_book(book_id):
             book.preview_file = save_preview(preview_file_obj)
 
         book.review_text = request.form.get("review_text", "").strip() or None
+        book.review_video_url = _make_embed_url(request.form.get("review_video_url", "").strip())
 
         review_video_obj = request.files.get("review_video")
         if review_video_obj and review_video_obj.filename:
@@ -2826,6 +2804,7 @@ def init_db():
             ("orders",             "status_note",        "TEXT"),
             ("books",              "review_text",        "TEXT"),
             ("books",              "review_video",       "VARCHAR(200)"),
+            ("books",              "review_video_url",   "VARCHAR(500)"),
         ]
         for table, column, col_type in migrations:
             # Use a fresh connection per column so a failed ALTER doesn't
