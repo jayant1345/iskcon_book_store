@@ -205,25 +205,35 @@
                             <small class="text-muted">Devotee experience — shown on the book page.</small>
                         </div>
                         <div class="col-md-5">
-                            <!-- YouTube / Vimeo URL (recommended) -->
+                            <!-- YouTube / Vimeo URLs (up to 3) -->
                             <div class="card border-success mb-3">
                                 <div class="card-header bg-success text-white py-2 d-flex align-items-center gap-2">
                                     <i class="fab fa-youtube"></i>
-                                    <small class="fw-bold">YouTube / Vimeo Link <span class="badge bg-warning text-dark ms-1">Recommended</span></small>
+                                    <small class="fw-bold">YouTube Links (up to 3) <span class="badge bg-warning text-dark ms-1">Recommended</span></small>
                                 </div>
-                                <div class="card-body p-3">
-                                    <input type="text" name="review_video_url"
-                                           class="form-control form-control-sm"
-                                           value="{{ book.review_video_url if book and book.review_video_url else '' }}"
-                                           placeholder="https://www.youtube.com/watch?v=...">
-                                    <small class="text-muted">Upload video to YouTube (can be Unlisted) → paste link here. Works on all devices and survives server restarts.</small>
-                                    {% if book and book.review_video_url %}
-                                    <div class="mt-2">
-                                        <a href="{{ book.review_video_url }}" target="_blank" class="btn btn-outline-success btn-sm">
-                                            <i class="fas fa-external-link-alt me-1"></i>Preview current video
-                                        </a>
+                                <div class="card-body p-3 d-flex flex-column gap-2">
+                                    <div>
+                                        <label class="form-label mb-1 small fw-bold text-danger">Video 1</label>
+                                        <input type="text" name="review_video_url"
+                                               class="form-control form-control-sm"
+                                               value="{{ book.review_video_url if book and book.review_video_url else '' }}"
+                                               placeholder="https://youtube.com/shorts/... or watch?v=...">
                                     </div>
-                                    {% endif %}
+                                    <div>
+                                        <label class="form-label mb-1 small fw-bold" style="color:#b8860b;">Video 2 <span class="text-muted fw-normal">(optional)</span></label>
+                                        <input type="text" name="review_video_url2"
+                                               class="form-control form-control-sm"
+                                               value="{{ book.review_video_url2 if book and book.review_video_url2 else '' }}"
+                                               placeholder="Second YouTube link (optional)">
+                                    </div>
+                                    <div>
+                                        <label class="form-label mb-1 small fw-bold text-secondary">Video 3 <span class="text-muted fw-normal">(optional)</span></label>
+                                        <input type="text" name="review_video_url3"
+                                               class="form-control form-control-sm"
+                                               value="{{ book.review_video_url3 if book and book.review_video_url3 else '' }}"
+                                               placeholder="Third YouTube link (optional)">
+                                    </div>
+                                    <small class="text-muted">Upload to YouTube as Unlisted → paste link. All formats accepted (Shorts, watch URL, youtu.be).</small>
                                 </div>
                             </div>
                             <!-- File upload (fallback) -->

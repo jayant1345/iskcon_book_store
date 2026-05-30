@@ -241,7 +241,12 @@
   {% endif %}
 
   <!-- ── Reader Review / Testimonial ── -->
-  {% set _has_video = book.review_video_url or book.review_video %}
+  {% set _urls = [] %}
+  {% if book.review_video_url  %}{% set _ = _urls.append(book.review_video_url)  %}{% endif %}
+  {% if book.review_video_url2 %}{% set _ = _urls.append(book.review_video_url2) %}{% endif %}
+  {% if book.review_video_url3 %}{% set _ = _urls.append(book.review_video_url3) %}{% endif %}
+  {% if not _urls and book.review_video %}{% set _ = _urls.append('__file__') %}{% endif %}
+  {% set _has_video = _urls|length > 0 %}
   {% if book.review_text or _has_video %}
   <div class="row mt-4">
     <div class="col-12">
@@ -249,16 +254,12 @@
         <h3 class="section-title mb-4" style="color:var(--brown);">
           <i class="bi bi-person-heart me-2" style="color:var(--saffron);"></i>What Devotees Say
         </h3>
-        <div class="row g-4 align-items-start">
-          {% if _has_video %}
-          <div class="col-md-5">
+        {% if _has_video %}
+        <div class="row g-3 mb-4" style="--bs-columns:{% if _urls|length == 1 %}1{% else %}{{ _urls|length }}{% endif %};">
+          {% for _url in _urls %}
+          <div class="col-md">
             <div style="background:#000; border-radius:12px; overflow:hidden; box-shadow:0 4px 16px rgba(0,0,0,.12); position:relative; padding-top:56.25%;">
-              {% if book.review_video_url %}
-              <iframe src="{{ book.review_video_url }}"
-                      style="position:absolute;top:0;left:0;width:100%;height:100%;border:0;"
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                      allowfullscreen></iframe>
-              {% else %}
+              {% if _url == '__file__' %}
               {% set _vext = book.review_video.rsplit('.', 1)[-1].lower() %}
               {% set _vmime = {'mp4': 'video/mp4', 'webm': 'video/webm', 'm4v': 'video/mp4',
                                'mov': 'video/mp4', 'avi': 'video/x-msvideo', 'mkv': 'video/x-matroska'} %}
@@ -267,37 +268,48 @@
                 <source src="{{ url_for('serve_review_video_stream', filename=book.review_video) }}"
                         type="{{ _vmime.get(_vext, 'video/mp4') }}">
               </video>
+              {% else %}
+              <iframe src="{{ _url }}"
+                      style="position:absolute;top:0;left:0;width:100%;height:100%;border:0;"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowfullscreen></iframe>
               {% endif %}
             </div>
-            <p class="text-center mt-2" style="font-size:0.78rem; color:var(--text-muted);">
-              <i class="bi bi-play-circle me-1"></i>Short review video · Press play to watch
+            {% if _urls|length > 1 %}
+            <p class="text-center mt-1 mb-0" style="font-size:0.75rem; color:var(--text-muted);">
+              <i class="bi bi-play-circle me-1"></i>Review {{ loop.index }}
             </p>
+            {% endif %}
           </div>
-          {% endif %}
-          {% if book.review_text %}
-          <div class="col-md-{% if _has_video %}7{% else %}12{% endif %}">
-            <div style="position:relative; padding:24px 24px 24px 32px;
-                        background:var(--cream-dark); border-radius:12px;">
-              <span style="position:absolute; top:10px; left:12px; font-size:3rem;
-                           color:var(--saffron); line-height:1; opacity:.5;">&ldquo;</span>
-              <p style="font-size:1.05rem; line-height:1.9; color:var(--text);
-                        font-style:italic; margin:0; white-space:pre-line;">
-                {{ book.review_text }}
-              </p>
-              <span style="display:block; text-align:right; font-size:3rem;
-                           color:var(--saffron); line-height:1; opacity:.5;">&rdquo;</span>
-            </div>
-            <div class="mt-3 d-flex align-items-center gap-2">
-              <span style="display:inline-flex; align-items:center; gap:6px;
-                           background:var(--saffron); color:white; padding:4px 14px;
-                           border-radius:20px; font-size:0.82rem; font-weight:600;">
-                <i class="bi bi-star-fill"></i> Verified Reader
-              </span>
-              <small style="color:var(--text-muted);">ISKCON devotee experience</small>
-            </div>
-          </div>
-          {% endif %}
+          {% endfor %}
         </div>
+        {% if _urls|length == 1 %}
+        <p class="text-center mb-3" style="font-size:0.78rem; color:var(--text-muted);">
+          <i class="bi bi-play-circle me-1"></i>Short review video · Press play to watch
+        </p>
+        {% endif %}
+        {% endif %}
+        {% if book.review_text %}
+        <div style="position:relative; padding:24px 24px 24px 32px;
+                    background:var(--cream-dark); border-radius:12px;">
+          <span style="position:absolute; top:10px; left:12px; font-size:3rem;
+                       color:var(--saffron); line-height:1; opacity:.5;">&ldquo;</span>
+          <p style="font-size:1.05rem; line-height:1.9; color:var(--text);
+                    font-style:italic; margin:0; white-space:pre-line;">
+            {{ book.review_text }}
+          </p>
+          <span style="display:block; text-align:right; font-size:3rem;
+                       color:var(--saffron); line-height:1; opacity:.5;">&rdquo;</span>
+        </div>
+        <div class="mt-3 d-flex align-items-center gap-2">
+          <span style="display:inline-flex; align-items:center; gap:6px;
+                       background:var(--saffron); color:white; padding:4px 14px;
+                       border-radius:20px; font-size:0.82rem; font-weight:600;">
+            <i class="bi bi-star-fill"></i> Verified Reader
+          </span>
+          <small style="color:var(--text-muted);">ISKCON devotee experience</small>
+        </div>
+        {% endif %}
       </div>
     </div>
   </div>

@@ -140,7 +140,9 @@ class Book(db.Model):
     preview_file   = db.Column(db.String(200), nullable=True)
     review_text      = db.Column(db.Text, nullable=True)
     review_video     = db.Column(db.String(200), nullable=True)
-    review_video_url = db.Column(db.String(500), nullable=True)
+    review_video_url  = db.Column(db.String(500), nullable=True)
+    review_video_url2 = db.Column(db.String(500), nullable=True)
+    review_video_url3 = db.Column(db.String(500), nullable=True)
     created_at     = db.Column(db.DateTime, default=datetime.utcnow)
     order_items    = db.relationship("OrderItem", backref="book", lazy=True)
 
@@ -1667,7 +1669,9 @@ def admin_add_book():
             preview_file   = preview_filename,
             review_text      = request.form.get("review_text", "").strip() or None,
             review_video     = review_video_filename,
-            review_video_url = _make_embed_url(request.form.get("review_video_url", "").strip()),
+            review_video_url  = _make_embed_url(request.form.get("review_video_url", "").strip()),
+            review_video_url2 = _make_embed_url(request.form.get("review_video_url2", "").strip()),
+            review_video_url3 = _make_embed_url(request.form.get("review_video_url3", "").strip()),
         )
         db.session.add(book)
         db.session.commit()
@@ -1732,7 +1736,9 @@ def admin_edit_book(book_id):
             book.preview_file = save_preview(preview_file_obj)
 
         book.review_text = request.form.get("review_text", "").strip() or None
-        book.review_video_url = _make_embed_url(request.form.get("review_video_url", "").strip())
+        book.review_video_url  = _make_embed_url(request.form.get("review_video_url", "").strip())
+        book.review_video_url2 = _make_embed_url(request.form.get("review_video_url2", "").strip())
+        book.review_video_url3 = _make_embed_url(request.form.get("review_video_url3", "").strip())
 
         review_video_obj = request.files.get("review_video")
         if review_video_obj and review_video_obj.filename:
@@ -1763,10 +1769,13 @@ def admin_bulk_video():
     if request.method == "POST":
         updated = 0
         for book in books:
-            raw = request.form.get(f"url_{book.id}", "").strip()
-            new_url = _make_embed_url(raw) if raw else None
-            if new_url != book.review_video_url:
-                book.review_video_url = new_url
+            u1 = _make_embed_url(request.form.get(f"url1_{book.id}", "").strip())
+            u2 = _make_embed_url(request.form.get(f"url2_{book.id}", "").strip())
+            u3 = _make_embed_url(request.form.get(f"url3_{book.id}", "").strip())
+            if u1 != book.review_video_url or u2 != book.review_video_url2 or u3 != book.review_video_url3:
+                book.review_video_url  = u1
+                book.review_video_url2 = u2
+                book.review_video_url3 = u3
                 updated += 1
         db.session.commit()
         flash(f"{updated} book(s) updated.", "success")
@@ -2828,6 +2837,8 @@ def init_db():
             ("books",              "review_text",        "TEXT"),
             ("books",              "review_video",       "VARCHAR(200)"),
             ("books",              "review_video_url",   "VARCHAR(500)"),
+            ("books",              "review_video_url2",  "VARCHAR(500)"),
+            ("books",              "review_video_url3",  "VARCHAR(500)"),
         ]
         for table, column, col_type in migrations:
             # Use a fresh connection per column so a failed ALTER doesn't
