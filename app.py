@@ -412,11 +412,16 @@ def save_review_video(file):
 
 
 def _make_embed_url(url):
-    """Convert YouTube watch/short URL to embed URL. Returns other URLs as-is."""
+    """Convert any YouTube URL (watch/short/youtu.be) to embed URL. Returns other URLs as-is."""
     import re as _re
     if not url:
         return None
     url = url.strip()
+    # YouTube Shorts: youtube.com/shorts/VIDEO_ID
+    m = _re.search(r"youtube\.com/shorts/([A-Za-z0-9_-]{11})", url)
+    if m:
+        return f"https://www.youtube.com/embed/{m.group(1)}?rel=0"
+    # YouTube watch URL or youtu.be short link
     m = _re.search(r"(?:youtube\.com/watch\?(?:.*&)?v=|youtu\.be/)([A-Za-z0-9_-]{11})", url)
     if m:
         return f"https://www.youtube.com/embed/{m.group(1)}?rel=0"
