@@ -189,6 +189,11 @@ class Order(db.Model):
     upi_transaction_id = db.Column(db.String(100))
     status_note        = db.Column(db.Text)
     is_deleted         = db.Column(db.Boolean, default=False)
+    is_donation               = db.Column(db.Boolean, default=False)
+    donation_type             = db.Column(db.String(20), nullable=True)   # "iskcon" | "person"
+    donation_recipient        = db.Column(db.String(200), nullable=True)
+    donation_recipient_address= db.Column(db.Text, nullable=True)
+    donor_message             = db.Column(db.Text, nullable=True)
     customer_id        = db.Column(db.Integer, db.ForeignKey("customers.id"), nullable=True)
     items              = db.relationship("OrderItem", backref="order", lazy=True)
 
@@ -1019,6 +1024,104 @@ def checkout():
     return render_template("checkout.html", **totals,
                            razorpay_key=app.config["RAZORPAY_KEY_ID"],
                            prefill=prefill)
+
+
+@app.route("/donate/<int:book_id>", methods=["GET", "POST"])
+def donate_book(book_id):
+    book = Book.query.filter_by(id=book_id, deleted=False, active=True).first_or_404()
+
+    if request.method == "GET":
+        return render_template("donate.html", book=book)
+
+    donor_name    = request.form.get("donor_name", "").strip()
+    donor_phone   = request.form.get("donor_phone", "").strip()
+    donor_email   = request.form.get("donor_email", "").strip()
+    donor_message = request.form.get("donor_message", "").strip()
+    donation_type = request.form.get("donation_type", "iskcon")
+    try:
+        quantity = max(1, int(request.form.get("quantity") or 1))
+    except ValueError:
+        quantity = 1
+
+    donation_recipient         = request.form.get("donation_recipient", "").strip()
+    donation_recipient_address = request.form.get("donation_recipient_address", "").strip()
+
+    if not donor_name or not donor_phone:
+        flash("Please fill your name and phone number.", "danger")
+        return render_template("donate.html", book=book)
+
+    total_amount = round(book.price * quantity, 2)
+
+    if donation_type == "person":
+        order_address = donation_recipient_address or "Gift — Address not specified"
+    else:
+        order_address = "Donated to ISKCON for distribution"
+
+    order = Order(
+        order_number              = generate_order_number(),
+        customer_name             = donor_name,
+        customer_email            = donor_email or None,
+        customer_phone            = donor_phone,
+        address                   = order_address,
+        city                      = "—",
+        state                     = "",
+        pincode                   = "000000",
+        subtotal                  = total_amount,
+        shipping_charge           = 0,
+        discount_amount           = 0,
+        total_amount              = total_amount,
+        payment_method            = "razorpay",
+        payment_status            = "pending",
+        order_status              = "placed",
+        notes                     = donor_message or None,
+        is_donation               = True,
+        donation_type             = donation_type,
+        donation_recipient        = donation_recipient or None,
+        donation_recipient_address= donation_recipient_address or None,
+        donor_message             = donor_message or None,
+    )
+    db.session.add(order)
+    db.session.flush()
+
+    oi = OrderItem(
+        order_id   = order.id,
+        book_id    = book.id,
+        book_title = book.title,
+        quantity   = quantity,
+        price      = book.price,
+    )
+    book.stock = max(0, book.stock - quantity)
+    db.session.add(oi)
+    db.session.commit()
+
+    try:
+        import requests as _req
+        rp_resp = _req.post(
+            "https://api.razorpay.com/v1/orders",
+            auth=(app.config["RAZORPAY_KEY_ID"], app.config["RAZORPAY_KEY_SECRET"]),
+            json={
+                "amount":   int(total_amount * 100),
+                "currency": "INR",
+                "receipt":  order.order_number,
+            },
+            timeout=10,
+        )
+        rp_resp.raise_for_status()
+        rp_order = rp_resp.json()
+        order.razorpay_order_id = rp_order["id"]
+        db.session.commit()
+        return render_template("payment_razorpay.html",
+                               order=order,
+                               rp_order=rp_order,
+                               key_id=app.config["RAZORPAY_KEY_ID"])
+    except Exception as e:
+        OrderItem.query.filter_by(order_id=order.id).delete()
+        db.session.delete(order)
+        db.session.commit()
+        book.stock += quantity
+        db.session.commit()
+        flash(f"Payment gateway error: {e}. Please try again.", "danger")
+        return render_template("donate.html", book=book)
 
 
 @app.route("/payment/verify", methods=["POST"])
@@ -2839,6 +2942,11 @@ def init_db():
             ("books",              "review_video_url",   "VARCHAR(500)"),
             ("books",              "review_video_url2",  "VARCHAR(500)"),
             ("books",              "review_video_url3",  "VARCHAR(500)"),
+            ("orders",             "is_donation",                "BOOLEAN DEFAULT FALSE"),
+            ("orders",             "donation_type",              "VARCHAR(20)"),
+            ("orders",             "donation_recipient",         "VARCHAR(200)"),
+            ("orders",             "donation_recipient_address", "TEXT"),
+            ("orders",             "donor_message",              "TEXT"),
         ]
         for table, column, col_type in migrations:
             # Use a fresh connection per column so a failed ALTER doesn't

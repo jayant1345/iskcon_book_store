@@ -4,11 +4,29 @@
 {% block content %}
 <div class="container py-5">
   <div class="success-card">
+    {% if order.is_donation %}
+    <div class="success-icon">🎁</div>
+    <h2 class="section-title text-center mt-3" style="color:#28a745;">Donation Confirmed!</h2>
+    <p class="text-muted">🙏 Hare Krishna! Thank you for your generous donation.</p>
+    <div class="alert text-start mb-3" style="background:#fff8e7; border:1px solid #ffe082; border-radius:12px;">
+      {% if order.donation_type == 'iskcon' %}
+        <strong>🙏 Your books will be distributed by ISKCON</strong><br>
+        <small class="text-muted">These copies will reach new devotees through temple programs and book marathon service.</small>
+      {% else %}
+        <strong>🎁 Gift to: {{ order.donation_recipient or 'Recipient' }}</strong><br>
+        <small class="text-muted">Delivery to: {{ order.donation_recipient_address or order.address }}</small>
+      {% endif %}
+      {% if order.donor_message %}
+        <div class="mt-2 text-muted" style="font-style:italic;">"{{ order.donor_message }}"</div>
+      {% endif %}
+    </div>
+  {% else %}
     <div class="success-icon">🎉</div>
     <h2 class="section-title text-center mt-3" style="color:#28a745;">
       Order Confirmed!
     </h2>
     <p class="text-muted">🙏 Hare Krishna! Thank you for your purchase.</p>
+  {% endif %}
 
     <div class="order-number">{{ order.order_number }}</div>
 
@@ -154,7 +172,11 @@
     </div>
 
     <p class="text-muted small mt-4">
-      🙏 Your purchase helps spread Vedic wisdom across the world. Hare Krishna!
+      {% if order.is_donation %}
+        🙏 Your donation helps spread Vedic wisdom across the world. Hare Krishna!
+      {% else %}
+        🙏 Your purchase helps spread Vedic wisdom across the world. Hare Krishna!
+      {% endif %}
     </p>
   </div>
 </div>

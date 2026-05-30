@@ -107,7 +107,14 @@
             <tbody>
                 {% for order in orders.items %}
                 <tr>
-                    <td><a href="{{ url_for('admin_order_detail', order_id=order.id) }}" class="text-decoration-none fw-bold">{{ order.order_number }}</a></td>
+                    <td>
+                        <a href="{{ url_for('admin_order_detail', order_id=order.id) }}" class="text-decoration-none fw-bold">{{ order.order_number }}</a>
+                        {% if order.is_donation %}
+                        <span class="badge bg-warning text-dark d-block mt-1" style="font-size:0.65rem;">
+                            🎁 DONATION
+                        </span>
+                        {% endif %}
+                    </td>
                     <td>{{ order.customer_name }}</td>
                     <td>
                         <small>{{ order.customer_phone }}</small><br>

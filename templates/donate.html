@@ -1,0 +1,197 @@
+{% extends "base.html" %}
+{% block title %}Donate "{{ book.title }}" — {{ store_name }}{% endblock %}
+
+{% block content %}
+<div class="container py-4" style="max-width:680px;">
+
+  <!-- Breadcrumb -->
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb breadcrumb-iskcon">
+      <li class="breadcrumb-item"><a href="{{ url_for('index') }}">🏠 Home</a></li>
+      <li class="breadcrumb-item"><a href="{{ url_for('book_detail', book_id=book.id) }}">{{ book.title[:35] }}{% if book.title|length > 35 %}…{% endif %}</a></li>
+      <li class="breadcrumb-item active">Donate This Book</li>
+    </ol>
+  </nav>
+
+  <!-- Header -->
+  <div class="text-center mb-4">
+    <div style="font-size:3.5rem; line-height:1;">🎁</div>
+    <h2 style="font-family:'Cinzel',serif; color:var(--brown); margin-top:10px;">Donate a Book</h2>
+    <p class="text-muted">Sponsor the gift of Vedic wisdom — a book that can change someone's life.</p>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for cat, msg in messages %}
+      <div class="alert alert-{{ cat }}">{{ msg }}</div>
+    {% endfor %}
+  {% endwith %}
+
+  <!-- Book card -->
+  <div class="d-flex align-items-center gap-3 p-3 mb-4"
+       style="background:var(--cream-dark); border-radius:14px; border:1px solid var(--border);">
+    <img src="{{ url_for('static', filename='images/books/' + book.image) }}"
+         alt="{{ book.title }}"
+         style="width:64px; height:90px; object-fit:cover; border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,.15);"
+         onerror="this.src='https://via.placeholder.com/64x90/FF6600/FFFFFF?text=📖'">
+    <div>
+      <div style="font-family:'Cinzel',serif; font-weight:700; color:var(--brown); font-size:1.05rem;">{{ book.title }}</div>
+      <div class="text-muted" style="font-size:0.9rem;">by {{ book.author }}</div>
+      <div class="mt-1">
+        <span style="color:var(--saffron); font-size:1.1rem; font-weight:700;">₹{{ book.price|int }}</span>
+        <span class="text-muted ms-1" style="font-size:0.85rem;">per copy</span>
+      </div>
+    </div>
+  </div>
+
+  <form method="POST" action="{{ url_for('donate_book', book_id=book.id) }}">
+
+    <!-- Quantity -->
+    <div class="mb-4">
+      <label class="form-label fw-bold">How many copies to donate?</label>
+      <div class="d-flex align-items-center gap-3">
+        <div class="qty-picker">
+          <button type="button" data-action="minus">−</button>
+          <input type="number" name="quantity" value="1" min="1" max="{{ book.stock }}"
+                 id="donate-qty" style="width:60px;text-align:center;border:none;font-weight:700;">
+          <button type="button" data-action="plus">+</button>
+        </div>
+        <div>
+          <span class="text-muted">Total: </span>
+          <strong id="donate-total" style="color:var(--saffron); font-size:1.15rem;">₹{{ book.price|int }}</strong>
+        </div>
+      </div>
+    </div>
+
+    <!-- Donation type -->
+    <div class="mb-4">
+      <label class="form-label fw-bold">Who receives the book?</label>
+      <div class="row g-3">
+        <div class="col-6">
+          <input type="radio" class="btn-check" name="donation_type" id="typeIskcon"
+                 value="iskcon" checked>
+          <label class="btn btn-outline-warning w-100 py-3 text-start" for="typeIskcon"
+                 style="border-radius:12px;">
+            <div style="font-size:1.5rem; line-height:1; margin-bottom:6px;">🙏</div>
+            <div class="fw-bold" style="font-size:0.9rem;">ISKCON Distribution</div>
+            <div class="text-muted" style="font-size:0.78rem; line-height:1.4;">Books given to new devotees, book marathons &amp; temple programs</div>
+          </label>
+        </div>
+        <div class="col-6">
+          <input type="radio" class="btn-check" name="donation_type" id="typePerson"
+                 value="person">
+          <label class="btn btn-outline-warning w-100 py-3 text-start" for="typePerson"
+                 style="border-radius:12px;">
+            <div style="font-size:1.5rem; line-height:1; margin-bottom:6px;">🎁</div>
+            <div class="fw-bold" style="font-size:0.9rem;">Gift to Someone</div>
+            <div class="text-muted" style="font-size:0.78rem; line-height:1.4;">Send the book directly to a friend or family member's address</div>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recipient section (shown only for "person") -->
+    <div id="recipientSection" class="mb-4 p-3"
+         style="display:none; background:#fff8e7; border:1px solid #ffe082; border-radius:12px;">
+      <h6 class="fw-bold mb-3"><i class="bi bi-person-heart me-2 text-warning"></i>Recipient Details</h6>
+      <div class="mb-3">
+        <label class="form-label small fw-bold">Recipient Name *</label>
+        <input type="text" name="donation_recipient" class="form-control"
+               placeholder="Person's full name">
+      </div>
+      <div class="mb-2">
+        <label class="form-label small fw-bold">Recipient Address *</label>
+        <textarea name="donation_recipient_address" class="form-control" rows="3"
+                  placeholder="Full delivery address, city, pincode"></textarea>
+      </div>
+    </div>
+
+    <!-- Donor details -->
+    <div class="p-3 mb-4" style="background:var(--cream-dark); border-radius:12px; border:1px solid var(--border);">
+      <h6 class="fw-bold mb-3"><i class="bi bi-person-circle me-2" style="color:var(--saffron);"></i>Your Details (Donor)</h6>
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label class="form-label small fw-bold">Your Name *</label>
+          <input type="text" name="donor_name" class="form-control" required
+                 placeholder="Your full name">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label small fw-bold">Phone *</label>
+          <input type="tel" name="donor_phone" class="form-control" required
+                 placeholder="+91 98765 43210">
+        </div>
+        <div class="col-12">
+          <label class="form-label small fw-bold">Email <span class="text-muted fw-normal">(for donation receipt)</span></label>
+          <input type="email" name="donor_email" class="form-control"
+                 placeholder="yourname@email.com">
+        </div>
+        <div class="col-12">
+          <label class="form-label small fw-bold">Message / Occasion <span class="text-muted fw-normal">(optional)</span></label>
+          <input type="text" name="donor_message" class="form-control"
+                 placeholder="e.g. In memory of… | Birthday gift | Book marathon seva">
+        </div>
+      </div>
+    </div>
+
+    <!-- Total summary -->
+    <div class="d-flex justify-content-between align-items-center p-3 mb-4"
+         style="background:#fff3e0; border-radius:12px; border:1px solid #ffcc80;">
+      <div>
+        <div class="text-muted small">Donation Amount</div>
+        <div id="donate-summary-qty" style="font-size:0.85rem;">1 copy × ₹{{ book.price|int }}</div>
+      </div>
+      <div style="font-size:1.5rem; font-weight:700; color:var(--saffron);" id="donate-summary-total">
+        ₹{{ book.price|int }}
+      </div>
+    </div>
+
+    <button type="submit" class="btn btn-saffron btn-lg w-100 fw-bold py-3">
+      <i class="bi bi-gift me-2"></i>Proceed to Pay &amp; Donate
+    </button>
+
+    <p class="text-center text-muted small mt-3">
+      🔒 Secure payment via Razorpay &nbsp;·&nbsp; UPI · Cards · Net Banking accepted
+    </p>
+
+    <div class="text-center mt-2">
+      <a href="{{ url_for('book_detail', book_id=book.id) }}" class="text-muted small">← Back to book</a>
+    </div>
+  </form>
+</div>
+
+<script>
+(function () {
+  var price   = {{ book.price }};
+  var qtyInput = document.getElementById('donate-qty');
+  var totalEl  = document.getElementById('donate-total');
+  var summaryQty   = document.getElementById('donate-summary-qty');
+  var summaryTotal = document.getElementById('donate-summary-total');
+
+  function updateTotal() {
+    var qty = parseInt(qtyInput.value) || 1;
+    var total = Math.round(qty * price);
+    totalEl.textContent  = '₹' + total;
+    summaryQty.textContent   = qty + ' cop' + (qty === 1 ? 'y' : 'ies') + ' × ₹{{ book.price|int }}';
+    summaryTotal.textContent = '₹' + total;
+  }
+
+  // Qty picker buttons
+  document.querySelectorAll('.qty-picker [data-action]').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var qty = parseInt(qtyInput.value) || 1;
+      if (this.dataset.action === 'plus')  qtyInput.value = qty + 1;
+      if (this.dataset.action === 'minus') qtyInput.value = Math.max(1, qty - 1);
+      updateTotal();
+    });
+  });
+  qtyInput.addEventListener('input', updateTotal);
+
+  // Donation type toggle
+  var recipientSection = document.getElementById('recipientSection');
+  document.querySelectorAll('input[name="donation_type"]').forEach(function(radio) {
+    radio.addEventListener('change', function() {
+      recipientSection.style.display = (this.value === 'person') ? 'block' : 'none';
+    });
+  });
+})();
+</script>
+{% endblock %}
