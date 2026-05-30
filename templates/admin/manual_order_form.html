@@ -1,0 +1,278 @@
+{% extends "admin/admin_base.html" %}
+{% block page_title %}Create Manual Order{% endblock %}
+{% block content %}
+
+<div class="d-flex align-items-center gap-3 mb-4">
+    <a href="{{ url_for('admin_orders') }}" class="btn btn-outline-secondary btn-sm">
+        <i class="fas fa-arrow-left me-1"></i>Back to Orders
+    </a>
+    <div>
+        <h4 class="mb-0">Create Manual Order</h4>
+        <small class="text-muted">For WhatsApp / phone / walk-in enquiries that converted to an order</small>
+    </div>
+</div>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% for cat, msg in messages %}
+    <div class="alert alert-{{ cat }}">{{ msg }}</div>
+  {% endfor %}
+{% endwith %}
+
+<form method="POST" id="manualOrderForm">
+<div class="row g-4">
+
+    <!-- ── Left: Customer + Books ── -->
+    <div class="col-lg-8">
+
+        <!-- Customer Details -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-warning text-dark py-2">
+                <h6 class="mb-0"><i class="fas fa-user me-2"></i>Customer Details</h6>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Customer Name *</label>
+                        <input type="text" name="customer_name" class="form-control" required placeholder="Full name">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Phone *</label>
+                        <input type="text" name="customer_phone" class="form-control" required placeholder="10-digit mobile">
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Email <small class="text-muted">(optional)</small></label>
+                        <input type="email" name="customer_email" class="form-control" placeholder="customer@example.com">
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Address *</label>
+                        <textarea name="address" class="form-control" rows="2" required placeholder="House / Flat, Street, Locality"></textarea>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">City</label>
+                        <input type="text" name="city" class="form-control" placeholder="City">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">State</label>
+                        <input type="text" name="state" class="form-control" placeholder="State">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Pincode</label>
+                        <input type="text" name="pincode" class="form-control" placeholder="6-digit pincode" maxlength="6">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Books -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-warning text-dark py-2 d-flex justify-content-between align-items-center">
+                <h6 class="mb-0"><i class="fas fa-book me-2"></i>Books Ordered</h6>
+                <button type="button" class="btn btn-dark btn-sm" onclick="addBookRow()">
+                    <i class="fas fa-plus me-1"></i>Add Book
+                </button>
+            </div>
+            <div class="card-body p-0">
+                <table class="table mb-0" id="booksTable">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width:45%">Book</th>
+                            <th style="width:15%">Qty</th>
+                            <th style="width:20%">Unit Price (₹)</th>
+                            <th style="width:15%">Subtotal</th>
+                            <th style="width:5%"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="bookRows">
+                        <!-- first row pre-added -->
+                    </tbody>
+                    <tfoot>
+                        <tr class="table-light">
+                            <td colspan="3" class="text-end fw-bold">Books Subtotal:</td>
+                            <td class="fw-bold text-success" id="booksSubtotal">₹0</td>
+                            <td></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- ── Right: Payment + Notes ── -->
+    <div class="col-lg-4">
+
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-warning text-dark py-2">
+                <h6 class="mb-0"><i class="fas fa-rupee-sign me-2"></i>Payment & Order</h6>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label">Payment Method</label>
+                    <select name="payment_method" class="form-select">
+                        <option value="whatsapp">💬 WhatsApp</option>
+                        <option value="cod">🚚 Cash on Delivery</option>
+                        <option value="upi">📱 UPI</option>
+                        <option value="cash">💵 Cash (Walk-in)</option>
+                        <option value="bank_transfer">🏦 Bank Transfer</option>
+                        <option value="phone">📞 Phone Order</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Payment Status</label>
+                    <select name="payment_status" class="form-select">
+                        <option value="pending">⏳ Pending</option>
+                        <option value="paid">✅ Paid</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Order Status</label>
+                    <select name="order_status" class="form-select">
+                        <option value="confirmed">✅ Confirmed</option>
+                        <option value="placed">📋 Placed</option>
+                        <option value="shipped">🚚 Shipped</option>
+                        <option value="delivered">📦 Delivered</option>
+                    </select>
+                </div>
+                <hr>
+                <div class="mb-3">
+                    <label class="form-label">Shipping Charge (₹)</label>
+                    <input type="number" name="shipping_charge" id="shippingCharge"
+                           class="form-control" value="0" min="0" step="1" oninput="updateTotal()">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Discount Amount (₹)</label>
+                    <input type="number" name="discount_amount" id="discountAmount"
+                           class="form-control" value="0" min="0" step="1" oninput="updateTotal()">
+                </div>
+                <hr>
+                <div class="p-3 rounded" style="background:#fff8f0; border:1px solid #f0d9b5;">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span class="text-muted">Subtotal</span>
+                        <span id="summarySubtotal">₹0</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-1">
+                        <span class="text-muted">Shipping</span>
+                        <span id="summaryShipping">₹0</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Discount</span>
+                        <span id="summaryDiscount" class="text-success">-₹0</span>
+                    </div>
+                    <div class="d-flex justify-content-between fw-bold fs-5 border-top pt-2">
+                        <span>Total</span>
+                        <span id="summaryTotal" class="text-warning">₹0</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-secondary text-white py-2">
+                <h6 class="mb-0"><i class="fas fa-sticky-note me-2"></i>Notes</h6>
+            </div>
+            <div class="card-body">
+                <textarea name="notes" class="form-control" rows="4"
+                          placeholder="e.g. WhatsApp order from +91 98765 43210 on 30 May 2026. Customer confirmed on call."></textarea>
+                <small class="text-muted">Internal note — not shown to customer</small>
+            </div>
+        </div>
+
+        <div class="d-grid gap-2">
+            <button type="submit" class="btn btn-warning btn-lg fw-bold">
+                <i class="fas fa-check-circle me-2"></i>Create Order
+            </button>
+            <a href="{{ url_for('admin_orders') }}" class="btn btn-outline-secondary">Cancel</a>
+        </div>
+
+    </div>
+</div>
+</form>
+
+<!-- Book data for JS -->
+<script>
+const BOOKS = {
+    {% for b in books %}
+    "{{ b.id }}": { title: "{{ b.title|replace('"', '\\"') }}", price: {{ b.price }}, stock: {{ b.stock }}, is_ebook: {{ 'true' if b.is_ebook else 'false' }} },
+    {% endfor %}
+};
+
+let rowCount = 0;
+
+function addBookRow(bookId, qty, price) {
+    rowCount++;
+    const id = rowCount;
+    const tbody = document.getElementById('bookRows');
+    const options = Object.entries(BOOKS).map(([bid, b]) =>
+        `<option value="${bid}" ${bookId == bid ? 'selected' : ''}>${b.title}${b.is_ebook ? ' [eBook]' : ''} — ₹${b.price}</option>`
+    ).join('');
+
+    const tr = document.createElement('tr');
+    tr.id = `row_${id}`;
+    tr.innerHTML = `
+        <td>
+            <select name="book_id" class="form-select form-select-sm" onchange="onBookChange(this, ${id})">
+                <option value="">-- Select Book --</option>
+                ${options}
+            </select>
+        </td>
+        <td>
+            <input type="number" name="quantity" id="qty_${id}" class="form-control form-control-sm"
+                   value="${qty || 1}" min="1" style="width:70px" oninput="updateTotal()">
+        </td>
+        <td>
+            <input type="number" name="unit_price" id="price_${id}" class="form-control form-control-sm"
+                   value="${price || ''}" min="0" step="0.01" style="width:90px" oninput="updateTotal()">
+        </td>
+        <td class="fw-bold text-success" id="rowsubtotal_${id}">₹0</td>
+        <td>
+            <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeRow(${id})">
+                <i class="fas fa-times"></i>
+            </button>
+        </td>`;
+    tbody.appendChild(tr);
+    updateTotal();
+}
+
+function onBookChange(sel, id) {
+    const bid = sel.value;
+    if (bid && BOOKS[bid]) {
+        document.getElementById(`price_${id}`).value = BOOKS[bid].price;
+    }
+    updateTotal();
+}
+
+function removeRow(id) {
+    const row = document.getElementById(`row_${id}`);
+    if (row) row.remove();
+    updateTotal();
+}
+
+function updateTotal() {
+    let subtotal = 0;
+    document.querySelectorAll('#bookRows tr').forEach(tr => {
+        const id = tr.id.split('_')[1];
+        const qtyEl   = document.getElementById(`qty_${id}`);
+        const priceEl = document.getElementById(`price_${id}`);
+        const subEl   = document.getElementById(`rowsubtotal_${id}`);
+        if (!qtyEl || !priceEl) return;
+        const qty   = parseFloat(qtyEl.value) || 0;
+        const price = parseFloat(priceEl.value) || 0;
+        const sub   = qty * price;
+        subtotal += sub;
+        if (subEl) subEl.textContent = '₹' + sub.toFixed(0);
+    });
+    const shipping = parseFloat(document.getElementById('shippingCharge').value) || 0;
+    const discount = parseFloat(document.getElementById('discountAmount').value) || 0;
+    const total    = subtotal + shipping - discount;
+
+    document.getElementById('booksSubtotal').textContent   = '₹' + subtotal.toFixed(0);
+    document.getElementById('summarySubtotal').textContent = '₹' + subtotal.toFixed(0);
+    document.getElementById('summaryShipping').textContent = '₹' + shipping.toFixed(0);
+    document.getElementById('summaryDiscount').textContent = '-₹' + discount.toFixed(0);
+    document.getElementById('summaryTotal').textContent    = '₹' + total.toFixed(0);
+}
+
+// Start with one empty row
+addBookRow();
+</script>
+{% endblock %}

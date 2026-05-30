@@ -2174,6 +2174,103 @@ def admin_delete_category(cat_id):
 
 # ── Admin: Orders ──
 
+@app.route("/admin/orders/create", methods=["GET", "POST"])
+@admin_required
+def admin_create_manual_order():
+    """Create a manual order for WhatsApp / phone / walk-in enquiries."""
+    books = Book.query.filter_by(active=True, deleted=False).order_by(Book.title).all()
+
+    if request.method == "POST":
+        # ── Customer details ──
+        customer_name  = request.form.get("customer_name", "").strip()
+        customer_phone = request.form.get("customer_phone", "").strip()
+        customer_email = request.form.get("customer_email", "").strip() or None
+        address        = request.form.get("address", "").strip()
+        city           = request.form.get("city", "").strip()
+        state          = request.form.get("state", "").strip()
+        pincode        = request.form.get("pincode", "").strip()
+
+        # ── Book rows (arrays) ──
+        book_ids   = request.form.getlist("book_id")
+        quantities = request.form.getlist("quantity")
+        prices     = request.form.getlist("unit_price")
+
+        if not customer_name or not customer_phone or not address:
+            flash("Customer name, phone and address are required.", "danger")
+            return render_template("admin/manual_order_form.html", books=books)
+
+        order_items_data = []
+        subtotal = 0.0
+        for bid, qty_str, price_str in zip(book_ids, quantities, prices):
+            if not bid:
+                continue
+            try:
+                qty   = int(qty_str)
+                price = float(price_str)
+            except (ValueError, TypeError):
+                continue
+            if qty <= 0:
+                continue
+            book = Book.query.get(int(bid))
+            if not book:
+                continue
+            order_items_data.append({"book": book, "qty": qty, "price": price})
+            subtotal += price * qty
+
+        if not order_items_data:
+            flash("Add at least one book to the order.", "danger")
+            return render_template("admin/manual_order_form.html", books=books)
+
+        shipping   = float(request.form.get("shipping_charge", 0) or 0)
+        discount   = float(request.form.get("discount_amount", 0) or 0)
+        total      = subtotal + shipping - discount
+
+        pay_method = request.form.get("payment_method", "whatsapp")
+        pay_status = request.form.get("payment_status", "pending")
+        ord_status = request.form.get("order_status", "confirmed")
+        notes      = request.form.get("notes", "").strip() or None
+
+        order = Order(
+            order_number    = generate_order_number(),
+            customer_name   = customer_name,
+            customer_phone  = customer_phone,
+            customer_email  = customer_email,
+            address         = address,
+            city            = city,
+            state           = state,
+            pincode         = pincode,
+            subtotal        = subtotal,
+            shipping_charge = shipping,
+            discount_amount = discount,
+            total_amount    = total,
+            payment_method  = pay_method,
+            payment_status  = pay_status,
+            order_status    = ord_status,
+            notes           = notes,
+        )
+        db.session.add(order)
+        db.session.flush()   # get order.id before committing
+
+        for item_data in order_items_data:
+            oi = OrderItem(
+                order_id   = order.id,
+                book_id    = item_data["book"].id,
+                book_title = item_data["book"].title,
+                quantity   = item_data["qty"],
+                price      = item_data["price"],
+            )
+            db.session.add(oi)
+            # Deduct stock only for paper books
+            if not item_data["book"].is_ebook:
+                item_data["book"].stock = max(0, item_data["book"].stock - item_data["qty"])
+
+        db.session.commit()
+        flash(f"Manual order {order.order_number} created successfully!", "success")
+        return redirect(url_for("admin_order_detail", order_id=order.id))
+
+    return render_template("admin/manual_order_form.html", books=books)
+
+
 @app.route("/admin/orders")
 @admin_required
 def admin_orders():

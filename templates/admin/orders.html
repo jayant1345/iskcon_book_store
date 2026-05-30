@@ -9,6 +9,9 @@
         <small class="text-muted">{{ orders.total }} total orders</small>
     </div>
     <div class="d-flex gap-2 flex-wrap align-items-center">
+        <a href="{{ url_for('admin_create_manual_order') }}" class="btn btn-warning btn-sm fw-bold">
+            <i class="fas fa-plus me-1"></i>Create Manual Order
+        </a>
         {% if status or pay_status or pay_method or customer_f %}
         <a href="{{ url_for('admin_orders') }}" class="btn btn-outline-secondary btn-sm">
             <i class="fas fa-times me-1"></i>Clear Filters
