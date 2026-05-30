@@ -250,12 +250,15 @@
         </h3>
         <div class="row g-4 align-items-start">
           {% if book.review_video %}
+          {% set _vext = book.review_video.rsplit('.', 1)[-1].lower() %}
+          {% set _vmime = {'mp4': 'video/mp4', 'webm': 'video/webm', 'm4v': 'video/mp4',
+                           'mov': 'video/mp4', 'avi': 'video/x-msvideo', 'mkv': 'video/x-matroska'} %}
           <div class="col-md-5">
             <div style="background:var(--cream-dark); border-radius:12px; overflow:hidden; box-shadow:0 4px 16px rgba(0,0,0,.12);">
-              <video controls preload="metadata"
-                     style="width:100%; display:block; max-height:300px; object-fit:cover; border-radius:12px;"
-                     poster="{{ url_for('static', filename='images/books/' + book.image) }}">
-                <source src="{{ url_for('static', filename='videos/book_reviews/' + book.review_video) }}">
+              <video controls playsinline preload="auto"
+                     style="width:100%; display:block; max-height:300px; object-fit:contain; border-radius:12px; background:#000;">
+                <source src="{{ url_for('static', filename='videos/book_reviews/' + book.review_video) }}"
+                        type="{{ _vmime.get(_vext, 'video/mp4') }}">
                 Your browser does not support the video tag.
               </video>
             </div>
