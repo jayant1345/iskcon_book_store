@@ -1028,7 +1028,9 @@ def checkout():
 
 @app.route("/donate/<int:book_id>", methods=["GET", "POST"])
 def donate_book(book_id):
-    book = Book.query.filter_by(id=book_id, deleted=False, active=True).first_or_404()
+    book = Book.query.get_or_404(book_id)
+    if book.deleted:
+        abort(404)
 
     if request.method == "GET":
         return render_template("donate.html", book=book)
