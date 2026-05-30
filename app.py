@@ -57,6 +57,7 @@ class Config:
     ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "webp"}
     EBOOK_FOLDER = os.path.join(BASE_DIR, "ebooks")
     PREVIEW_FOLDER = os.path.join(BASE_DIR, "static", "previews")
+    REVIEW_VIDEO_FOLDER = os.path.join(BASE_DIR, "static", "videos", "book_reviews")
     ALLOWED_EBOOK_EXTENSIONS = {"pdf", "epub"}
     RAZORPAY_KEY_ID     = os.environ.get("RAZORPAY_KEY_ID", "rzp_test_your_key_id")
     RAZORPAY_KEY_SECRET = os.environ.get("RAZORPAY_KEY_SECRET", "your_razorpay_secret")
@@ -91,6 +92,7 @@ try:
     os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
     os.makedirs(app.config["EBOOK_FOLDER"], exist_ok=True)
     os.makedirs(app.config["PREVIEW_FOLDER"], exist_ok=True)
+    os.makedirs(app.config["REVIEW_VIDEO_FOLDER"], exist_ok=True)
 except Exception as e:
     print(f"[WARNING] makedirs failed: {e}")
 
@@ -136,6 +138,8 @@ class Book(db.Model):
     is_ebook       = db.Column(db.Boolean, default=False)
     ebook_file     = db.Column(db.String(200), nullable=True)
     preview_file   = db.Column(db.String(200), nullable=True)
+    review_text    = db.Column(db.Text, nullable=True)
+    review_video   = db.Column(db.String(200), nullable=True)
     created_at     = db.Column(db.DateTime, default=datetime.utcnow)
     order_items    = db.relationship("OrderItem", backref="book", lazy=True)
 
@@ -371,6 +375,19 @@ def save_preview(file):
         filename = f"preview_{uuid.uuid4().hex}.pdf"
         file.save(os.path.join(app.config["PREVIEW_FOLDER"], filename))
         return filename
+    return None
+
+
+ALLOWED_VIDEO_EXTENSIONS = {"mp4", "webm", "mov", "avi", "mkv", "m4v"}
+
+def save_review_video(file):
+    """Save uploaded book review video and return filename (stored in static/videos/book_reviews/)."""
+    if file and file.filename:
+        ext = file.filename.rsplit(".", 1)[-1].lower() if "." in file.filename else ""
+        if ext in ALLOWED_VIDEO_EXTENSIONS:
+            filename = f"review_{uuid.uuid4().hex}.{ext}"
+            file.save(os.path.join(app.config["REVIEW_VIDEO_FOLDER"], filename))
+            return filename
     return None
 
 
@@ -1589,6 +1606,7 @@ def admin_add_book():
         is_ebook = request.form.get("book_format") == "ebook"
         ebook_filename = save_ebook(ebook_file_obj) if is_ebook else None
         preview_filename = save_preview(request.files.get("preview_file"))
+        review_video_filename = save_review_video(request.files.get("review_video"))
 
         book = Book(
             title          = request.form["title"].strip(),
@@ -1610,6 +1628,8 @@ def admin_add_book():
             is_ebook       = is_ebook,
             ebook_file     = ebook_filename,
             preview_file   = preview_filename,
+            review_text    = request.form.get("review_text", "").strip() or None,
+            review_video   = review_video_filename,
         )
         db.session.add(book)
         db.session.commit()
@@ -1672,6 +1692,22 @@ def admin_edit_book(book_id):
                 if os.path.exists(old_preview):
                     os.remove(old_preview)
             book.preview_file = save_preview(preview_file_obj)
+
+        book.review_text = request.form.get("review_text", "").strip() or None
+
+        review_video_obj = request.files.get("review_video")
+        if review_video_obj and review_video_obj.filename:
+            if book.review_video:
+                old_vid = os.path.join(app.config["REVIEW_VIDEO_FOLDER"], book.review_video)
+                if os.path.exists(old_vid):
+                    os.remove(old_vid)
+            book.review_video = save_review_video(review_video_obj)
+
+        if request.form.get("remove_review_video") == "1" and book.review_video:
+            old_vid = os.path.join(app.config["REVIEW_VIDEO_FOLDER"], book.review_video)
+            if os.path.exists(old_vid):
+                os.remove(old_vid)
+            book.review_video = None
 
         db.session.commit()
         flash("Book updated!", "success")
@@ -2635,6 +2671,8 @@ def init_db():
             ("customers",          "saved_state",        "VARCHAR(100)"),
             ("customers",          "saved_pincode",      "VARCHAR(10)"),
             ("orders",             "status_note",        "TEXT"),
+            ("books",              "review_text",        "TEXT"),
+            ("books",              "review_video",       "VARCHAR(200)"),
         ]
         for table, column, col_type in migrations:
             # Use a fresh connection per column so a failed ALTER doesn't

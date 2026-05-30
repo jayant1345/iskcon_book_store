@@ -194,6 +194,35 @@
                         });
                     </script>
 
+                    <!-- Reader Review Section -->
+                    <hr class="my-4">
+                    <h6 class="fw-bold text-warning mb-3"><i class="fas fa-star me-2"></i>Reader Review / Book Testimonial</h6>
+                    <p class="text-muted small mb-3">Add a short reader experience or book summary from a devotee's point of view. Optionally upload a short video (≤ 30 sec, MP4 recommended).</p>
+                    <div class="row g-3">
+                        <div class="col-md-7">
+                            <label class="form-label">Reader Testimonial Text</label>
+                            <textarea name="review_text" class="form-control" rows="5"
+                                      placeholder="e.g. This book changed my life — it explains the story of Ajamila and how the holy name can save even the most fallen soul at the moment of death. A must-read for every sincere seeker...">{{ book.review_text if book and book.review_text else '' }}</textarea>
+                            <small class="text-muted">Describe what the book is about and how it benefited the reader. Shown on the book detail page.</small>
+                        </div>
+                        <div class="col-md-5">
+                            <label class="form-label">Review Video (MP4 / WebM / MOV)</label>
+                            {% if book and book.review_video %}
+                            <div class="mb-2">
+                                <video src="{{ url_for('static', filename='videos/book_reviews/' + book.review_video) }}"
+                                       controls style="max-width:100%; border-radius:6px; max-height:160px;"></video>
+                                <div class="form-check mt-1">
+                                    <input class="form-check-input" type="checkbox" name="remove_review_video" value="1" id="removeVideo">
+                                    <label class="form-check-label text-danger small" for="removeVideo">Remove current video</label>
+                                </div>
+                            </div>
+                            {% endif %}
+                            <input type="file" name="review_video" class="form-control"
+                                   accept="video/mp4,video/webm,video/quicktime,video/x-msvideo,video/x-matroska,video/mp4">
+                            <small class="text-muted">Max ~500 MB · MP4, WebM, MOV, AVI, MKV supported · ~30 sec clip ideal</small>
+                        </div>
+                    </div>
+
                     <hr class="my-4">
                     <div class="d-flex justify-content-between">
                         <a href="{{ url_for('admin_books') }}" class="btn btn-secondary">
