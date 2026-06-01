@@ -223,16 +223,18 @@
                 Share your name and phone so we can help you better. Then we'll open WhatsApp for you.
               </p>
               <div class="mb-3">
-                <label class="form-label fw-bold small">Your Name</label>
+                <label class="form-label fw-bold small">Your Name <span class="text-danger">*</span></label>
                 <input type="text" id="wa-name" class="form-control"
                        placeholder="Your full name"
                        value="{{ current_customer.name if current_customer else '' }}">
+                <div id="wa-name-err" class="text-danger small mt-1" style="display:none;">Please enter your name.</div>
               </div>
               <div class="mb-3">
-                <label class="form-label fw-bold small">Phone Number</label>
+                <label class="form-label fw-bold small">Phone Number <span class="text-danger">*</span></label>
                 <input type="tel" id="wa-phone" class="form-control"
                        placeholder="+91 98765 43210"
                        value="{{ current_customer.phone if current_customer else '' }}">
+                <div id="wa-phone-err" class="text-danger small mt-1" style="display:none;">Please enter your phone number.</div>
               </div>
               <div class="p-2 rounded" style="background:#e7f5ff; font-size:0.82rem; color:#555;">
                 📖 Enquiring about: <strong>{{ book.title }}</strong>
@@ -255,15 +257,40 @@
 
       <script>
       document.getElementById('wa-go-btn').addEventListener('click', function () {
-        var name      = document.getElementById('wa-name').value.trim();
-        var phone     = document.getElementById('wa-phone').value.trim();
+        var nameInput  = document.getElementById('wa-name');
+        var phoneInput = document.getElementById('wa-phone');
+        var name       = nameInput.value.trim();
+        var phone      = phoneInput.value.trim();
+        var nameErr    = document.getElementById('wa-name-err');
+        var phoneErr   = document.getElementById('wa-phone-err');
+
+        // Validate
+        var valid = true;
+        if (!name) {
+          nameErr.style.display = 'block';
+          nameInput.classList.add('is-invalid');
+          valid = false;
+        } else {
+          nameErr.style.display = 'none';
+          nameInput.classList.remove('is-invalid');
+        }
+        if (!phone) {
+          phoneErr.style.display = 'block';
+          phoneInput.classList.add('is-invalid');
+          valid = false;
+        } else {
+          phoneErr.style.display = 'none';
+          phoneInput.classList.remove('is-invalid');
+        }
+        if (!valid) return;
+
         var bookId    = this.dataset.bookId;
         var bookTitle = this.dataset.bookTitle;
         var waPhone   = this.dataset.phone.replace(/\D/g, '');
         var message   = encodeURIComponent(
           '🙏 Hare Krishna!\nI would like to order: ' + bookTitle +
-          '\nMy name: ' + (name || '—') +
-          '\nPhone: ' + (phone || '—')
+          '\nMy name: ' + name +
+          '\nPhone: ' + phone
         );
 
         // Log the enquiry silently
@@ -271,13 +298,22 @@
           method:  'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ name: name, phone: phone, book_id: bookId, book_title: bookTitle })
-        }).catch(function(){});  // fire-and-forget
+        }).catch(function(){});
 
         // Open WhatsApp
         window.open('https://wa.me/' + waPhone + '?text=' + message, '_blank');
 
         // Close modal
         bootstrap.Modal.getInstance(document.getElementById('waEnquiryModal')).hide();
+      });
+
+      // Clear validation state when modal is reopened
+      document.getElementById('waEnquiryModal').addEventListener('show.bs.modal', function () {
+        ['wa-name', 'wa-phone'].forEach(function(id) {
+          document.getElementById(id).classList.remove('is-invalid');
+        });
+        document.getElementById('wa-name-err').style.display = 'none';
+        document.getElementById('wa-phone-err').style.display = 'none';
       });
       </script>
 
