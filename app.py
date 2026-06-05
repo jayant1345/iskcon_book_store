@@ -1507,7 +1507,7 @@ def magazine():
 def magazine_detail(mag_id):
     mag        = Magazine.query.get_or_404(mag_id)
     customer   = get_current_customer()
-    has_access = get_magazine_access(customer.id if customer else None, mag_id)
+    has_access = session.get("admin_logged_in") or get_magazine_access(customer.id if customer else None, mag_id)
     monthly_price = float(Setting.get("mag_monthly_price", "49"))
     yearly_price  = float(Setting.get("mag_yearly_price",  "399"))
     active_sub = None

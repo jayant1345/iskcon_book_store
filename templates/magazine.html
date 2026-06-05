@@ -87,7 +87,7 @@
 <!-- ══ Hero ════════════════════════════════════ -->
 <section class="mag-hero">
   <div class="container position-relative">
-    <div class="mag-badge">ISKCON Publication &nbsp;·&nbsp; {{ mag.issue_label }}</div>
+    <div class="mag-badge">ISKCON Publication{% if mag.issue_label %} &nbsp;·&nbsp; {{ mag.issue_label }}{% endif %}</div>
     <h1>{{ mag.title.split()[0] }} <span>{{ mag.title.split()[1:] | join(' ') }}</span></h1>
     <p>{{ mag.description or "Explore the most profound questions of existence through science, philosophy and Vedic wisdom." }}</p>
     {% if has_access %}
