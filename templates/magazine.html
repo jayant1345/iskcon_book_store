@@ -84,6 +84,17 @@
 
 {% block content %}
 
+<!-- Back breadcrumb -->
+<div style="background:#3D1A00; padding:8px 0;">
+  <div class="container">
+    <a href="{{ url_for('index') }}" style="color:rgba(255,204,102,.8); font-size:.85rem; text-decoration:none;">
+      ← Home
+    </a>
+    <span style="color:rgba(255,255,255,.3); margin:0 8px;">/</span>
+    <span style="color:rgba(255,255,255,.55); font-size:.85rem;">Magazine</span>
+  </div>
+</div>
+
 <!-- ══ Hero ════════════════════════════════════ -->
 <section class="mag-hero">
   <div class="container position-relative">
