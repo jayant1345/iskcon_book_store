@@ -84,6 +84,10 @@
           <a class="nav-link" href="{{ url_for('books') }}">All Books</a>
         </li>
         <li class="nav-item">
+          <a class="nav-link {% if request.endpoint == 'magazine' %}active{% endif %}"
+             href="{{ url_for('magazine') }}">📰 Magazine</a>
+        </li>
+        <li class="nav-item">
           <a class="nav-link" href="{{ url_for('order_track') }}">Track Order</a>
         </li>
       </ul>
@@ -187,6 +191,7 @@
         <h5>Quick Links</h5>
         <a href="{{ url_for('index') }}">🏠 Home</a>
         <a href="{{ url_for('books') }}">📚 All Books</a>
+        <a href="{{ url_for('magazine') }}">📰 Magazine</a>
         <a href="{{ url_for('cart') }}">🛒 Cart</a>
         <a href="{{ url_for('order_track') }}">📦 Track Order</a>
         <a href="{{ url_for('admin_login') }}">⚙️ Admin</a>

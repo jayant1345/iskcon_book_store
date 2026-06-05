@@ -7,4 +7,5 @@ instance/
 .env
 server.log
 *.pdf
+!static/magazines/*.pdf
 ebooks/

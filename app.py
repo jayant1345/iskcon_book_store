@@ -1390,6 +1390,15 @@ def order_track():
 
 
 # ─────────────────────────────────────────────
+# MAGAZINE ROUTE
+# ─────────────────────────────────────────────
+
+@app.route("/magazine")
+def magazine():
+    return render_template("magazine.html")
+
+
+# ─────────────────────────────────────────────
 # CUSTOMER ACCOUNT ROUTES
 # ─────────────────────────────────────────────
 

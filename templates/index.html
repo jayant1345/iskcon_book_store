@@ -433,6 +433,92 @@
 </section>
 {% endif %}
 
+<!-- ═══════ MAGAZINE SECTION ═══════ -->
+<section class="py-5" style="background: linear-gradient(135deg, #1a0a00 0%, #3D1A00 55%, #7A3500 100%); color:#fff; overflow:hidden; position:relative;">
+  <!-- background texture -->
+  <div style="position:absolute;inset:0;opacity:0.05;background-image:url(&quot;data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23FF9933' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4z'/%3E%3C/g%3E%3C/svg%3E&quot;);"></div>
+  <div class="container position-relative">
+    <div class="row align-items-center g-5">
+      <!-- Left: text -->
+      <div class="col-lg-7">
+        <div style="display:inline-block; background:rgba(255,153,51,0.15); border:1px solid rgba(255,153,51,0.4); color:#FF9933; padding:3px 16px; border-radius:50px; font-size:0.75rem; letter-spacing:2px; text-transform:uppercase; margin-bottom:14px;">
+          ISKCON Publication · New Magazine
+        </div>
+        <h2 style="font-family:'Georgia',serif; font-size:clamp(1.6rem,3.5vw,2.6rem); font-weight:700; color:#fff; margin-bottom:14px; line-height:1.25;">
+          "The <span style="color:#FFD700;">God Question</span>"
+        </h2>
+        <p style="color:rgba(255,255,255,0.78); font-size:0.98rem; line-height:1.8; margin-bottom:10px;">
+          Does God exist? This thought-provoking magazine tackles the ultimate question
+          of human existence — weaving together science, philosophy, and the timeless
+          wisdom of Vedic literature.
+        </p>
+        <p style="color:rgba(255,255,255,0.6); font-size:0.88rem; font-style:italic; margin-bottom:28px;">
+          Published by Prabhuji · Distributed by ISKCON
+        </p>
+        <div class="d-flex gap-3 flex-wrap">
+          <a href="{{ url_for('magazine') }}" class="btn btn-gold btn-lg px-5">
+            📖 Read Magazine
+          </a>
+          <a href="{{ url_for('static', filename='magazines/the-god-question.pdf') }}"
+             download="The God Question - ISKCON Magazine.pdf"
+             class="btn btn-outline-light px-4">
+            ⬇ Download PDF
+          </a>
+        </div>
+        <!-- feature pills -->
+        <div class="d-flex gap-2 flex-wrap mt-4">
+          <span style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.2); color:rgba(255,255,255,0.75); padding:4px 12px; border-radius:50px; font-size:0.78rem;">🔬 Science &amp; God</span>
+          <span style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.2); color:rgba(255,255,255,0.75); padding:4px 12px; border-radius:50px; font-size:0.78rem;">🧠 Philosophy</span>
+          <span style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.2); color:rgba(255,255,255,0.75); padding:4px 12px; border-radius:50px; font-size:0.78rem;">📿 Vedic Wisdom</span>
+          <span style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.2); color:rgba(255,255,255,0.75); padding:4px 12px; border-radius:50px; font-size:0.78rem;">🌿 Free to Read</span>
+        </div>
+      </div>
+      <!-- Right: mini cover preview rendered by PDF.js -->
+      <div class="col-lg-5 text-center d-none d-lg-block">
+        <div style="position:relative; display:inline-block;">
+          <div id="homeMagCover" style="width:240px; margin:0 auto; border-radius:12px; overflow:hidden; box-shadow:0 16px 60px rgba(0,0,0,0.6);">
+            <canvas id="homeMagCanvas" style="display:block; width:100%; height:auto;"></canvas>
+          </div>
+          <div style="position:absolute; top:-12px; right:-12px; background:#FF9933; color:#fff; width:52px; height:52px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:0.7rem; font-weight:700; text-align:center; line-height:1.2; box-shadow:0 4px 12px rgba(0,0,0,0.3);">NEW<br>MAG</div>
+          <p style="color:rgba(255,255,255,0.5); font-size:0.78rem; margin-top:10px;">Click to preview all pages →</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+// Render magazine cover thumbnail on homepage
+(function () {
+  if (typeof pdfjsLib === 'undefined') {
+    var s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+    s.onload = loadCover;
+    document.head.appendChild(s);
+  } else {
+    loadCover();
+  }
+  function loadCover() {
+    pdfjsLib.GlobalWorkerOptions.workerSrc =
+      'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    pdfjsLib.getDocument("{{ url_for('static', filename='magazines/the-god-question.pdf') }}")
+      .promise.then(function (doc) {
+        return doc.getPage(1);
+      }).then(function (page) {
+        var canvas = document.getElementById('homeMagCanvas');
+        if (!canvas) return;
+        var vp = page.getViewport({ scale: 1.2 });
+        canvas.width  = vp.width;
+        canvas.height = vp.height;
+        page.render({ canvasContext: canvas.getContext('2d'), viewport: vp });
+      }).catch(function () {
+        var wrap = document.getElementById('homeMagCover');
+        if (wrap) wrap.innerHTML = '<div style="width:240px;height:320px;background:rgba(255,255,255,0.05);border-radius:12px;display:flex;align-items:center;justify-content:center;color:#FF9933;font-size:3rem;">📖</div>';
+      });
+  }
+})();
+</script>
+
 <!-- ═══════ QUOTE BANNER ═══════ -->
 <section class="py-5 text-center" style="background:var(--cream);">
   <div class="container" style="max-width:750px;">
