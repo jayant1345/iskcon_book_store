@@ -339,8 +339,11 @@ function initPdfViewer(){
 (function(){
   'use strict';
 
-  const PDF_URL   = "{{ url_for('static', filename='magazines/' + mag.pdf_filename) }}";
+  const FULL_PDF_URL    = "{{ url_for('static', filename='magazines/' + mag.pdf_filename) }}";
+  const PREVIEW_PDF_URL = "{{ url_for('static', filename='magazines/' + mag.pdf_filename.replace('.pdf', '-preview.pdf')) }}";
   const HAS_ACCESS = {{ 'true' if has_access else 'false' }};
+  /* Use tiny preview PDF (first 3 + last 2 pages only) for the grid — loads ~10x faster */
+  const PDF_URL = HAS_ACCESS ? FULL_PDF_URL : PREVIEW_PDF_URL;
 
   /* Try CDN worker first, fall back to disabling worker (main-thread) */
   try {
@@ -460,13 +463,17 @@ function initPdfViewer(){
     });
 
     // Last 2 — free preview
+    // When using preview PDF (HAS_ACCESS=false), pages 4&5 ARE the last pages of the original
+    const lastLabels = HAS_ACCESS
+      ? lastPages.map((n,i) => i===lastPages.length-1 ? 'Back Cover' : 'Page '+n)
+      : ['Page ' + (totalPages-1), 'Back Cover'];
     const lg = document.getElementById('lastGrid');
     lg.innerHTML = '';
     if(lastPages.length === 0){
       lg.innerHTML = '<p class="text-muted text-center py-3">All pages shown above.</p>';
     } else {
       lastPages.forEach((n,i) => {
-        const label = i===lastPages.length-1 ? 'Back Cover (p.'+n+')' : 'Page '+n;
+        const label = lastLabels[i] || 'Page '+n;
         lg.appendChild(makeCard(n, label, lastPages));
       });
     }
