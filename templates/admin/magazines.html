@@ -1,0 +1,286 @@
+{% extends "admin/admin_base.html" %}
+{% block page_title %}Magazines{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+
+  <!-- ── Subscription Pricing Settings ───────────────────── -->
+  <div class="col-12">
+    <div class="card table-card">
+      <div class="card-header" style="background:#FF9933;color:#fff;">
+        <h5 class="mb-0"><i class="fas fa-cog me-2"></i>Subscription Pricing Settings</h5>
+      </div>
+      <div class="card-body">
+        <form method="POST" action="{{ url_for('admin_magazine_settings') }}" class="row g-3 align-items-end">
+          <div class="col-md-3">
+            <label class="form-label fw-semibold">Monthly Price (₹)</label>
+            <input type="number" name="monthly_price" class="form-control" value="{{ monthly_price }}" min="0" step="1" required>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label fw-semibold">Yearly Price (₹)</label>
+            <input type="number" name="yearly_price" class="form-control" value="{{ yearly_price }}" min="0" step="1" required>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label fw-semibold">Subscriptions</label>
+            <div class="form-check form-switch mt-1">
+              <input class="form-check-input" type="checkbox" name="sub_enabled" id="subEnabled"
+                     {% if sub_enabled == '1' %}checked{% endif %}>
+              <label class="form-check-label" for="subEnabled">Enable subscriptions</label>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <button type="submit" class="btn w-100" style="background:#FF9933;color:#fff;">
+              <i class="fas fa-save me-1"></i> Save Pricing
+            </button>
+          </div>
+        </form>
+        <small class="text-muted mt-2 d-block">
+          Yearly saving: ₹{{ yearly_price }} vs ₹{{ (monthly_price|int * 12) }} (monthly × 12) —
+          {% set saving = (monthly_price|int * 12) - yearly_price|int %}
+          {% if saving > 0 %}saves ₹{{ saving }} ({{ ((saving / (monthly_price|int * 12)) * 100)|int }}%){% else %}no saving currently{% endif %}
+        </small>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Magazine List + Add ──────────────────────────────── -->
+  <div class="col-12">
+    <div class="card table-card">
+      <div class="card-header d-flex justify-content-between align-items-center" style="background:#FF9933;color:#fff;">
+        <h5 class="mb-0"><i class="fas fa-newspaper me-2"></i>Magazines ({{ magazines|length }})</h5>
+        <button class="btn btn-sm btn-light" data-bs-toggle="modal" data-bs-target="#addMagModal">
+          <i class="fas fa-plus me-1"></i> Add Magazine
+        </button>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead>
+              <tr>
+                <th>Title</th><th>Issue</th><th>Price</th><th>Free?</th><th>Active</th><th>PDF File</th><th>Published</th><th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for m in magazines %}
+              <tr {% if not m.active %}class="table-secondary opacity-50"{% endif %}>
+                <td><strong>{{ m.title }}</strong></td>
+                <td>{{ m.issue_label }}</td>
+                <td>{% if m.is_free %}<span class="badge bg-success">Free</span>{% else %}₹{{ m.single_price|int }}{% endif %}</td>
+                <td>
+                  {% if m.is_free %}<i class="fas fa-check-circle text-success"></i>
+                  {% else %}<i class="fas fa-times-circle text-secondary"></i>{% endif %}
+                </td>
+                <td>
+                  {% if m.active %}<span class="badge bg-success">Active</span>
+                  {% else %}<span class="badge bg-secondary">Inactive</span>{% endif %}
+                </td>
+                <td><code style="font-size:.78rem;">{{ m.pdf_filename }}</code></td>
+                <td style="font-size:.82rem;">{{ m.published_at.strftime('%d %b %Y') if m.published_at else '—' }}</td>
+                <td>
+                  <button class="btn btn-sm btn-outline-warning"
+                          data-bs-toggle="modal" data-bs-target="#editMag{{ m.id }}">
+                    <i class="fas fa-edit"></i>
+                  </button>
+                  {% if m.active %}
+                  <form method="POST" action="{{ url_for('admin_magazine_delete', mag_id=m.id) }}"
+                        class="d-inline" onsubmit="return confirm('Deactivate this magazine?')">
+                    <button class="btn btn-sm btn-outline-danger"><i class="fas fa-eye-slash"></i></button>
+                  </form>
+                  {% endif %}
+                  <a href="{{ url_for('magazine_detail', mag_id=m.id) }}" target="_blank"
+                     class="btn btn-sm btn-outline-secondary">
+                    <i class="fas fa-external-link-alt"></i>
+                  </a>
+                </td>
+              </tr>
+              {% else %}
+              <tr><td colspan="8" class="text-center text-muted py-4">No magazines yet.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Active Subscriptions ─────────────────────────────── -->
+  <div class="col-lg-6">
+    <div class="card table-card">
+      <div class="card-header" style="background:#FF9933;color:#fff;">
+        <h5 class="mb-0"><i class="fas fa-users me-2"></i>Recent Subscriptions ({{ subscriptions|length }})</h5>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-sm mb-0">
+            <thead><tr><th>Customer</th><th>Plan</th><th>Expires</th><th>₹</th><th>Status</th></tr></thead>
+            <tbody>
+              {% for s in subscriptions %}
+              <tr>
+                <td style="font-size:.82rem;">{{ s.customer.name }}<br><small class="text-muted">{{ s.customer.email }}</small></td>
+                <td><span class="badge" style="background:#FF9933;">{{ s.plan|capitalize }}</span></td>
+                <td style="font-size:.8rem;">{{ s.end_date.strftime('%d %b %Y') }}</td>
+                <td>₹{{ s.amount_paid|int }}</td>
+                <td>
+                  {% if s.status == 'active' and s.end_date > now %}
+                    <span class="badge bg-success">Active</span>
+                  {% else %}
+                    <span class="badge bg-secondary">Expired</span>
+                  {% endif %}
+                </td>
+              </tr>
+              {% else %}
+              <tr><td colspan="5" class="text-center text-muted py-3">No subscriptions yet.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Single Issue Purchases ───────────────────────────── -->
+  <div class="col-lg-6">
+    <div class="card table-card">
+      <div class="card-header" style="background:#FF9933;color:#fff;">
+        <h5 class="mb-0"><i class="fas fa-shopping-bag me-2"></i>Recent Purchases ({{ purchases|length }})</h5>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-sm mb-0">
+            <thead><tr><th>Customer</th><th>Magazine</th><th>₹</th><th>Date</th></tr></thead>
+            <tbody>
+              {% for p in purchases %}
+              <tr>
+                <td style="font-size:.82rem;">{{ p.customer.name }}<br><small class="text-muted">{{ p.customer.email }}</small></td>
+                <td style="font-size:.82rem;">{{ p.magazine.title }}</td>
+                <td>₹{{ p.amount_paid|int }}</td>
+                <td style="font-size:.8rem;">{{ p.purchased_at.strftime('%d %b %Y') }}</td>
+              </tr>
+              {% else %}
+              <tr><td colspan="4" class="text-center text-muted py-3">No purchases yet.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /row -->
+
+
+<!-- ══ Add Magazine Modal ════════════════════════════════════ -->
+<div class="modal fade" id="addMagModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header" style="background:#FF9933;color:#fff;">
+        <h5 class="modal-title"><i class="fas fa-plus me-2"></i>Add New Magazine</h5>
+        <button class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="POST" action="{{ url_for('admin_magazine_add') }}">
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Title <span class="text-danger">*</span></label>
+            <input type="text" name="title" class="form-control" placeholder="The God Question" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Issue Label</label>
+            <input type="text" name="issue_label" class="form-control" placeholder="Issue 2 · 2025">
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Description</label>
+            <textarea name="description" class="form-control" rows="3" placeholder="Short description…"></textarea>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">PDF Filename <span class="text-danger">*</span></label>
+            <input type="text" name="pdf_filename" class="form-control" placeholder="my-magazine.pdf" required>
+            <small class="text-muted">File must be uploaded to <code>static/magazines/</code></small>
+          </div>
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label class="form-label fw-semibold">Single Issue Price (₹)</label>
+              <input type="number" name="single_price" class="form-control" value="49" min="0" step="1">
+            </div>
+            <div class="col-md-6 mb-3 d-flex align-items-end">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" name="is_free" value="1" id="addIsFree">
+                <label class="form-check-label" for="addIsFree">Make this issue free</label>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn" style="background:#FF9933;color:#fff;">
+            <i class="fas fa-plus me-1"></i> Add Magazine
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+
+<!-- ══ Edit Magazine Modals ══════════════════════════════════ -->
+{% for m in magazines %}
+<div class="modal fade" id="editMag{{ m.id }}" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header" style="background:#FF9933;color:#fff;">
+        <h5 class="modal-title"><i class="fas fa-edit me-2"></i>Edit — {{ m.title }}</h5>
+        <button class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="POST" action="{{ url_for('admin_magazine_edit', mag_id=m.id) }}">
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Title</label>
+            <input type="text" name="title" class="form-control" value="{{ m.title }}" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Issue Label</label>
+            <input type="text" name="issue_label" class="form-control" value="{{ m.issue_label }}">
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Description</label>
+            <textarea name="description" class="form-control" rows="3">{{ m.description or '' }}</textarea>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">PDF Filename</label>
+            <input type="text" name="pdf_filename" class="form-control" value="{{ m.pdf_filename or '' }}">
+          </div>
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label class="form-label fw-semibold">Single Price (₹)</label>
+              <input type="number" name="single_price" class="form-control" value="{{ m.single_price|int }}" min="0">
+            </div>
+            <div class="col-md-6 mb-3 d-flex align-items-end gap-3">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" name="is_free" value="1"
+                       id="editFree{{ m.id }}" {% if m.is_free %}checked{% endif %}>
+                <label class="form-check-label" for="editFree{{ m.id }}">Free</label>
+              </div>
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" name="active" value="1"
+                       id="editActive{{ m.id }}" {% if m.active %}checked{% endif %}>
+                <label class="form-check-label" for="editActive{{ m.id }}">Active</label>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn" style="background:#FF9933;color:#fff;">
+            <i class="fas fa-save me-1"></i> Save Changes
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endfor %}
+
+<script>
+// Pass 'now' to template for subscription status check
+const now = new Date();
+</script>
+{% endblock %}

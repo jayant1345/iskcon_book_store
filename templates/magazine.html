@@ -1,394 +1,506 @@
 {% extends "base.html" %}
-{% block title %}The God Question – ISKCON Magazine{% endblock %}
-{% block meta_description %}Read "The God Question" – ISKCON's thought-provoking magazine exploring the ultimate questions of life, consciousness, and the existence of God.{% endblock %}
+{% block title %}{{ mag.title }} – ISKCON Magazine{% endblock %}
+{% block meta_description %}Read {{ mag.title }} ({{ mag.issue_label }}) — ISKCON's thought-provoking magazine exploring science, philosophy and Vedic wisdom.{% endblock %}
 
 {% block extra_css %}
 <style>
-  /* ── Magazine Page Layout ─────────────────── */
+  /* ── Hero ───────────────────────────────── */
   .mag-hero {
-    background: linear-gradient(135deg, #1a0a00 0%, #3D1A00 50%, #7A3500 100%);
-    padding: 56px 0 40px;
+    background: linear-gradient(135deg, #1a0a00 0%, #3D1A00 55%, #7A3500 100%);
+    padding: 52px 0 36px;
     text-align: center;
-    position: relative;
-    overflow: hidden;
+    position: relative; overflow: hidden;
   }
   .mag-hero::before {
-    content: '';
-    position: absolute; inset: 0;
-    background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23FF9933' fill-opacity='0.04'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
-    opacity: 0.5;
+    content:''; position:absolute; inset:0; opacity:0.04;
+    background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23FF9933'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4z'/%3E%3C/g%3E%3C/svg%3E");
   }
-  .mag-hero .badge-pill {
-    display: inline-block;
-    background: rgba(255,153,51,0.2);
-    border: 1px solid rgba(255,153,51,0.5);
-    color: #FF9933;
-    padding: 4px 18px;
-    border-radius: 50px;
-    font-size: 0.78rem;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    margin-bottom: 16px;
-  }
-  .mag-hero h1 {
-    color: #fff;
-    font-family: 'Georgia', serif;
-    font-size: clamp(2rem, 5vw, 3.2rem);
-    font-weight: 700;
-    line-height: 1.2;
-    margin-bottom: 12px;
-  }
-  .mag-hero h1 span { color: #FFD700; }
-  .mag-hero p {
-    color: rgba(255,255,255,0.75);
-    font-size: 1rem;
-    max-width: 560px;
-    margin: 0 auto 28px;
-    line-height: 1.7;
-  }
+  .mag-badge { display:inline-block; background:rgba(255,153,51,0.18); border:1px solid rgba(255,153,51,0.45); color:#FF9933; padding:3px 16px; border-radius:50px; font-size:0.75rem; letter-spacing:2px; text-transform:uppercase; margin-bottom:14px; }
+  .mag-hero h1 { color:#fff; font-family:'Georgia',serif; font-size:clamp(1.9rem,4.5vw,3rem); font-weight:700; line-height:1.2; margin-bottom:10px; }
+  .mag-hero h1 span { color:#FFD700; }
+  .mag-hero p { color:rgba(255,255,255,0.72); font-size:.96rem; max-width:520px; margin:0 auto 28px; line-height:1.75; }
 
-  /* ── Section Headers ─────────────────────── */
-  .section-divider {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    margin-bottom: 32px;
-  }
-  .section-divider::before,
-  .section-divider::after {
-    content: '';
-    flex: 1;
-    height: 1px;
-    background: linear-gradient(to right, transparent, rgba(255,153,51,0.5), transparent);
-  }
-  .section-divider span {
-    font-family: 'Georgia', serif;
-    font-size: 1.3rem;
-    font-weight: 700;
-    color: #3D1A00;
-    white-space: nowrap;
-  }
+  /* ── Section divider ─────────────────────── */
+  .sec-divider { display:flex; align-items:center; gap:14px; margin-bottom:28px; }
+  .sec-divider::before,.sec-divider::after { content:''; flex:1; height:1px; background:linear-gradient(to right,transparent,rgba(255,153,51,.45),transparent); }
+  .sec-divider span { font-family:'Georgia',serif; font-size:1.1rem; font-weight:700; color:#3D1A00; white-space:nowrap; }
 
-  /* ── PDF Canvas Cards ────────────────────── */
-  .page-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-    gap: 28px;
-  }
-  .page-card {
-    background: #fff;
-    border-radius: 12px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-    overflow: hidden;
-    transition: transform 0.25s, box-shadow 0.25s;
-    border: 2px solid transparent;
-    cursor: pointer;
-  }
-  .page-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 10px 32px rgba(61,26,0,0.18);
-    border-color: rgba(255,153,51,0.5);
-  }
-  .page-card canvas {
-    display: block;
-    width: 100%;
-    height: auto;
-  }
-  .page-label {
-    text-align: center;
-    padding: 10px;
-    font-size: 0.82rem;
-    font-weight: 600;
-    color: #7A3500;
-    background: #FFF8F0;
-    border-top: 1px solid #FFE4C4;
-    letter-spacing: 0.5px;
-  }
+  /* ── Page grid ───────────────────────────── */
+  .page-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:24px; }
+  .page-card { background:#fff; border-radius:12px; box-shadow:0 4px 18px rgba(0,0,0,.09); overflow:hidden; transition:transform .22s,box-shadow .22s; border:2px solid transparent; cursor:pointer; }
+  .page-card:hover { transform:translateY(-4px); box-shadow:0 10px 30px rgba(61,26,0,.16); border-color:rgba(255,153,51,.5); }
+  .page-card canvas { display:block; width:100%; height:auto; }
+  .page-label { text-align:center; padding:9px; font-size:.8rem; font-weight:600; color:#7A3500; background:#FFF8F0; border-top:1px solid #FFE4C4; letter-spacing:.4px; }
 
-  /* ── Loading Spinner ─────────────────────── */
-  .page-loading {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 340px;
-    color: #FF9933;
-    font-size: 0.9rem;
-    gap: 10px;
-    background: #FFF8F0;
-    border-radius: 10px;
-  }
-  .spinner {
-    width: 28px; height: 28px;
-    border: 3px solid rgba(255,153,51,0.2);
-    border-top-color: #FF9933;
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-  }
-  @keyframes spin { to { transform: rotate(360deg); } }
+  /* ── Locked page card ────────────────────── */
+  .page-locked { position:relative; border-radius:12px; overflow:hidden; box-shadow:0 4px 18px rgba(0,0,0,.09); }
+  .page-locked-blur { filter:blur(6px) brightness(.45); pointer-events:none; user-select:none; }
+  .page-locked-overlay { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; }
+  .lock-icon { font-size:2rem; }
+  .lock-msg { color:#fff; font-size:.78rem; font-weight:600; letter-spacing:.5px; text-shadow:0 1px 4px rgba(0,0,0,.6); }
 
-  /* ── CTA Banner ─────────────────────────── */
-  .mag-cta {
-    background: linear-gradient(135deg, #3D1A00, #7A3500);
-    border-radius: 16px;
-    padding: 40px 32px;
-    text-align: center;
-    color: #fff;
-    margin-top: 20px;
-  }
-  .mag-cta h3 { font-family:'Georgia',serif; font-size:1.5rem; color:#FFD700; margin-bottom:10px; }
-  .mag-cta p { color:rgba(255,255,255,0.8); margin-bottom:20px; font-size:0.95rem; }
+  /* ── Loading ─────────────────────────────── */
+  .page-loading { display:flex; align-items:center; justify-content:center; min-height:300px; color:#FF9933; font-size:.88rem; gap:10px; background:#FFF8F0; border-radius:10px; }
+  .spinner { width:26px; height:26px; border:3px solid rgba(255,153,51,.2); border-top-color:#FF9933; border-radius:50%; animation:spin .8s linear infinite; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+
+  /* ── Paywall box ─────────────────────────── */
+  .paywall-box { background:linear-gradient(135deg,#1a0a00,#3D1A00); border-radius:18px; padding:40px 32px; color:#fff; text-align:center; margin:36px 0 0; box-shadow:0 8px 40px rgba(0,0,0,.3); }
+  .paywall-box h3 { font-family:'Georgia',serif; font-size:1.5rem; color:#FFD700; margin-bottom:10px; }
+  .paywall-box p { color:rgba(255,255,255,.75); font-size:.95rem; margin-bottom:28px; }
+  .plan-cards { display:flex; gap:18px; justify-content:center; flex-wrap:wrap; margin-bottom:24px; }
+  .plan-card { background:rgba(255,255,255,.07); border:2px solid rgba(255,153,51,.35); border-radius:14px; padding:22px 26px; min-width:180px; flex:1; max-width:220px; transition:border-color .2s,background .2s; cursor:pointer; }
+  .plan-card:hover,.plan-card.selected { border-color:#FF9933; background:rgba(255,153,51,.14); }
+  .plan-card .plan-label { font-size:.72rem; text-transform:uppercase; letter-spacing:2px; color:#FF9933; margin-bottom:6px; }
+  .plan-card .plan-price { font-size:1.9rem; font-weight:700; color:#fff; line-height:1.1; }
+  .plan-card .plan-period { font-size:.78rem; color:rgba(255,255,255,.55); }
+  .plan-card .plan-badge { display:inline-block; background:#FF9933; color:#fff; font-size:.65rem; font-weight:700; padding:2px 8px; border-radius:50px; margin-top:6px; }
+  .paywall-divider { display:flex; align-items:center; gap:10px; color:rgba(255,255,255,.4); font-size:.8rem; margin:18px 0; }
+  .paywall-divider::before,.paywall-divider::after { content:''; flex:1; height:1px; background:rgba(255,255,255,.15); }
+
+  /* ── CTA strip ───────────────────────────── */
+  .mag-cta { background:linear-gradient(135deg,#3D1A00,#7A3500); border-radius:16px; padding:36px 28px; text-align:center; color:#fff; }
+  .mag-cta h3 { font-family:'Georgia',serif; font-size:1.35rem; color:#FFD700; margin-bottom:8px; }
+  .mag-cta p { color:rgba(255,255,255,.78); margin-bottom:18px; font-size:.92rem; }
 
   /* ── Lightbox ────────────────────────────── */
-  .lightbox-overlay {
-    display: none;
-    position: fixed; inset: 0; z-index: 9999;
-    background: rgba(0,0,0,0.88);
-    align-items: center;
-    justify-content: center;
-    padding: 20px;
-  }
-  .lightbox-overlay.open { display: flex; }
-  .lightbox-inner { position: relative; max-width: min(800px, 95vw); width: 100%; }
-  .lightbox-inner canvas { width: 100% !important; height: auto !important; border-radius: 8px; box-shadow: 0 8px 40px rgba(0,0,0,0.7); }
-  .lightbox-close {
-    position: absolute; top: -44px; right: 0;
-    background: none; border: none; color: #fff;
-    font-size: 2rem; cursor: pointer; line-height: 1;
-  }
-  .lightbox-nav {
-    display: flex; justify-content: center; gap: 20px; margin-top: 18px;
-  }
-  .lightbox-nav button {
-    background: rgba(255,153,51,0.2); border: 1px solid rgba(255,153,51,0.5);
-    color: #FF9933; padding: 8px 22px; border-radius: 50px;
-    font-size: 0.9rem; cursor: pointer; transition: background 0.2s;
-  }
-  .lightbox-nav button:hover { background: rgba(255,153,51,0.4); }
-  .lightbox-page-info { text-align:center; color:rgba(255,255,255,0.7); font-size:0.85rem; margin-top:10px; }
+  .lb-overlay { display:none; position:fixed; inset:0; z-index:9999; background:rgba(0,0,0,.88); align-items:center; justify-content:center; padding:18px; }
+  .lb-overlay.open { display:flex; }
+  .lb-inner { position:relative; max-width:min(760px,94vw); width:100%; }
+  .lb-inner canvas { width:100%!important; height:auto!important; border-radius:8px; box-shadow:0 8px 40px rgba(0,0,0,.7); }
+  .lb-close { position:absolute; top:-42px; right:0; background:none; border:none; color:#fff; font-size:1.9rem; cursor:pointer; }
+  .lb-nav { display:flex; justify-content:center; gap:18px; margin-top:14px; }
+  .lb-nav button { background:rgba(255,153,51,.2); border:1px solid rgba(255,153,51,.5); color:#FF9933; padding:7px 20px; border-radius:50px; font-size:.88rem; cursor:pointer; transition:background .2s; }
+  .lb-nav button:hover { background:rgba(255,153,51,.38); }
+  .lb-info { text-align:center; color:rgba(255,255,255,.6); font-size:.82rem; margin-top:8px; }
 
-  @media (max-width: 576px) {
-    .page-grid { grid-template-columns: repeat(2, 1fr); gap: 14px; }
+  @media(max-width:576px) {
+    .page-grid { grid-template-columns:repeat(2,1fr); gap:12px; }
+    .plan-cards { flex-direction:column; align-items:center; }
+    .plan-card { max-width:100%; width:100%; }
   }
 </style>
 {% endblock %}
 
 {% block content %}
 
-<!-- ══ Hero ══════════════════════════════════════ -->
+<!-- ══ Hero ════════════════════════════════════ -->
 <section class="mag-hero">
   <div class="container position-relative">
-    <div class="badge-pill">ISKCON Publication</div>
-    <h1>The <span>God Question</span></h1>
-    <p>
-      Explore the most profound question ever asked — Does God exist?
-      This special magazine examines science, philosophy, and Vedic wisdom
-      to shine light on the ultimate truth.
-    </p>
-    <a href="{{ url_for('static', filename='magazines/the-god-question.pdf') }}"
-       download="The God Question - ISKCON Magazine.pdf"
-       class="btn btn-gold btn-lg px-5 me-2">
-      ⬇ Download Full Magazine
+    <div class="mag-badge">ISKCON Publication &nbsp;·&nbsp; {{ mag.issue_label }}</div>
+    <h1>{{ mag.title.split()[0] }} <span>{{ mag.title.split()[1:] | join(' ') }}</span></h1>
+    <p>{{ mag.description or "Explore the most profound questions of existence through science, philosophy and Vedic wisdom." }}</p>
+    {% if has_access %}
+    <a href="{{ url_for('magazine_download', mag_id=mag.id) }}" class="btn btn-gold btn-lg px-5 me-2">
+      ⬇ Download PDF
     </a>
-    <a href="{{ url_for('books') }}" class="btn btn-outline-light btn-lg px-4">
-      📚 Browse Books
-    </a>
+    {% else %}
+    <a href="#paywall" class="btn btn-gold btn-lg px-5 me-2">📖 Get Full Access</a>
+    {% endif %}
+    <a href="{{ url_for('books') }}" class="btn btn-outline-light px-4">📚 Browse Books</a>
   </div>
 </section>
 
-<!-- ══ First 3 Pages ══════════════════════════════ -->
+<!-- ══ Free Preview — First 3 Pages ═══════════ -->
 <section class="py-5" style="background:#FFF8F0;">
   <div class="container">
-    <div class="section-divider">
-      <span>📖 Preview — First 3 Pages</span>
-    </div>
-    <div class="page-grid" id="firstPagesGrid">
-      <div class="page-loading" id="loading-first"><div class="spinner"></div> Loading pages…</div>
+    <div class="sec-divider"><span>📖 Free Preview — First 3 Pages</span></div>
+    <div class="page-grid" id="firstGrid">
+      <div class="page-loading"><div class="spinner"></div> Loading…</div>
     </div>
   </div>
 </section>
 
-<!-- ══ Middle Divider ════════════════════════════ -->
-<div style="background: linear-gradient(90deg,#3D1A00,#7A3500); padding:20px 0; text-align:center; color:rgba(255,255,255,0.7); font-style:italic; letter-spacing:0.5px; font-size:0.95rem;">
+<!-- ══ Quote strip ═════════════════════════════ -->
+<div style="background:linear-gradient(90deg,#3D1A00,#7A3500);padding:18px 0;text-align:center;color:rgba(255,255,255,.72);font-style:italic;letter-spacing:.4px;font-size:.93rem;">
   "A human being who does not know the answer to these questions is no better than an animal." — Srimad Bhagavatam 2.3.19
 </div>
 
-<!-- ══ Last 2 Pages ═══════════════════════════════ -->
+<!-- ══ Last 2 Pages (free preview) ═════════════ -->
 <section class="py-5" style="background:#fff;">
   <div class="container">
-    <div class="section-divider">
-      <span>📄 Preview — Last 2 Pages</span>
-    </div>
-    <div class="page-grid" id="lastPagesGrid">
-      <div class="page-loading" id="loading-last"><div class="spinner"></div> Loading pages…</div>
+    <div class="sec-divider"><span>📄 Preview — Last 2 Pages</span></div>
+    <div class="page-grid" id="lastGrid">
+      <div class="page-loading"><div class="spinner"></div> Loading…</div>
     </div>
   </div>
 </section>
 
-<!-- ══ CTA ════════════════════════════════════════ -->
-<section class="py-5" style="background:#FFF8F0;">
-  <div class="container" style="max-width:720px;">
-    <div class="mag-cta">
-      <div style="font-size:2.5rem; margin-bottom:12px;">📿</div>
-      <h3>Continue Your Spiritual Journey</h3>
-      <p>
-        Inspired by "The God Question"? Explore our full collection of
-        Vedic literature — Bhagavad Gita, Srimad Bhagavatam and more,
-        personally translated by Srila Prabhupada.
+<!-- ══ Paywall / Full access ═══════════════════ -->
+{% if not has_access %}
+<section class="py-5" style="background:#FFF8F0;" id="paywall">
+  <div class="container" style="max-width:780px;">
+    <div class="paywall-box">
+      <div style="font-size:2.4rem;margin-bottom:12px;">🔒</div>
+      <h3>Unlock the Full Magazine</h3>
+      <p>Read all pages, download the PDF, and get access to every future issue with a subscription.</p>
+
+      <!-- Plan cards -->
+      <div class="plan-cards">
+        <!-- Single issue -->
+        {% if not mag.is_free %}
+        <div class="plan-card selected" id="planSingle" onclick="selectPlan('single')">
+          <div class="plan-label">This Issue Only</div>
+          <div class="plan-price">₹{{ mag.single_price|int }}</div>
+          <div class="plan-period">one-time · forever</div>
+        </div>
+        {% endif %}
+
+        {% set sub_enabled = settings_get('mag_subscription_enabled', '1') %}
+        {% if sub_enabled == '1' %}
+        <!-- Monthly -->
+        <div class="plan-card" id="planMonthly" onclick="selectPlan('monthly')">
+          <div class="plan-label">Monthly</div>
+          <div class="plan-price">₹{{ monthly_price|int }}</div>
+          <div class="plan-period">per month · all issues</div>
+        </div>
+        <!-- Yearly -->
+        <div class="plan-card" id="planYearly" onclick="selectPlan('yearly')">
+          <div class="plan-label">Yearly</div>
+          <div class="plan-price">₹{{ yearly_price|int }}</div>
+          <div class="plan-period">per year · all issues</div>
+          {% set monthly_equiv = (yearly_price / 12)|int %}
+          {% set saving_pct = (100 - (yearly_price / (monthly_price * 12) * 100))|int %}
+          {% if saving_pct > 0 %}
+          <div class="plan-badge">Save {{ saving_pct }}%</div>
+          {% endif %}
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- CTA button triggers payment modal -->
+      {% if not mag.is_free %}
+      <div id="btnSingle">
+        <button type="button" class="btn btn-gold btn-lg px-5"
+                onclick="openPayModal('buy', {{ mag.id }}, null, {{ mag.single_price }}, '{{ mag.title }}')">
+          💳 Buy This Issue — ₹{{ mag.single_price|int }}
+        </button>
+      </div>
+      {% endif %}
+
+      {% if sub_enabled == '1' %}
+      <div id="btnMonthly" style="display:none;">
+        <button type="button" class="btn btn-gold btn-lg px-5"
+                onclick="openPayModal('subscribe', null, 'monthly', {{ monthly_price }}, 'Monthly Subscription')">
+          💳 Subscribe Monthly — ₹{{ monthly_price|int }}/mo
+        </button>
+      </div>
+      <div id="btnYearly" style="display:none;">
+        <button type="button" class="btn btn-gold btn-lg px-5"
+                onclick="openPayModal('subscribe', null, 'yearly', {{ yearly_price }}, 'Yearly Subscription')">
+          💳 Subscribe Yearly — ₹{{ yearly_price|int }}/yr
+        </button>
+      </div>
+      {% endif %}
+
+      <div class="paywall-divider">or</div>
+      <p style="color:rgba(255,255,255,.5);font-size:.82rem;margin:0;">
+        {% if current_customer %}
+          Logged in as {{ current_customer.email }}
+        {% else %}
+          <a href="{{ url_for('customer_login', next=request.path) }}" style="color:#FF9933;">Log in</a>
+          to access previously purchased magazines.
+        {% endif %}
       </p>
-      <a href="{{ url_for('books') }}" class="btn btn-gold btn-lg px-5">
-        🪷 Explore All Books
-      </a>
     </div>
   </div>
 </section>
 
-<!-- ══ Lightbox ═══════════════════════════════════ -->
-<div class="lightbox-overlay" id="lightbox">
-  <div class="lightbox-inner">
-    <button class="lightbox-close" id="lightboxClose">&times;</button>
-    <canvas id="lightboxCanvas"></canvas>
-    <div class="lightbox-nav">
-      <button id="lightboxPrev">← Prev</button>
-      <button id="lightboxNext">Next →</button>
+{% else %}
+<!-- ══ Full access — show all remaining pages ══ -->
+<section class="py-5" style="background:#FFF8F0;">
+  <div class="container">
+    <div class="sec-divider"><span>📖 Full Magazine — All Pages</span></div>
+    <div id="fullPageGrid" class="page-grid">
+      <div class="page-loading"><div class="spinner"></div> Loading remaining pages…</div>
     </div>
-    <div class="lightbox-page-info" id="lightboxInfo"></div>
+  </div>
+</section>
+{% endif %}
+
+<!-- ══ CTA ════════════════════════════════════ -->
+<section class="py-5" style="background:{% if has_access %}#fff{% else %}#fff{% endif %};">
+  <div class="container" style="max-width:680px;">
+    <div class="mag-cta">
+      <div style="font-size:2.2rem;margin-bottom:10px;">📿</div>
+      <h3>Deepen Your Spiritual Journey</h3>
+      <p>Explore our full collection of Vedic literature — Bhagavad Gita, Srimad Bhagavatam and more.</p>
+      <a href="{{ url_for('books') }}" class="btn btn-gold btn-lg px-5">🪷 Explore All Books</a>
+    </div>
+  </div>
+</section>
+
+<!-- ══ Payment Method Modal ═══════════════════ -->
+<div class="modal fade" id="payMethodModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border-radius:18px; overflow:hidden; border:none;">
+
+      <div class="modal-header" style="background:linear-gradient(135deg,#1a0a00,#3D1A00); border:none; padding:22px 24px;">
+        <div>
+          <div style="color:#FF9933; font-size:.72rem; letter-spacing:2px; text-transform:uppercase; margin-bottom:4px;">Complete Purchase</div>
+          <h5 class="modal-title" style="color:#fff; font-family:'Georgia',serif; margin:0;" id="payModalTitle">Buy This Issue</h5>
+          <div style="color:rgba(255,255,255,.55); font-size:.82rem; margin-top:2px;" id="payModalAmount"></div>
+        </div>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body" style="padding:28px 24px; background:#fff;">
+        <p style="font-size:.88rem; color:#555; margin-bottom:20px;">Choose your preferred payment method:</p>
+
+        <form method="POST" action="{{ url_for('magazine_checkout') }}" id="payMethodForm">
+          <input type="hidden" name="action"          id="pmAction">
+          <input type="hidden" name="mag_id"          id="pmMagId">
+          <input type="hidden" name="plan"            id="pmPlan">
+          <input type="hidden" name="payment_method"  id="pmMethod" value="razorpay">
+
+          <button type="button" class="pay-method-btn w-100 mb-3" onclick="submitPay('upi')"
+                  style="display:flex;align-items:center;gap:14px;padding:14px 18px;border:2px solid #e2e8f0;border-radius:12px;background:#fff;cursor:pointer;text-align:left;">
+            <div style="width:42px;height:42px;background:#fff8f0;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.4rem;flex-shrink:0;">📲</div>
+            <div>
+              <div style="font-weight:700;font-size:.95rem;color:#1a0a00;">UPI Payment</div>
+              <div style="font-size:.78rem;color:#888;">GPay · PhonePe · Paytm · Any UPI App</div>
+            </div>
+            <div style="margin-left:auto;color:#FF9933;font-size:1.1rem;">›</div>
+          </button>
+
+          <button type="button" class="pay-method-btn w-100 mb-3" onclick="submitPay('payu')"
+                  style="display:flex;align-items:center;gap:14px;padding:14px 18px;border:2px solid #e2e8f0;border-radius:12px;background:#fff;cursor:pointer;text-align:left;">
+            <div style="width:42px;height:42px;background:#fff8f0;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.4rem;flex-shrink:0;">🏦</div>
+            <div>
+              <div style="font-weight:700;font-size:.95rem;color:#1a0a00;">PayU</div>
+              <div style="font-size:.78rem;color:#888;">Cards · Net Banking · Wallets</div>
+            </div>
+            <div style="margin-left:auto;color:#FF9933;font-size:1.1rem;">›</div>
+          </button>
+
+          <button type="button" class="pay-method-btn w-100" onclick="submitPay('razorpay')"
+                  style="display:flex;align-items:center;gap:14px;padding:14px 18px;border:2px solid #e2e8f0;border-radius:12px;background:#fff;cursor:pointer;text-align:left;">
+            <div style="width:42px;height:42px;background:#fff8f0;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.4rem;flex-shrink:0;">💳</div>
+            <div>
+              <div style="font-weight:700;font-size:.95rem;color:#1a0a00;">Razorpay</div>
+              <div style="font-size:.78rem;color:#888;">UPI · Cards · Net Banking · EMI</div>
+            </div>
+            <div style="margin-left:auto;color:#FF9933;font-size:1.1rem;">›</div>
+          </button>
+        </form>
+
+        <div style="text-align:center;margin-top:20px;font-size:.75rem;color:#aaa;">
+          🔒 100% Secure &nbsp;·&nbsp; Encrypted Payment &nbsp;·&nbsp; ISKCON Book Store
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<style>.pay-method-btn:hover { border-color:#FF9933 !important; background:#fff8f0 !important; }</style>
+
+<!-- ══ Lightbox ═══════════════════════════════ -->
+<div class="lb-overlay" id="lightbox">
+  <div class="lb-inner">
+    <button class="lb-close" id="lbClose">&times;</button>
+    <canvas id="lbCanvas"></canvas>
+    <div class="lb-nav">
+      <button id="lbPrev">← Prev</button>
+      <button id="lbNext">Next →</button>
+    </div>
+    <div class="lb-info" id="lbInfo"></div>
   </div>
 </div>
 
 {% endblock %}
 
 {% block extra_js %}
-<!-- PDF.js from CDN -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script>
-(function () {
+(function(){
   'use strict';
 
-  const PDF_URL = "{{ url_for('static', filename='magazines/the-god-question.pdf') }}";
+  const PDF_URL   = "{{ url_for('static', filename='magazines/' + mag.pdf_filename) }}";
+  const HAS_ACCESS = {{ 'true' if has_access else 'false' }};
+
   pdfjsLib.GlobalWorkerOptions.workerSrc =
     'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
-  // Pages to show: first 3, last 2 — resolved after PDF loads
-  let pdfDoc = null;
-  let totalPages = 0;
+  let pdfDoc = null, totalPages = 0;
+  let lbPages = [], lbIdx = 0;
 
-  // Lightbox state
-  let lightboxPages = [];   // array of page numbers currently in lightbox context
-  let lightboxIdx = 0;
-
-  // ── Render one page into a <canvas> ──────────────
-  async function renderPage(pageNum, canvas, scale) {
-    const page = await pdfDoc.getPage(pageNum);
-    const vp = page.getViewport({ scale });
+  // ── Render page into canvas ──────────────────
+  async function renderPage(n, canvas, scale) {
+    const page = await pdfDoc.getPage(n);
+    const vp   = page.getViewport({ scale });
     canvas.width  = vp.width;
     canvas.height = vp.height;
     await page.render({ canvasContext: canvas.getContext('2d'), viewport: vp }).promise;
   }
 
-  // ── Build a page card ────────────────────────────
-  function makeCard(pageNum, label, contextPages) {
-    const card = document.createElement('div');
+  // ── Build free page card ─────────────────────
+  function makeCard(n, label, ctx) {
+    const card   = document.createElement('div');
     card.className = 'page-card';
     const canvas = document.createElement('canvas');
-    const lbl = document.createElement('div');
+    const lbl    = document.createElement('div');
     lbl.className = 'page-label';
     lbl.textContent = label;
     card.appendChild(canvas);
     card.appendChild(lbl);
-
-    // Render at 1.4× for preview quality
-    renderPage(pageNum, canvas, 1.4);
-
-    // Click → open lightbox
-    card.addEventListener('click', function () {
-      lightboxPages = contextPages;
-      lightboxIdx = contextPages.indexOf(pageNum);
-      openLightbox(lightboxPages[lightboxIdx]);
-    });
-
+    renderPage(n, canvas, 1.35);
+    card.addEventListener('click', () => { lbPages = ctx; lbIdx = ctx.indexOf(n); openLb(lbPages[lbIdx]); });
     return card;
   }
 
-  // ── Lightbox ────────────────────────────────────
-  const overlay    = document.getElementById('lightbox');
-  const lbCanvas   = document.getElementById('lightboxCanvas');
-  const lbInfo     = document.getElementById('lightboxInfo');
-  const lbClose    = document.getElementById('lightboxClose');
-  const lbPrev     = document.getElementById('lightboxPrev');
-  const lbNext     = document.getElementById('lightboxNext');
-
-  async function openLightbox(pageNum) {
-    overlay.classList.add('open');
-    document.body.style.overflow = 'hidden';
-    const scale = Math.min(2.2, window.innerWidth / 250);
-    await renderPage(pageNum, lbCanvas, scale);
-    lbInfo.textContent = 'Page ' + lightboxPages[lightboxIdx] + ' of ' + totalPages;
-    lbPrev.disabled = lightboxIdx === 0;
-    lbNext.disabled = lightboxIdx === lightboxPages.length - 1;
+  // ── Build locked page card ───────────────────
+  function makeLockedCard(n, label) {
+    const wrap   = document.createElement('div');
+    wrap.className = 'page-locked';
+    const canvas = document.createElement('canvas');
+    canvas.className = 'page-locked-blur';
+    const lbl    = document.createElement('div');
+    lbl.className = 'page-label';
+    lbl.textContent = label;
+    const overlay = document.createElement('div');
+    overlay.className = 'page-locked-overlay';
+    overlay.innerHTML = '<div class="lock-icon">🔒</div><div class="lock-msg">Members Only</div>';
+    wrap.appendChild(canvas);
+    wrap.appendChild(lbl);
+    wrap.appendChild(overlay);
+    renderPage(n, canvas, 1.35);
+    wrap.addEventListener('click', () => { document.getElementById('paywall')?.scrollIntoView({behavior:'smooth'}); });
+    return wrap;
   }
 
-  lbClose.addEventListener('click', function () {
-    overlay.classList.remove('open');
-    document.body.style.overflow = '';
-  });
-  overlay.addEventListener('click', function (e) {
-    if (e.target === overlay) {
-      overlay.classList.remove('open');
-      document.body.style.overflow = '';
-    }
-  });
-  lbPrev.addEventListener('click', function () {
-    if (lightboxIdx > 0) { lightboxIdx--; openLightbox(lightboxPages[lightboxIdx]); }
-  });
-  lbNext.addEventListener('click', function () {
-    if (lightboxIdx < lightboxPages.length - 1) { lightboxIdx++; openLightbox(lightboxPages[lightboxIdx]); }
-  });
-  document.addEventListener('keydown', function (e) {
-    if (!overlay.classList.contains('open')) return;
-    if (e.key === 'Escape')       { lbClose.click(); }
-    else if (e.key === 'ArrowLeft')  { lbPrev.click(); }
-    else if (e.key === 'ArrowRight') { lbNext.click(); }
+  // ── Lightbox ─────────────────────────────────
+  const overlay = document.getElementById('lightbox');
+  const lbCanvas= document.getElementById('lbCanvas');
+  const lbInfo  = document.getElementById('lbInfo');
+  const lbClose = document.getElementById('lbClose');
+  const lbPrev  = document.getElementById('lbPrev');
+  const lbNext  = document.getElementById('lbNext');
+
+  async function openLb(n) {
+    overlay.classList.add('open');
+    document.body.style.overflow = 'hidden';
+    const scale = Math.min(2.2, window.innerWidth / 240);
+    await renderPage(n, lbCanvas, scale);
+    lbInfo.textContent = 'Page ' + lbPages[lbIdx] + ' of ' + totalPages;
+    lbPrev.disabled = lbIdx === 0;
+    lbNext.disabled = lbIdx === lbPages.length - 1;
+  }
+  lbClose.addEventListener('click', () => { overlay.classList.remove('open'); document.body.style.overflow=''; });
+  overlay.addEventListener('click', e => { if(e.target===overlay){ overlay.classList.remove('open'); document.body.style.overflow=''; } });
+  lbPrev.addEventListener('click', () => { if(lbIdx>0){ lbIdx--; openLb(lbPages[lbIdx]); } });
+  lbNext.addEventListener('click', () => { if(lbIdx<lbPages.length-1){ lbIdx++; openLb(lbPages[lbIdx]); } });
+  document.addEventListener('keydown', e => {
+    if(!overlay.classList.contains('open')) return;
+    if(e.key==='Escape') lbClose.click();
+    else if(e.key==='ArrowLeft') lbPrev.click();
+    else if(e.key==='ArrowRight') lbNext.click();
   });
 
-  // ── Load PDF & build grids ──────────────────────
-  pdfjsLib.getDocument(PDF_URL).promise.then(function (doc) {
+  // ── Load PDF ─────────────────────────────────
+  pdfjsLib.getDocument(PDF_URL).promise.then(doc => {
     pdfDoc     = doc;
     totalPages = doc.numPages;
 
-    const firstPages = [1, 2, 3].filter(n => n <= totalPages);
-    const lastPages  = [];
-    if (totalPages >= 2) lastPages.push(totalPages - 1);
-    if (totalPages >= 1) lastPages.push(totalPages);
-    // avoid duplicating a page that's already in firstPages
-    const uniqueLast = lastPages.filter(n => !firstPages.includes(n));
+    const firstPages = [1,2,3].filter(n => n <= totalPages);
+    const lastRaw    = [];
+    if(totalPages >= 2) lastRaw.push(totalPages - 1);
+    if(totalPages >= 1) lastRaw.push(totalPages);
+    const lastPages  = lastRaw.filter(n => !firstPages.includes(n));
 
-    // ── First-pages grid ──
-    const firstGrid = document.getElementById('firstPagesGrid');
-    firstGrid.innerHTML = '';
-    firstPages.forEach(function (n, i) {
-      const labels = ['Cover', 'Page 2', 'Page 3'];
-      firstGrid.appendChild(makeCard(n, labels[i] || ('Page ' + n), firstPages));
+    // First 3 — always free
+    const fg = document.getElementById('firstGrid');
+    fg.innerHTML = '';
+    firstPages.forEach((n,i) => {
+      const labels = ['Cover','Page 2','Page 3'];
+      fg.appendChild(makeCard(n, labels[i]||'Page '+n, firstPages));
     });
 
-    // ── Last-pages grid ──
-    const lastGrid = document.getElementById('lastPagesGrid');
-    lastGrid.innerHTML = '';
-    if (uniqueLast.length === 0) {
-      lastGrid.innerHTML = '<p class="text-muted text-center">These pages are already shown above.</p>';
+    // Last 2 — free preview
+    const lg = document.getElementById('lastGrid');
+    lg.innerHTML = '';
+    if(lastPages.length === 0){
+      lg.innerHTML = '<p class="text-muted text-center py-3">All pages shown above.</p>';
     } else {
-      uniqueLast.forEach(function (n, i) {
-        const label = i === uniqueLast.length - 1
-          ? 'Back Cover (Page ' + n + ')'
-          : 'Page ' + n;
-        lastGrid.appendChild(makeCard(n, label, uniqueLast));
+      lastPages.forEach((n,i) => {
+        const label = i===lastPages.length-1 ? 'Back Cover (p.'+n+')' : 'Page '+n;
+        lg.appendChild(makeCard(n, label, lastPages));
       });
     }
-  }).catch(function (err) {
-    console.error('PDF load error:', err);
-    document.getElementById('firstPagesGrid').innerHTML =
-      '<p class="text-danger text-center py-4">Could not load magazine preview. <a href="{{ url_for(\'static\', filename=\'magazines/the-god-question.pdf\') }}" download>Download it instead</a>.</p>';
-    document.getElementById('lastPagesGrid').innerHTML = '';
+
+    if(HAS_ACCESS){
+      // Show all remaining pages
+      const shown = new Set([...firstPages, ...lastPages]);
+      const middlePages = [];
+      for(let n=1; n<=totalPages; n++) if(!shown.has(n)) middlePages.push(n);
+      const fullGrid = document.getElementById('fullPageGrid');
+      if(fullGrid){
+        fullGrid.innerHTML = '';
+        if(middlePages.length === 0){
+          fullGrid.innerHTML = '<p class="text-muted text-center py-3">You\'ve seen all pages in the preview above!</p>';
+        } else {
+          const allUnlocked = [...firstPages, ...middlePages, ...lastPages].sort((a,b)=>a-b);
+          middlePages.forEach(n => {
+            fullGrid.appendChild(makeCard(n, 'Page '+n, allUnlocked));
+          });
+        }
+      }
+    } else {
+      // Show locked placeholders for middle pages (up to 4 visible)
+      const shown     = new Set([...firstPages, ...lastPages]);
+      const midSample = [];
+      for(let n=1; n<=totalPages && midSample.length<4; n++)
+        if(!shown.has(n)) midSample.push(n);
+      if(midSample.length > 0){
+        const lockSection = document.createElement('section');
+        lockSection.className = 'py-4';
+        lockSection.style.background = '#f5f5f5';
+        lockSection.innerHTML = '<div class="container"><div class="sec-divider"><span>🔒 Pages 4 – '+totalPages+' (Members Only)</span></div></div>';
+        const lockGrid = document.createElement('div');
+        lockGrid.className = 'container';
+        const grid = document.createElement('div');
+        grid.className = 'page-grid';
+        midSample.forEach(n => grid.appendChild(makeLockedCard(n, 'Page '+n)));
+        lockGrid.appendChild(grid);
+        lockSection.appendChild(lockGrid);
+        document.getElementById('paywall').insertAdjacentElement('beforebegin', lockSection);
+      }
+    }
+  }).catch(() => {
+    document.getElementById('firstGrid').innerHTML =
+      '<p class="text-danger text-center py-4 w-100">Could not load magazine preview.</p>';
+    document.getElementById('lastGrid').innerHTML = '';
   });
+
+  // ── Payment modal ────────────────────────────
+  function openPayModal(action, magId, plan, amount, label) {
+    document.getElementById('pmAction').value = action;
+    document.getElementById('pmMagId').value  = magId  || '';
+    document.getElementById('pmPlan').value   = plan   || '';
+    document.getElementById('payModalTitle').textContent  = label;
+    document.getElementById('payModalAmount').textContent = '₹' + Math.round(amount);
+    var modal = new bootstrap.Modal(document.getElementById('payMethodModal'));
+    modal.show();
+  }
+  function submitPay(method) {
+    document.getElementById('pmMethod').value = method;
+    document.getElementById('payMethodForm').submit();
+  }
+
+  // ── Plan switcher ─────────────────────────────
+  function selectPlan(plan) {
+    ['single','monthly','yearly'].forEach(p => {
+      const card = document.getElementById('planCard' + p.charAt(0).toUpperCase() + p.slice(1));
+      // normalise id: planSingle, planMonthly, planYearly
+    });
+    document.querySelectorAll('.plan-card').forEach(c => c.classList.remove('selected'));
+    const sel = document.getElementById('plan' + plan.charAt(0).toUpperCase() + plan.slice(1));
+    if(sel) sel.classList.add('selected');
+    ['Single','Monthly','Yearly'].forEach(p => {
+      const btn = document.getElementById('btn' + p);
+      if(btn) btn.style.display = 'none';
+    });
+    const activeBtn = document.getElementById('btn' + plan.charAt(0).toUpperCase() + plan.slice(1));
+    if(activeBtn) activeBtn.style.display = 'block';
+  }
 })();
 </script>
 {% endblock %}

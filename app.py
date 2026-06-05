@@ -349,6 +349,68 @@ class Customer(db.Model):
         return f"<Customer {self.email}>"
 
 
+class Magazine(db.Model):
+    __tablename__ = "magazines"
+    id           = db.Column(db.Integer, primary_key=True)
+    title        = db.Column(db.String(200), nullable=False)
+    issue_label  = db.Column(db.String(100), default="Issue 1")
+    description  = db.Column(db.Text)
+    pdf_filename = db.Column(db.String(200))          # file inside static/magazines/
+    single_price = db.Column(db.Float, default=49.0)  # one-time purchase price
+    is_free      = db.Column(db.Boolean, default=False)
+    active       = db.Column(db.Boolean, default=True)
+    published_at = db.Column(db.DateTime, default=datetime.utcnow)
+    purchases    = db.relationship("MagazinePurchase", backref="magazine", lazy=True)
+
+    def __repr__(self):
+        return f"<Magazine {self.title}>"
+
+
+class MagazineSubscription(db.Model):
+    __tablename__ = "magazine_subscriptions"
+    id                  = db.Column(db.Integer, primary_key=True)
+    customer_id         = db.Column(db.Integer, db.ForeignKey("customers.id"), nullable=False)
+    plan                = db.Column(db.String(20), nullable=False)  # 'monthly' | 'yearly'
+    start_date          = db.Column(db.DateTime, default=datetime.utcnow)
+    end_date            = db.Column(db.DateTime, nullable=False)
+    razorpay_order_id   = db.Column(db.String(100))
+    razorpay_payment_id = db.Column(db.String(100))
+    amount_paid         = db.Column(db.Float)
+    status              = db.Column(db.String(20), default="active")  # active | expired
+    created_at          = db.Column(db.DateTime, default=datetime.utcnow)
+    customer            = db.relationship("Customer", backref="mag_subscriptions")
+
+
+class MagazinePurchase(db.Model):
+    __tablename__ = "magazine_purchases"
+    id                  = db.Column(db.Integer, primary_key=True)
+    customer_id         = db.Column(db.Integer, db.ForeignKey("customers.id"), nullable=False)
+    magazine_id         = db.Column(db.Integer, db.ForeignKey("magazines.id"), nullable=False)
+    razorpay_order_id   = db.Column(db.String(100))
+    razorpay_payment_id = db.Column(db.String(100))
+    amount_paid         = db.Column(db.Float)
+    purchased_at        = db.Column(db.DateTime, default=datetime.utcnow)
+    customer            = db.relationship("Customer", backref="mag_purchases")
+
+
+class PendingMagPayment(db.Model):
+    """Temporary record created before payment — lets PayU callbacks find context without session."""
+    __tablename__ = "pending_mag_payments"
+    id              = db.Column(db.Integer, primary_key=True)
+    txn_ref         = db.Column(db.String(100), unique=True, nullable=False)
+    payment_type    = db.Column(db.String(20))   # 'buy' | 'subscribe'
+    mag_id          = db.Column(db.Integer, nullable=True)
+    plan            = db.Column(db.String(20), nullable=True)
+    customer_id     = db.Column(db.Integer, db.ForeignKey("customers.id"), nullable=False)
+    amount          = db.Column(db.Float)
+    payment_method  = db.Column(db.String(20))   # 'razorpay' | 'payu' | 'upi'
+    status          = db.Column(db.String(20), default="pending")   # pending/completed/failed
+    utr             = db.Column(db.String(100), nullable=True)
+    razorpay_order_id = db.Column(db.String(100), nullable=True)
+    created_at      = db.Column(db.DateTime, default=datetime.utcnow)
+    customer        = db.relationship("Customer", backref="pending_mag_payments")
+
+
 # ─────────────────────────────────────────────
 # Helpers
 # ─────────────────────────────────────────────
@@ -449,6 +511,44 @@ def generate_order_number():
     return "ISKCON" + datetime.now().strftime("%Y%m%d") + uuid.uuid4().hex[:6].upper()
 
 
+def get_magazine_access(customer_id, magazine_id):
+    """Return True if customer has full access to the given magazine."""
+    mag = Magazine.query.get(magazine_id)
+    if not mag or mag.is_free:
+        return True
+    if not customer_id:
+        return False
+    now = datetime.utcnow()
+    sub = MagazineSubscription.query.filter_by(
+        customer_id=customer_id, status="active"
+    ).filter(MagazineSubscription.end_date > now).first()
+    if sub:
+        return True
+    purchase = MagazinePurchase.query.filter_by(
+        customer_id=customer_id, magazine_id=magazine_id
+    ).first()
+    return purchase is not None
+
+
+def _create_razorpay_order(amount_inr, receipt, notes=None):
+    """Create a Razorpay order and return the order dict or raise."""
+    import requests as _req
+    payload = {
+        "amount":   int(amount_inr * 100),
+        "currency": "INR",
+        "receipt":  receipt,
+        "notes":    notes or {},
+    }
+    resp = _req.post(
+        "https://api.razorpay.com/v1/orders",
+        json=payload,
+        auth=(app.config["RAZORPAY_KEY_ID"], app.config["RAZORPAY_KEY_SECRET"]),
+        timeout=15,
+    )
+    resp.raise_for_status()
+    return resp.json()
+
+
 # ── Cart helpers (stored in Flask session) ──
 
 def get_cart():
@@ -546,6 +646,8 @@ def inject_globals():
         "upi_id":           app.config["UPI_ID"],
         "upi_name":         app.config["UPI_NAME"],
         "current_customer": get_current_customer(),
+        "now":              datetime.utcnow(),
+        "settings_get":     Setting.get,
     }
 
 
@@ -1390,12 +1492,376 @@ def order_track():
 
 
 # ─────────────────────────────────────────────
-# MAGAZINE ROUTE
+# MAGAZINE ROUTES
 # ─────────────────────────────────────────────
 
 @app.route("/magazine")
 def magazine():
-    return render_template("magazine.html")
+    magazines = Magazine.query.filter_by(active=True).order_by(Magazine.published_at.desc()).all()
+    if len(magazines) == 1:
+        return redirect(url_for("magazine_detail", mag_id=magazines[0].id))
+    return render_template("magazine_list.html", magazines=magazines)
+
+
+@app.route("/magazine/<int:mag_id>")
+def magazine_detail(mag_id):
+    mag        = Magazine.query.get_or_404(mag_id)
+    customer   = get_current_customer()
+    has_access = get_magazine_access(customer.id if customer else None, mag_id)
+    monthly_price = float(Setting.get("mag_monthly_price", "49"))
+    yearly_price  = float(Setting.get("mag_yearly_price",  "399"))
+    active_sub = None
+    if customer:
+        now = datetime.utcnow()
+        active_sub = MagazineSubscription.query.filter_by(
+            customer_id=customer.id, status="active"
+        ).filter(MagazineSubscription.end_date > now).first()
+    return render_template(
+        "magazine.html",
+        mag=mag,
+        has_access=has_access,
+        monthly_price=monthly_price,
+        yearly_price=yearly_price,
+        active_sub=active_sub,
+        razorpay_key=app.config["RAZORPAY_KEY_ID"],
+    )
+
+
+@app.route("/magazine/checkout", methods=["POST"])
+def magazine_checkout():
+    """Unified magazine checkout — handles buy (single issue) or subscribe (monthly/yearly)
+    across all three payment methods: UPI, PayU, Razorpay."""
+    action         = request.form.get("action")        # 'buy' | 'subscribe'
+    mag_id         = request.form.get("mag_id", type=int)
+    plan           = request.form.get("plan")          # 'monthly' | 'yearly'
+    payment_method = request.form.get("payment_method", "razorpay")
+
+    customer = get_current_customer()
+    if not customer:
+        flash("Please log in to complete this purchase.", "warning")
+        return redirect(url_for("customer_login", next=request.referrer or url_for("magazine")))
+
+    monthly_price = float(Setting.get("mag_monthly_price", "49"))
+    yearly_price  = float(Setting.get("mag_yearly_price",  "399"))
+
+    if action == "buy":
+        mag = Magazine.query.get_or_404(mag_id)
+        if mag.is_free or get_magazine_access(customer.id, mag_id):
+            flash("You already have access to this magazine.", "info")
+            return redirect(url_for("magazine_detail", mag_id=mag_id))
+        amount      = mag.single_price
+        description = f"{mag.title} — {mag.issue_label}"
+        txn_prefix  = f"MAGBUY{mag_id}"
+        back_url    = url_for("magazine_detail", mag_id=mag_id)
+    elif action == "subscribe":
+        amount      = monthly_price if plan == "monthly" else yearly_price
+        label       = "Monthly" if plan == "monthly" else "Yearly"
+        description = f"Magazine {label} Subscription"
+        txn_prefix  = f"MAGSUB{plan.upper()[:1]}"
+        back_url    = url_for("magazine")
+        mag_id      = None
+    else:
+        flash("Invalid action.", "danger")
+        return redirect(url_for("magazine"))
+
+    txn_ref = f"{txn_prefix}-C{customer.id}-{uuid.uuid4().hex[:6].upper()}"
+
+    # Persist pending payment so server callbacks (PayU) can resolve it
+    pending = PendingMagPayment(
+        txn_ref        = txn_ref,
+        payment_type   = action,
+        mag_id         = mag_id,
+        plan           = plan,
+        customer_id    = customer.id,
+        amount         = amount,
+        payment_method = payment_method,
+        status         = "pending",
+    )
+    db.session.add(pending)
+    db.session.commit()
+
+    # ── Razorpay ──────────────────────────────────────────────
+    if payment_method == "razorpay":
+        try:
+            rp_order = _create_razorpay_order(amount, txn_ref, {"type": action})
+            pending.razorpay_order_id = rp_order["id"]
+            db.session.commit()
+            return render_template(
+                "payment_razorpay_simple.html",
+                razorpay_key      = app.config["RAZORPAY_KEY_ID"],
+                razorpay_order_id = rp_order["id"],
+                amount            = int(amount * 100),
+                customer_name     = customer.name,
+                customer_email    = customer.email,
+                customer_phone    = customer.phone,
+                order_number      = txn_ref,
+                callback_url      = url_for("magazine_razorpay_verify", _external=True),
+                description       = description,
+            )
+        except Exception:
+            pending.status = "failed"
+            db.session.commit()
+            flash("Payment gateway error. Please try again.", "danger")
+            return redirect(back_url)
+
+    # ── PayU ──────────────────────────────────────────────────
+    if payment_method == "payu":
+        key       = app.config["PAYU_MERCHANT_KEY"]
+        salt      = app.config["PAYU_MERCHANT_SALT"]
+        env       = app.config["PAYU_ENV"]
+        amt_str   = f"{amount:.2f}"
+        firstname = (customer.name.split()[0] if customer.name else "Customer")[:50]
+        email_str = customer.email or ""
+        hash_val  = _payu_hash(key, txn_ref, amt_str, "ISKCON Magazine",
+                               firstname, email_str, salt)
+        payu_url  = ("https://test.payu.in/_payment" if env == "test"
+                     else "https://secure.payu.in/_payment")
+        return render_template(
+            "payment_payu.html",
+            order        = type("O", (), {
+                "order_number":   txn_ref,
+                "total_amount":   amount,
+                "customer_name":  customer.name,
+                "customer_phone": customer.phone,
+                "customer_email": customer.email,
+                "items":          [],
+            })(),
+            payu_url  = payu_url,
+            key       = key,
+            amount    = amt_str,
+            firstname = firstname,
+            email     = email_str,
+            phone     = customer.phone or "",
+            hash_val  = hash_val,
+            surl      = url_for("magazine_payu_success", _external=True),
+            furl      = url_for("magazine_payu_failure", _external=True),
+        )
+
+    # ── UPI ───────────────────────────────────────────────────
+    if payment_method == "upi":
+        return redirect(url_for("magazine_upi_qr", txn_ref=txn_ref))
+
+    flash("Unknown payment method.", "danger")
+    return redirect(back_url)
+
+
+@app.route("/magazine/razorpay/verify", methods=["POST"])
+def magazine_razorpay_verify():
+    data          = request.get_json() or request.form.to_dict()
+    rp_order_id   = data.get("razorpay_order_id")
+    rp_payment_id = data.get("razorpay_payment_id")
+    rp_signature  = data.get("razorpay_signature")
+
+    pending = PendingMagPayment.query.filter_by(
+        razorpay_order_id=rp_order_id, status="pending"
+    ).first()
+    if not pending:
+        return jsonify({"success": False, "error": "Payment record not found"}), 400
+
+    try:
+        msg      = f"{rp_order_id}|{rp_payment_id}".encode()
+        expected = hmac.new(app.config["RAZORPAY_KEY_SECRET"].encode(), msg, hashlib.sha256).hexdigest()
+        if not hmac.compare_digest(expected, rp_signature):
+            raise ValueError("Signature mismatch")
+        redirect_url = _complete_mag_payment(pending, rp_payment_id)
+        return jsonify({"success": True, "redirect": redirect_url})
+    except Exception:
+        pending.status = "failed"
+        db.session.commit()
+        return jsonify({"success": False, "error": "Verification failed"}), 400
+
+
+@app.route("/magazine/payu/success", methods=["POST"])
+def magazine_payu_success():
+    data    = request.form.to_dict()
+    salt    = app.config["PAYU_MERCHANT_SALT"]
+    txn_ref = data.get("txnid", "")
+    pending = PendingMagPayment.query.filter_by(txn_ref=txn_ref).first()
+    if pending:
+        expected = _payu_verify_hash(data, salt)
+        if expected == data.get("hash", "") and data.get("status") == "success":
+            redirect_url = _complete_mag_payment(pending, data.get("mihpayid", ""))
+            flash("Payment successful! Enjoy the magazine. 🙏", "success")
+            return redirect(redirect_url)
+        pending.status = "failed"
+        db.session.commit()
+    flash("Payment verification failed. Please contact support.", "danger")
+    return redirect(url_for("magazine"))
+
+
+@app.route("/magazine/payu/failure", methods=["POST"])
+def magazine_payu_failure():
+    data    = request.form.to_dict()
+    txn_ref = data.get("txnid", "")
+    pending = PendingMagPayment.query.filter_by(txn_ref=txn_ref).first()
+    if pending:
+        pending.status = "failed"
+        db.session.commit()
+    flash("Payment failed or cancelled. Please try again.", "danger")
+    return redirect(url_for("magazine"))
+
+
+@app.route("/magazine/upi/<txn_ref>")
+def magazine_upi_qr(txn_ref):
+    pending = PendingMagPayment.query.filter_by(txn_ref=txn_ref).first_or_404()
+    if pending.status == "completed":
+        flash("Payment already completed!", "success")
+        return redirect(_mag_success_redirect(pending))
+    upi_id   = app.config.get("UPI_ID", "")
+    upi_name = app.config.get("UPI_NAME", "ISKCON Book Store")
+    amount   = f"{pending.amount:.2f}"
+    upi_link = (f"upi://pay?pa={upi_id}&pn={upi_name.replace(' ', '%20')}"
+                f"&am={amount}&tn={txn_ref}&cu=INR")
+    qr_b64 = None
+    try:
+        import qrcode, io as _io
+        qr = qrcode.QRCode(version=1, error_correction=qrcode.constants.ERROR_CORRECT_M,
+                           box_size=8, border=4)
+        qr.add_data(upi_link)
+        qr.make(fit=True)
+        img = qr.make_image(fill_color="black", back_color="white")
+        buf = _io.BytesIO()
+        img.save(buf, format="PNG")
+        qr_b64 = base64.b64encode(buf.getvalue()).decode()
+    except Exception:
+        pass
+    return render_template("magazine_upi.html",
+                           pending=pending, upi_id=upi_id, upi_name=upi_name,
+                           amount=amount, upi_link=upi_link, qr_b64=qr_b64)
+
+
+@app.route("/magazine/upi/confirm/<txn_ref>", methods=["POST"])
+def magazine_upi_confirm(txn_ref):
+    pending = PendingMagPayment.query.filter_by(txn_ref=txn_ref).first_or_404()
+    utr = request.form.get("utr", "").strip()
+    if utr:
+        pending.utr    = utr
+        pending.status = "pending_verification"   # admin must manually confirm UPI
+        db.session.commit()
+        flash("Transaction ID submitted! We'll verify and activate your access shortly. 🙏", "success")
+    return redirect(_mag_success_redirect(pending))
+
+
+def _complete_mag_payment(pending, payment_id):
+    """Create MagazinePurchase or MagazineSubscription from a completed PendingMagPayment."""
+    if pending.payment_type == "buy":
+        db.session.add(MagazinePurchase(
+            customer_id         = pending.customer_id,
+            magazine_id         = pending.mag_id,
+            razorpay_payment_id = payment_id,
+            amount_paid         = pending.amount,
+        ))
+    else:
+        days = 30 if pending.plan == "monthly" else 365
+        db.session.add(MagazineSubscription(
+            customer_id         = pending.customer_id,
+            plan                = pending.plan,
+            end_date            = datetime.utcnow() + timedelta(days=days),
+            razorpay_payment_id = payment_id,
+            amount_paid         = pending.amount,
+            status              = "active",
+        ))
+    pending.status = "completed"
+    db.session.commit()
+    return _mag_success_redirect(pending)
+
+
+def _mag_success_redirect(pending):
+    if pending.payment_type == "buy" and pending.mag_id:
+        return url_for("magazine_detail", mag_id=pending.mag_id)
+    return url_for("magazine")
+
+
+@app.route("/magazine/<int:mag_id>/download")
+@customer_login_required
+def magazine_download(mag_id):
+    mag = Magazine.query.get_or_404(mag_id)
+    customer = get_current_customer()
+    if not get_magazine_access(customer.id, mag_id):
+        flash("Please purchase this issue or subscribe to download.", "warning")
+        return redirect(url_for("magazine_detail", mag_id=mag_id))
+    mag_dir = os.path.join(app.static_folder, "magazines")
+    return send_from_directory(mag_dir, mag.pdf_filename, as_attachment=True,
+                               download_name=f"{mag.title}.pdf")
+
+
+# ── Admin: Magazine management ──
+
+@app.route("/admin/magazines")
+@admin_required
+def admin_magazines():
+    magazines     = Magazine.query.order_by(Magazine.published_at.desc()).all()
+    subscriptions = MagazineSubscription.query.order_by(
+        MagazineSubscription.created_at.desc()).limit(50).all()
+    purchases     = MagazinePurchase.query.order_by(
+        MagazinePurchase.purchased_at.desc()).limit(50).all()
+    monthly_price = Setting.get("mag_monthly_price", "49")
+    yearly_price  = Setting.get("mag_yearly_price",  "399")
+    sub_enabled   = Setting.get("mag_subscription_enabled", "1")
+    return render_template(
+        "admin/magazines.html",
+        magazines=magazines,
+        subscriptions=subscriptions,
+        purchases=purchases,
+        monthly_price=monthly_price,
+        yearly_price=yearly_price,
+        sub_enabled=sub_enabled,
+        active_page="magazines",
+    )
+
+
+@app.route("/admin/magazines/add", methods=["POST"])
+@admin_required
+def admin_magazine_add():
+    mag = Magazine(
+        title        = request.form.get("title", "").strip(),
+        issue_label  = request.form.get("issue_label", "").strip(),
+        description  = request.form.get("description", "").strip(),
+        pdf_filename = request.form.get("pdf_filename", "").strip(),
+        single_price = float(request.form.get("single_price") or 49),
+        is_free      = request.form.get("is_free") == "1",
+        active       = True,
+    )
+    db.session.add(mag)
+    db.session.commit()
+    flash(f"Magazine '{mag.title}' added.", "success")
+    return redirect(url_for("admin_magazines"))
+
+
+@app.route("/admin/magazines/edit/<int:mag_id>", methods=["POST"])
+@admin_required
+def admin_magazine_edit(mag_id):
+    mag = Magazine.query.get_or_404(mag_id)
+    mag.title        = request.form.get("title", mag.title).strip()
+    mag.issue_label  = request.form.get("issue_label", mag.issue_label).strip()
+    mag.description  = request.form.get("description", mag.description or "").strip()
+    mag.pdf_filename = request.form.get("pdf_filename", mag.pdf_filename or "").strip()
+    mag.single_price = float(request.form.get("single_price") or mag.single_price)
+    mag.is_free      = request.form.get("is_free") == "1"
+    mag.active       = request.form.get("active") == "1"
+    db.session.commit()
+    flash("Magazine updated.", "success")
+    return redirect(url_for("admin_magazines"))
+
+
+@app.route("/admin/magazines/delete/<int:mag_id>", methods=["POST"])
+@admin_required
+def admin_magazine_delete(mag_id):
+    mag = Magazine.query.get_or_404(mag_id)
+    mag.active = False
+    db.session.commit()
+    flash("Magazine deactivated.", "success")
+    return redirect(url_for("admin_magazines"))
+
+
+@app.route("/admin/magazines/settings", methods=["POST"])
+@admin_required
+def admin_magazine_settings():
+    Setting.set("mag_monthly_price",        request.form.get("monthly_price", "49"))
+    Setting.set("mag_yearly_price",         request.form.get("yearly_price",  "399"))
+    Setting.set("mag_subscription_enabled", "1" if request.form.get("sub_enabled") else "0")
+    flash("Subscription pricing updated.", "success")
+    return redirect(url_for("admin_magazines"))
 
 
 # ─────────────────────────────────────────────
@@ -3036,6 +3502,26 @@ def init_db():
                     print(f"[MIGRATE] Added column {table}.{column}")
             except Exception:
                 pass  # Column already exists — ignore
+
+        # Seed first magazine if none exist
+        try:
+            if Magazine.query.count() == 0:
+                db.session.add(Magazine(
+                    title="The God Question",
+                    issue_label="Issue 1 · 2025",
+                    description="Explore the most profound question ever asked — Does God exist? "
+                                "This special magazine examines science, philosophy, and Vedic "
+                                "wisdom to shine light on the ultimate truth.",
+                    pdf_filename="the-god-question.pdf",
+                    single_price=49.0,
+                    is_free=False,
+                    active=True,
+                ))
+                db.session.commit()
+                print("[SEED] Added first magazine: The God Question")
+        except Exception as e:
+            db.session.rollback()
+            print(f"[WARNING] Magazine seed failed: {e}")
 
         # Backfill any NULL is_deleted values so filter_by(is_deleted=False) works correctly
         try:
