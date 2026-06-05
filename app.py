@@ -3508,7 +3508,7 @@ def init_db():
             if Magazine.query.count() == 0:
                 db.session.add(Magazine(
                     title="The God Question",
-                    issue_label="Issue 1 · 2025",
+                    issue_label="Issue 1 · 2026",
                     description="Explore the most profound question ever asked — Does God exist? "
                                 "This special magazine examines science, philosophy, and Vedic "
                                 "wisdom to shine light on the ultimate truth.",
@@ -3522,6 +3522,17 @@ def init_db():
         except Exception as e:
             db.session.rollback()
             print(f"[WARNING] Magazine seed failed: {e}")
+
+        # Patch existing magazine issue_label from 2025 → 2026
+        try:
+            mag = Magazine.query.filter_by(issue_label="Issue 1 · 2025").first()
+            if mag:
+                mag.issue_label = "Issue 1 · 2026"
+                db.session.commit()
+                print("[MIGRATE] Updated magazine issue_label to 2026")
+        except Exception as e:
+            db.session.rollback()
+            print(f"[WARNING] Magazine label patch failed: {e}")
 
         # Backfill any NULL is_deleted values so filter_by(is_deleted=False) works correctly
         try:
