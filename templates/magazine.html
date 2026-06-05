@@ -320,19 +320,42 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script>
+/* Load PDF.js — try cdnjs, fall back to unpkg */
+(function(){
+  function loadScript(src, cb) {
+    var s = document.createElement('script'); s.src = src;
+    s.onload = cb; s.onerror = function(){ cb(true); };
+    document.head.appendChild(s);
+  }
+  loadScript('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js', function(err){
+    if(err) loadScript('https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.min.js', initPdfViewer);
+    else initPdfViewer();
+  });
+})();
+</script>
+<script>
+function initPdfViewer(){
 (function(){
   'use strict';
 
   const PDF_URL   = "{{ url_for('static', filename='magazines/' + mag.pdf_filename) }}";
   const HAS_ACCESS = {{ 'true' if has_access else 'false' }};
 
-  pdfjsLib.GlobalWorkerOptions.workerSrc =
-    'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  /* Try CDN worker first, fall back to disabling worker (main-thread) */
+  try {
+    pdfjsLib.GlobalWorkerOptions.workerSrc =
+      'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  } catch(e) { /* ignore */ }
 
   let pdfDoc = null, totalPages = 0;
   let lbPages = [], lbIdx = 0;
+
+  // ── Show spinner in a grid ───────────────────
+  function showLoading(gridId) {
+    const g = document.getElementById(gridId);
+    if(g) g.innerHTML = '<div class="page-loading w-100"><div class="spinner"></div> Loading pages…</div>';
+  }
 
   // ── Render page into canvas ──────────────────
   async function renderPage(n, canvas, scale) {
@@ -347,13 +370,21 @@
   function makeCard(n, label, ctx) {
     const card   = document.createElement('div');
     card.className = 'page-card';
+    const spinner = document.createElement('div');
+    spinner.style.cssText = 'min-height:280px;display:flex;align-items:center;justify-content:center;';
+    spinner.innerHTML = '<div class="spinner"></div>';
     const canvas = document.createElement('canvas');
+    canvas.style.display = 'none';
     const lbl    = document.createElement('div');
     lbl.className = 'page-label';
     lbl.textContent = label;
+    card.appendChild(spinner);
     card.appendChild(canvas);
     card.appendChild(lbl);
-    renderPage(n, canvas, 1.35);
+    renderPage(n, canvas, 1.35).then(function(){
+      spinner.remove();
+      canvas.style.display = 'block';
+    }).catch(function(){ spinner.innerHTML = '<div style="color:#aaa;padding:20px;font-size:.8rem;">⚠ Page '+n+'</div>'; });
     card.addEventListener('click', () => { lbPages = ctx; lbIdx = ctx.indexOf(n); openLb(lbPages[lbIdx]); });
     return card;
   }
@@ -408,7 +439,9 @@
   });
 
   // ── Load PDF ─────────────────────────────────
-  pdfjsLib.getDocument(PDF_URL).promise.then(doc => {
+  showLoading('firstGrid');
+  showLoading('lastGrid');
+  pdfjsLib.getDocument({ url: PDF_URL, rangeChunkSize: 65536, disableStream: false, disableAutoFetch: false }).promise.then(doc => {
     pdfDoc     = doc;
     totalPages = doc.numPages;
 
@@ -476,10 +509,14 @@
         document.getElementById('paywall').insertAdjacentElement('beforebegin', lockSection);
       }
     }
-  }).catch(() => {
+  }).catch(function(err) {
+    var msg = err && err.message ? err.message : String(err);
     document.getElementById('firstGrid').innerHTML =
-      '<p class="text-danger text-center py-4 w-100">Could not load magazine preview.</p>';
-    document.getElementById('lastGrid').innerHTML = '';
+      '<div class="text-center py-4 w-100" style="color:#c0392b;">' +
+      '⚠ Preview could not load.<br><small style="color:#888;">'+msg+'</small><br>' +
+      '<a href="'+ PDF_URL +'" target="_blank" class="btn btn-sm btn-outline-secondary mt-2">Open PDF directly</a></div>';
+    var lg = document.getElementById('lastGrid');
+    if(lg) lg.innerHTML = '';
   });
 
   // ── Payment modal ────────────────────────────
@@ -514,5 +551,6 @@
     if(activeBtn) activeBtn.style.display = 'block';
   }
 })();
+} // end initPdfViewer
 </script>
 {% endblock %}
