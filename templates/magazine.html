@@ -101,15 +101,13 @@
     <div class="mag-badge">ISKCON Publication{% if mag.issue_label %} &nbsp;·&nbsp; {{ mag.issue_label }}{% endif %}</div>
     <h1>{{ mag.title.split()[0] }} <span>{{ mag.title.split()[1:] | join(' ') }}</span></h1>
     <p>{{ mag.description or "Explore the most profound questions of existence through science, philosophy and Vedic wisdom." }}</p>
-    {% if can_download %}
-    <a href="{{ url_for('magazine_download', mag_id=mag.id) }}" class="btn btn-gold btn-lg px-5 me-2">
-      ⬇ Download PDF
-    </a>
+    {% if has_access %}
+    <span class="btn btn-gold btn-lg px-5 me-2" style="cursor:default;">✅ Full Access Unlocked</span>
     {% elif current_customer %}
-    {# Logged in but not paid — scroll to pricing on same page #}
+    {# Logged in but not paid — scroll to pricing #}
     <a href="#paywall" onclick="event.preventDefault();document.getElementById('paywall').scrollIntoView({behavior:'smooth',block:'start'});" class="btn btn-gold btn-lg px-5 me-2">📖 Get Full Access</a>
     {% else %}
-    {# Not logged in — go to login first, then come back here to purchase #}
+    {# Not logged in — go to login first #}
     <a href="{{ url_for('customer_login', next=request.url) }}" class="btn btn-gold btn-lg px-5 me-2">🔐 Login to Get Access</a>
     {% endif %}
     <a href="{{ url_for('books') }}" class="btn btn-outline-light px-4">📚 Browse Books</a>

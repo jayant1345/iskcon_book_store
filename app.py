@@ -1507,10 +1507,8 @@ def magazine():
 def magazine_detail(mag_id):
     mag          = Magazine.query.get_or_404(mag_id)
     customer     = get_current_customer()
-    paid_access  = get_magazine_access(customer.id if customer else None, mag_id)
-    # Admin can preview all pages but cannot download unless actually paid
-    has_access   = bool(session.get("admin_logged_in")) or paid_access
-    can_download = paid_access   # download requires real purchase/subscription
+    # Only real purchase/subscription grants access — no admin override on customer page
+    has_access   = get_magazine_access(customer.id if customer else None, mag_id)
     monthly_price = float(Setting.get("mag_monthly_price", "49"))
     yearly_price  = float(Setting.get("mag_yearly_price",  "399"))
     active_sub = None
@@ -1523,7 +1521,6 @@ def magazine_detail(mag_id):
         "magazine.html",
         mag=mag,
         has_access=has_access,
-        can_download=can_download,
         monthly_price=monthly_price,
         yearly_price=yearly_price,
         active_sub=active_sub,
