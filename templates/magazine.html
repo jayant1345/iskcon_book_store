@@ -342,8 +342,9 @@ function initPdfViewer(){
   const FULL_PDF_URL    = "{{ url_for('static', filename='magazines/' + mag.pdf_filename) }}";
   const PREVIEW_PDF_URL = "{{ url_for('static', filename='magazines/' + mag.pdf_filename.replace('.pdf', '-preview.pdf')) }}";
   const HAS_ACCESS = {{ 'true' if has_access else 'false' }};
-  /* Use tiny preview PDF (first 3 + last 2 pages only) for the grid — loads ~10x faster */
-  const PDF_URL = HAS_ACCESS ? FULL_PDF_URL : PREVIEW_PDF_URL;
+  /* Always use the small preview PDF for the page grid — loads instantly.
+     Full PDF is only used when rendering ALL pages for paid/admin users. */
+  const PDF_URL = PREVIEW_PDF_URL;
 
   /* Try CDN worker first, fall back to disabling worker (main-thread) */
   try {
@@ -479,21 +480,28 @@ function initPdfViewer(){
     }
 
     if(HAS_ACCESS){
-      // Show all remaining pages
-      const shown = new Set([...firstPages, ...lastPages]);
-      const middlePages = [];
-      for(let n=1; n<=totalPages; n++) if(!shown.has(n)) middlePages.push(n);
+      // Full access: load all pages from the FULL PDF
       const fullGrid = document.getElementById('fullPageGrid');
       if(fullGrid){
-        fullGrid.innerHTML = '';
-        if(middlePages.length === 0){
-          fullGrid.innerHTML = '<p class="text-muted text-center py-3">You\'ve seen all pages in the preview above!</p>';
-        } else {
-          const allUnlocked = [...firstPages, ...middlePages, ...lastPages].sort((a,b)=>a-b);
-          middlePages.forEach(n => {
-            fullGrid.appendChild(makeCard(n, 'Page '+n, allUnlocked));
-          });
-        }
+        fullGrid.innerHTML = '<div class="page-loading w-100"><div class="spinner"></div> Loading full magazine…</div>';
+        pdfjsLib.getDocument({ url: FULL_PDF_URL, rangeChunkSize: 65536 }).promise.then(function(fullDoc){
+          pdfDoc = fullDoc;
+          const realTotal = fullDoc.numPages;
+          const shownInPreview = new Set([1,2,3,realTotal-1,realTotal]);
+          const middlePages = [];
+          for(let n=1; n<=realTotal; n++) if(!shownInPreview.has(n)) middlePages.push(n);
+          fullGrid.innerHTML = '';
+          if(middlePages.length === 0){
+            fullGrid.innerHTML = '<p class="text-muted text-center py-3">All pages shown in preview!</p>';
+          } else {
+            const allUnlocked = Array.from({length:realTotal},(_,i)=>i+1);
+            middlePages.forEach(function(n){
+              fullGrid.appendChild(makeCard(n, 'Page '+n, allUnlocked));
+            });
+          }
+        }).catch(function(e){
+          fullGrid.innerHTML = '<p class="text-danger text-center py-3">Could not load full magazine: '+e.message+'</p>';
+        });
       }
     } else {
       // Show locked placeholders for middle pages (up to 4 visible)
