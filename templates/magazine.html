@@ -105,8 +105,12 @@
     <a href="{{ url_for('magazine_download', mag_id=mag.id) }}" class="btn btn-gold btn-lg px-5 me-2">
       ⬇ Download PDF
     </a>
-    {% else %}
+    {% elif current_customer %}
+    {# Logged in but not paid — scroll to pricing on same page #}
     <a href="#paywall" onclick="event.preventDefault();document.getElementById('paywall').scrollIntoView({behavior:'smooth',block:'start'});" class="btn btn-gold btn-lg px-5 me-2">📖 Get Full Access</a>
+    {% else %}
+    {# Not logged in — go to login first, then come back here to purchase #}
+    <a href="{{ url_for('customer_login', next=request.url) }}" class="btn btn-gold btn-lg px-5 me-2">🔐 Login to Get Access</a>
     {% endif %}
     <a href="{{ url_for('books') }}" class="btn btn-outline-light px-4">📚 Browse Books</a>
   </div>
@@ -179,7 +183,20 @@
         {% endif %}
       </div>
 
-      <!-- CTA button triggers payment modal -->
+      <!-- CTA: not logged in → login first; logged in → payment modal -->
+      {% if not current_customer %}
+      <div style="text-align:center;">
+        <p style="color:rgba(255,255,255,.7);margin-bottom:16px;font-size:.95rem;">
+          Please login or create an account to purchase.
+        </p>
+        <a href="{{ url_for('customer_login', next=request.url) }}"
+           class="btn btn-gold btn-lg px-5 me-2">🔐 Login to Purchase</a>
+        <a href="{{ url_for('customer_register', next=request.url) }}"
+           class="btn btn-outline-light px-4">📝 Create Account</a>
+      </div>
+
+      {% else %}
+      {# Logged-in customer — show payment buttons #}
       {% if not mag.is_free %}
       <div id="btnSingle">
         <button type="button" class="btn btn-gold btn-lg px-5"
@@ -202,6 +219,7 @@
           💳 Subscribe Yearly — ₹{{ yearly_price|int }}/yr
         </button>
       </div>
+      {% endif %}
       {% endif %}
 
       <div class="paywall-divider">or</div>
