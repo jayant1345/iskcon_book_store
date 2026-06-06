@@ -106,7 +106,7 @@
       ⬇ Download PDF
     </a>
     {% else %}
-    <a href="#paywall" class="btn btn-gold btn-lg px-5 me-2">📖 Get Full Access</a>
+    <a href="#paywall" onclick="event.preventDefault();document.getElementById('paywall').scrollIntoView({behavior:'smooth',block:'start'});" class="btn btn-gold btn-lg px-5 me-2">📖 Get Full Access</a>
     {% endif %}
     <a href="{{ url_for('books') }}" class="btn btn-outline-light px-4">📚 Browse Books</a>
   </div>
