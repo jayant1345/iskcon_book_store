@@ -101,7 +101,7 @@
     <div class="mag-badge">ISKCON Publication{% if mag.issue_label %} &nbsp;·&nbsp; {{ mag.issue_label }}{% endif %}</div>
     <h1>{{ mag.title.split()[0] }} <span>{{ mag.title.split()[1:] | join(' ') }}</span></h1>
     <p>{{ mag.description or "Explore the most profound questions of existence through science, philosophy and Vedic wisdom." }}</p>
-    {% if has_access %}
+    {% if can_download %}
     <a href="{{ url_for('magazine_download', mag_id=mag.id) }}" class="btn btn-gold btn-lg px-5 me-2">
       ⬇ Download PDF
     </a>

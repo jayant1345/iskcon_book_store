@@ -1505,9 +1505,12 @@ def magazine():
 
 @app.route("/magazine/<int:mag_id>")
 def magazine_detail(mag_id):
-    mag        = Magazine.query.get_or_404(mag_id)
-    customer   = get_current_customer()
-    has_access = session.get("admin_logged_in") or get_magazine_access(customer.id if customer else None, mag_id)
+    mag          = Magazine.query.get_or_404(mag_id)
+    customer     = get_current_customer()
+    paid_access  = get_magazine_access(customer.id if customer else None, mag_id)
+    # Admin can preview all pages but cannot download unless actually paid
+    has_access   = bool(session.get("admin_logged_in")) or paid_access
+    can_download = paid_access   # download requires real purchase/subscription
     monthly_price = float(Setting.get("mag_monthly_price", "49"))
     yearly_price  = float(Setting.get("mag_yearly_price",  "399"))
     active_sub = None
@@ -1520,6 +1523,7 @@ def magazine_detail(mag_id):
         "magazine.html",
         mag=mag,
         has_access=has_access,
+        can_download=can_download,
         monthly_price=monthly_price,
         yearly_price=yearly_price,
         active_sub=active_sub,
@@ -1777,8 +1781,7 @@ def _mag_success_redirect(pending):
 def magazine_download(mag_id):
     mag = Magazine.query.get_or_404(mag_id)
     customer = get_current_customer()
-    is_admin = session.get("admin_logged_in")
-    if not is_admin and not get_magazine_access(customer.id if customer else None, mag_id):
+    if not get_magazine_access(customer.id if customer else None, mag_id):
         flash("Please purchase this issue or subscribe to download.", "warning")
         return redirect(url_for("magazine_detail", mag_id=mag_id))
     mag_dir = os.path.join(app.static_folder, "magazines")
