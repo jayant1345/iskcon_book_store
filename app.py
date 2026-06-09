@@ -3546,6 +3546,11 @@ def init_db():
             ("orders",             "donation_recipient",         "VARCHAR(200)"),
             ("orders",             "donation_recipient_address", "TEXT"),
             ("orders",             "donor_message",              "TEXT"),
+            ("whatsapp_inquiries", "status",                     "VARCHAR(20) DEFAULT 'open'"),
+            ("admin_sessions",     "token",                      "VARCHAR(64)"),
+            ("admin_sessions",     "ip_address",                 "VARCHAR(45)"),
+            ("admin_sessions",     "login_at",                   "TIMESTAMP"),
+            ("admin_sessions",     "last_seen",                  "TIMESTAMP"),
         ]
         for table, column, col_type in migrations:
             # Use a fresh connection per column so a failed ALTER doesn't
