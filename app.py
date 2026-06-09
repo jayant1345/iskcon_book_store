@@ -2125,10 +2125,16 @@ def admin_logout():
 @admin_required
 def admin_whatsapp_inquiries():
     page = request.args.get("page", 1, type=int)
-    inquiries = (WhatsAppInquiry.query
-                 .filter_by(status="open")
-                 .order_by(WhatsAppInquiry.created_at.desc())
-                 .paginate(page=page, per_page=50, error_out=False))
+    try:
+        inquiries = (WhatsAppInquiry.query
+                     .filter_by(status="open")
+                     .order_by(WhatsAppInquiry.created_at.desc())
+                     .paginate(page=page, per_page=50, error_out=False))
+    except Exception:
+        db.session.rollback()
+        inquiries = (WhatsAppInquiry.query
+                     .order_by(WhatsAppInquiry.created_at.desc())
+                     .paginate(page=page, per_page=50, error_out=False))
     return render_template("admin/whatsapp_inquiries.html",
                            inquiries=inquiries,
                            active_page="whatsapp")
@@ -2138,9 +2144,13 @@ def admin_whatsapp_inquiries():
 @admin_required
 def admin_whatsapp_dismiss(inq_id):
     inq = WhatsAppInquiry.query.get_or_404(inq_id)
-    db.session.delete(inq)
-    db.session.commit()
-    flash("Lead removed.", "info")
+    try:
+        db.session.delete(inq)
+        db.session.commit()
+        flash("Lead removed.", "info")
+    except Exception:
+        db.session.rollback()
+        flash("Could not remove lead.", "danger")
     return redirect(url_for("admin_whatsapp_inquiries"))
 
 
@@ -2148,12 +2158,15 @@ def admin_whatsapp_dismiss(inq_id):
 @admin_required
 def admin_whatsapp_convert(inq_id):
     inq = WhatsAppInquiry.query.get_or_404(inq_id)
-    inq.status = "converted"
-    db.session.commit()
-    return redirect(url_for("admin_create_manual_order",
-                            name=inq.customer_name or "",
-                            phone=inq.customer_phone or "",
-                            note=f"WhatsApp enquiry for: {inq.book_title or 'general'}"))
+    try:
+        inq.status = "converted"
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+    name  = inq.customer_name  or ""
+    phone = inq.customer_phone or ""
+    note  = f"WhatsApp enquiry for: {inq.book_title or 'general'}"
+    return redirect(url_for("admin_create_manual_order", name=name, phone=phone, note=note))
 
 
 @app.route("/admin/test-email", methods=["GET", "POST"])
