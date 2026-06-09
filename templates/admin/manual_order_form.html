@@ -33,11 +33,11 @@
                 <div class="row g-3">
                     <div class="col-md-6">
                         <label class="form-label">Customer Name *</label>
-                        <input type="text" name="customer_name" class="form-control" required placeholder="Full name">
+                        <input type="text" name="customer_name" class="form-control" required placeholder="Full name" value="{{ request.args.get('name', '') }}">
                     </div>
                     <div class="col-md-6">
                         <label class="form-label">Phone *</label>
-                        <input type="text" name="customer_phone" class="form-control" required placeholder="10-digit mobile">
+                        <input type="text" name="customer_phone" class="form-control" required placeholder="10-digit mobile" value="{{ request.args.get('phone', '') }}">
                     </div>
                     <div class="col-12">
                         <label class="form-label">Email <small class="text-muted">(optional)</small></label>
@@ -172,7 +172,7 @@
             </div>
             <div class="card-body">
                 <textarea name="notes" class="form-control" rows="4"
-                          placeholder="e.g. WhatsApp order from +91 98765 43210 on 30 May 2026. Customer confirmed on call."></textarea>
+                          placeholder="e.g. WhatsApp order from +91 98765 43210 on 30 May 2026. Customer confirmed on call.">{{ request.args.get('note', '') }}</textarea>
                 <small class="text-muted">Internal note — not shown to customer</small>
             </div>
         </div>

@@ -259,6 +259,7 @@ class WhatsAppInquiry(db.Model):
     customer_name  = db.Column(db.String(200))
     customer_phone = db.Column(db.String(20))
     created_at     = db.Column(db.DateTime, default=datetime.utcnow)
+    status         = db.Column(db.String(20), default="open")
 
 
 class AdminSession(db.Model):
@@ -2125,11 +2126,34 @@ def admin_logout():
 def admin_whatsapp_inquiries():
     page = request.args.get("page", 1, type=int)
     inquiries = (WhatsAppInquiry.query
+                 .filter_by(status="open")
                  .order_by(WhatsAppInquiry.created_at.desc())
                  .paginate(page=page, per_page=50, error_out=False))
     return render_template("admin/whatsapp_inquiries.html",
                            inquiries=inquiries,
                            active_page="whatsapp")
+
+
+@app.route("/admin/whatsapp-inquiries/<int:inq_id>/dismiss", methods=["POST"])
+@admin_required
+def admin_whatsapp_dismiss(inq_id):
+    inq = WhatsAppInquiry.query.get_or_404(inq_id)
+    db.session.delete(inq)
+    db.session.commit()
+    flash("Lead removed.", "info")
+    return redirect(url_for("admin_whatsapp_inquiries"))
+
+
+@app.route("/admin/whatsapp-inquiries/<int:inq_id>/convert")
+@admin_required
+def admin_whatsapp_convert(inq_id):
+    inq = WhatsAppInquiry.query.get_or_404(inq_id)
+    inq.status = "converted"
+    db.session.commit()
+    return redirect(url_for("admin_create_manual_order",
+                            name=inq.customer_name or "",
+                            phone=inq.customer_phone or "",
+                            note=f"WhatsApp enquiry for: {inq.book_title or 'general'}"))
 
 
 @app.route("/admin/test-email", methods=["GET", "POST"])

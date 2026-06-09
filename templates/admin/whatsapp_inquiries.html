@@ -55,12 +55,25 @@
           </td>
           <td><small>{{ inq.created_at | ist('%d %b %Y, %I:%M %p') }}</small></td>
           <td>
-            {% if inq.customer_phone %}
-            <a href="https://wa.me/{{ inq.customer_phone|replace('+','')|replace(' ','')|replace('-','') }}?text={{ ('🙏 Hare Krishna! Regarding your enquiry for ' + (inq.book_title or 'our books') + ' — how can we help you?')|urlencode }}"
-               target="_blank" class="btn btn-sm btn-success">
-              <i class="fab fa-whatsapp me-1"></i>Reply
-            </a>
-            {% endif %}
+            <div class="d-flex gap-1 flex-wrap">
+              {% if inq.customer_phone %}
+              <a href="https://wa.me/{{ inq.customer_phone|replace('+','')|replace(' ','')|replace('-','') }}?text={{ ('🙏 Hare Krishna! Regarding your enquiry for ' + (inq.book_title or 'our books') + ' — how can we help you?')|urlencode }}"
+                 target="_blank" class="btn btn-sm btn-success">
+                <i class="fab fa-whatsapp me-1"></i>Reply
+              </a>
+              {% endif %}
+              <a href="{{ url_for('admin_whatsapp_convert', inq_id=inq.id) }}"
+                 class="btn btn-sm btn-primary"
+                 title="Mark as converted and open manual order form">
+                <i class="fas fa-check me-1"></i>Convert
+              </a>
+              <form method="POST" action="{{ url_for('admin_whatsapp_dismiss', inq_id=inq.id) }}"
+                    onsubmit="return confirm('Remove this lead?')">
+                <button type="submit" class="btn btn-sm btn-outline-danger" title="Dismiss / delete this lead">
+                  <i class="fas fa-trash"></i>
+                </button>
+              </form>
+            </div>
           </td>
         </tr>
         {% else %}
