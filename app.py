@@ -6,6 +6,7 @@ A production-ready e-commerce platform for ISKCON books.
 
 import os
 import uuid
+import secrets
 import hmac
 import hashlib
 import json
@@ -258,6 +259,15 @@ class WhatsAppInquiry(db.Model):
     customer_name  = db.Column(db.String(200))
     customer_phone = db.Column(db.String(20))
     created_at     = db.Column(db.DateTime, default=datetime.utcnow)
+
+
+class AdminSession(db.Model):
+    __tablename__ = "admin_sessions"
+    id         = db.Column(db.Integer, primary_key=True)
+    token      = db.Column(db.String(64), unique=True, nullable=False)
+    ip_address = db.Column(db.String(45), nullable=False)
+    login_at   = db.Column(db.DateTime, default=datetime.utcnow)
+    last_seen  = db.Column(db.DateTime, default=datetime.utcnow)
 
 
 class StockReceipt(db.Model):
@@ -607,6 +617,12 @@ def admin_required(f):
         if not session.get("admin_logged_in"):
             flash("Please login to access the admin panel.", "warning")
             return redirect(url_for("admin_login"))
+        token = session.get("admin_session_token")
+        if token:
+            rec = AdminSession.query.filter_by(token=token).first()
+            if rec:
+                rec.last_seen = datetime.utcnow()
+                db.session.commit()
         return f(*args, **kwargs)
     return decorated
 
@@ -2082,6 +2098,11 @@ def admin_login():
                 check_password_hash(app.config["ADMIN_PASSWORD_HASH"], password)):
             session["admin_logged_in"] = True
             session.permanent = True
+            token = secrets.token_hex(32)
+            session["admin_session_token"] = token
+            ip = request.headers.get("X-Forwarded-For", request.remote_addr).split(",")[0].strip()
+            db.session.add(AdminSession(token=token, ip_address=ip))
+            db.session.commit()
             flash("Welcome back, Admin! 🙏", "success")
             return redirect(url_for("admin_dashboard"))
         flash("Invalid credentials.", "danger")
@@ -2090,6 +2111,10 @@ def admin_login():
 
 @app.route("/admin/logout")
 def admin_logout():
+    token = session.pop("admin_session_token", None)
+    if token:
+        AdminSession.query.filter_by(token=token).delete()
+        db.session.commit()
     session.pop("admin_logged_in", None)
     flash("Logged out.", "info")
     return redirect(url_for("admin_login"))
@@ -2165,6 +2190,10 @@ def admin_dashboard():
     temple_pending_payment = db.session.query(db.func.sum(StockReceipt.total_payment))\
                                .filter(StockReceipt.payment_status == "pending").scalar() or 0
     recent_receipts     = StockReceipt.query.order_by(StockReceipt.received_date.desc()).limit(5).all()
+    cutoff = datetime.utcnow() - timedelta(minutes=30)
+    AdminSession.query.filter(AdminSession.last_seen < cutoff).delete()
+    db.session.commit()
+    active_sessions = AdminSession.query.order_by(AdminSession.last_seen.desc()).all()
     return render_template("admin/dashboard.html",
                            total_orders=total_orders,
                            total_revenue=total_revenue,
@@ -2174,7 +2203,8 @@ def admin_dashboard():
                            low_stock=low_stock,
                            temple_books_total=temple_books_total,
                            temple_pending_payment=temple_pending_payment,
-                           recent_receipts=recent_receipts)
+                           recent_receipts=recent_receipts,
+                           active_sessions=active_sessions)
 
 
 # ── Admin: Books ──
