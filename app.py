@@ -619,11 +619,22 @@ def admin_required(f):
             flash("Please login to access the admin panel.", "warning")
             return redirect(url_for("admin_login"))
         token = session.get("admin_session_token")
-        if token:
-            rec = AdminSession.query.filter_by(token=token).first()
-            if rec:
-                rec.last_seen = datetime.utcnow()
+        try:
+            if token:
+                rec = AdminSession.query.filter_by(token=token).first()
+                if rec:
+                    rec.last_seen = datetime.utcnow()
+                    db.session.commit()
+                else:
+                    token = None
+            if not token:
+                token = secrets.token_hex(32)
+                session["admin_session_token"] = token
+                ip = request.headers.get("X-Forwarded-For", request.remote_addr).split(",")[0].strip()
+                db.session.add(AdminSession(token=token, ip_address=ip))
                 db.session.commit()
+        except Exception:
+            db.session.rollback()
         return f(*args, **kwargs)
     return decorated
 
