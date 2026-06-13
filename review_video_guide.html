@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ISKCON Book Store — Review Video Upload Guide</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    max-width: 780px;
+    margin: 40px auto;
+    padding: 0 24px;
+    color: #222;
+    line-height: 1.7;
+  }
+  .header {
+    background: #ff6600;
+    color: white;
+    padding: 28px 32px;
+    border-radius: 10px;
+    margin-bottom: 32px;
+    text-align: center;
+  }
+  .header h1 { margin: 0 0 6px 0; font-size: 1.7rem; }
+  .header p  { margin: 0; opacity: 0.9; font-size: 0.95rem; }
+  h2 {
+    background: #fff3e0;
+    border-left: 5px solid #ff6600;
+    padding: 10px 16px;
+    border-radius: 0 8px 8px 0;
+    margin-top: 36px;
+    font-size: 1.1rem;
+    color: #333;
+  }
+  .step {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+    margin: 14px 0;
+  }
+  .step-num {
+    background: #ff6600;
+    color: white;
+    font-weight: bold;
+    font-size: 0.9rem;
+    min-width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 2px;
+    flex-shrink: 0;
+  }
+  .step-text { flex: 1; }
+  .step-text strong { display: block; margin-bottom: 2px; }
+  .note {
+    background: #fff8e1;
+    border: 1px solid #ffe082;
+    border-radius: 8px;
+    padding: 14px 18px;
+    margin: 16px 0;
+    font-size: 0.92rem;
+  }
+  .note b { color: #e65100; }
+  .important {
+    background: #fce4ec;
+    border: 1px solid #f48fb1;
+    border-radius: 8px;
+    padding: 14px 18px;
+    margin: 16px 0;
+  }
+  .code {
+    background: #f5f5f5;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    padding: 10px 14px;
+    font-family: monospace;
+    font-size: 0.88rem;
+    margin: 8px 0;
+    white-space: pre;
+  }
+  .visibility-box {
+    background: #f5f5f5;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    padding: 14px 20px;
+    margin: 10px 0;
+    font-family: monospace;
+    font-size: 0.9rem;
+  }
+  .visibility-box .selected { color: #ff6600; font-weight: bold; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0;
+  }
+  th {
+    background: #ff6600;
+    color: white;
+    padding: 10px 14px;
+    text-align: left;
+  }
+  td {
+    padding: 10px 14px;
+    border-bottom: 1px solid #eee;
+  }
+  tr:nth-child(even) td { background: #fafafa; }
+  .footer {
+    text-align: center;
+    color: #888;
+    font-size: 0.82rem;
+    margin-top: 48px;
+    padding-top: 16px;
+    border-top: 1px solid #eee;
+  }
+  @media print {
+    body { margin: 20px auto; }
+    .header { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    h2 { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    th { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .step-num { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>&#127897; Review Video Upload Guide</h1>
+  <p>ISKCON Book Store — Admin Instructions</p>
+</div>
+
+<div class="note">
+  <b>Purpose:</b> This guide explains how to record a devotee review video, upload it to YouTube,
+  and add it to a book page on the ISKCON Book Store website.
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<h2>What You Need</h2>
+
+<ul>
+  <li>A short <strong>30-second video</strong> of a devotee talking about a book</li>
+  <li>A computer or phone with internet</li>
+  <li>YouTube account login details (provided by store owner)</li>
+  <li>Access to the store Admin Panel</li>
+</ul>
+
+<!-- ═══════════════════════════════════════════ -->
+<h2>Part 1 — Record the Video</h2>
+
+<div class="step">
+  <div class="step-num">1</div>
+  <div class="step-text">
+    <strong>Ask a devotee to record a short video on their phone</strong>
+    The video should be around 30 seconds. They can speak in Gujarati, Hindi, or English.
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-num">2</div>
+  <div class="step-text">
+    <strong>What they should say in the video:</strong>
+    <ul>
+      <li>Which book they are talking about</li>
+      <li>What the book is about</li>
+      <li>How this book helped them / benefited them</li>
+      <li>Why other devotees should read this book</li>
+    </ul>
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-num">3</div>
+  <div class="step-text">
+    <strong>Send the video file</strong>
+    Devotee sends the recorded video to admin via WhatsApp or Email.
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<h2>Part 2 — Upload Video to YouTube</h2>
+
+<div class="important">
+  <b>&#9888; Important:</b> We upload to YouTube because the store server deletes uploaded files on restart.
+  YouTube stores the video permanently and it plays directly on the book page.
+  Set visibility to <b>Unlisted</b> so it does not appear in YouTube search.
+</div>
+
+<div class="step">
+  <div class="step-num">1</div>
+  <div class="step-text">
+    <strong>Open YouTube</strong>
+    Go to <b>youtube.com</b> on your computer → Sign in with the provided YouTube account.
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-num">2</div>
+  <div class="step-text">
+    <strong>Click "+ Create" button</strong>
+    It is at the top right corner of the YouTube page.
+    From the dropdown menu that appears, click <b>"Upload video"</b>.
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-num">3</div>
+  <div class="step-text">
+    <strong>Select the video file</strong>
+    Click <b>"Select files"</b> → find the video file on your computer → click Open.
+    The video will start uploading. Wait for the progress bar to complete.
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-num">4</div>
+  <div class="step-text">
+    <strong>Fill in the title</strong>
+    Type a simple title, for example:<br>
+    <div class="code">Bhagavad Gita Review - Devotee Experience</div>
+    Description can be left empty.
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-num">5</div>
+  <div class="step-text">
+    <strong>Click Next → Next → Next</strong>
+    Skip through all the extra screens without changing anything.
+    Just keep clicking the <b>Next</b> button (3 times total).
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-num">6</div>
+  <div class="step-text">
+    <strong>Set visibility to UNLISTED ← Most Important Step</strong>
+    On the last screen "Save or publish" you will see three options.
+    Select <b>Unlisted</b>:
+    <div class="visibility-box">
+&#9711;  Private
+   Only you can see
+
+<span class="selected">&#9679;  Unlisted  &larr; SELECT THIS
+   Anyone with the link can see</span>
+
+&#9711;  Public
+   Everyone can see</div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-num">7</div>
+  <div class="step-text">
+    <strong>Click Save</strong>
+    YouTube will save the video and show you the video page.
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-num">8</div>
+  <div class="step-text">
+    <strong>Copy the video link</strong>
+    The link appears at the bottom of the screen. It looks like this:<br>
+    <div class="code">https://www.youtube.com/watch?v=ABC123xyz</div>
+    <b>Copy this link.</b> You will need it in the next step.
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<h2>Part 3 — Add Video to Book in Admin Panel</h2>
+
+<div class="step">
+  <div class="step-num">1</div>
+  <div class="step-text">
+    <strong>Open the Admin Panel</strong>
+    Go to your store website and add <b>/admin/login</b> at the end of the web address.<br>
+    Enter your admin username and password.
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-num">2</div>
+  <div class="step-text">
+    <strong>Go to Books</strong>
+    Click <b>"Books"</b> in the left side menu.
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-num">3</div>
+  <div class="step-text">
+    <strong>Find the book and click Edit</strong>
+    Find the book you want to add the video to.
+    Click the <b>pencil (Edit) icon</b> next to that book.
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-num">4</div>
+  <div class="step-text">
+    <strong>Scroll to the bottom of the page</strong>
+    You will see a section called <b>"Reader Review / Book Testimonial"</b>.
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-num">5</div>
+  <div class="step-text">
+    <strong>Paste the YouTube link</strong>
+    In the <b>green box</b> labelled "YouTube / Vimeo Link" —
+    paste the YouTube link you copied in Part 2, Step 8.
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-num">6</div>
+  <div class="step-text">
+    <strong>Add testimonial text (optional but recommended)</strong>
+    In the text box on the left side, type what the devotee said about the book.
+    This text appears next to the video on the book page.
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-num">7</div>
+  <div class="step-text">
+    <strong>Click "Update Book"</strong>
+    Click the yellow <b>Update Book</b> button at the bottom of the page.
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<h2>Part 4 — Verify on Book Page</h2>
+
+<div class="step">
+  <div class="step-num">1</div>
+  <div class="step-text">
+    <strong>Open the store website</strong>
+    Go to your store and find the book you just edited.
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-num">2</div>
+  <div class="step-text">
+    <strong>Scroll down on the book page</strong>
+    You will see a section called <b>"What Devotees Say"</b>.
+    The YouTube video player will appear there.
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-num">3</div>
+  <div class="step-text">
+    <strong>Click Play to confirm it works</strong>
+    The video should play directly on the book page.
+    Customers do not need to go to YouTube.
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<h2>Quick Reference Summary</h2>
+
+<table>
+  <tr>
+    <th>Step</th>
+    <th>What to Do</th>
+    <th>Where</th>
+  </tr>
+  <tr>
+    <td>1</td>
+    <td>Get 30-second video from devotee</td>
+    <td>WhatsApp / Email</td>
+  </tr>
+  <tr>
+    <td>2</td>
+    <td>Upload to YouTube</td>
+    <td>youtube.com → + Create → Upload video</td>
+  </tr>
+  <tr>
+    <td>3</td>
+    <td>Set visibility to <b>Unlisted</b></td>
+    <td>Last screen before saving on YouTube</td>
+  </tr>
+  <tr>
+    <td>4</td>
+    <td>Copy the YouTube video link</td>
+    <td>YouTube video page after saving</td>
+  </tr>
+  <tr>
+    <td>5</td>
+    <td>Admin → Books → Edit book</td>
+    <td>Store Admin Panel</td>
+  </tr>
+  <tr>
+    <td>6</td>
+    <td>Paste link in green YouTube box → Save</td>
+    <td>Bottom of Edit Book page</td>
+  </tr>
+  <tr>
+    <td>7</td>
+    <td>Open book page and verify video plays</td>
+    <td>Store website</td>
+  </tr>
+</table>
+
+<!-- ═══════════════════════════════════════════ -->
+<h2>Important Notes</h2>
+
+<ul>
+  <li>Always set YouTube visibility to <b>Unlisted</b> — video will not appear in YouTube search but will work on the book page.</li>
+  <li><b>One video per book</b> — adding a new video replaces the old one.</li>
+  <li>The video plays <b>directly on the book page</b> — customers do not need to visit YouTube.</li>
+  <li>To <b>remove a video</b> — edit the book → clear the YouTube link field → click Update Book.</li>
+  <li>Do <b>not</b> upload large video files using the "Upload Video File" option on the edit page — those files are deleted when the server restarts.</li>
+</ul>
+
+<div class="footer">
+  ISKCON Book Store — Internal Admin Document &nbsp;|&nbsp; For queries contact store administrator
+</div>
+
+</body>
+</html>

@@ -42,7 +42,7 @@
 
 <div class="card table-card shadow-sm">
     <div class="table-responsive">
-        <form method="get" id="filter-form">
+        <form method="get" id="filter-form"></form>
         <table class="table table-hover mb-0">
             <thead>
                 <!-- Column headers -->
@@ -61,7 +61,7 @@
                 <tr style="background:#b8860b;">
                     <td></td>
                     <td>
-                        <input type="text" name="customer" class="form-control form-control-sm"
+                        <input type="text" name="customer" form="filter-form" class="form-control form-control-sm"
                                placeholder="Name / Phone…" value="{{ customer_f or '' }}"
                                style="font-size:0.78rem; min-width:120px;">
                     </td>
@@ -70,7 +70,7 @@
                     <td></td>
                     <td>
                         <!-- Payment method -->
-                        <select name="pay_method" class="form-select form-select-sm col-filter mb-1" style="font-size:0.78rem;">
+                        <select name="pay_method" form="filter-form" class="form-select form-select-sm col-filter mb-1" style="font-size:0.78rem;">
                             <option value="">All Methods</option>
                             <option value="payu"     {% if pay_method=='payu'     %}selected{% endif %}>🏦 PayU</option>
                             <option value="razorpay" {% if pay_method=='razorpay' %}selected{% endif %}>💳 Razorpay</option>
@@ -78,7 +78,7 @@
                             <option value="cod"      {% if pay_method=='cod'      %}selected{% endif %}>💵 COD</option>
                         </select>
                         <!-- Payment status -->
-                        <select name="pay_status" class="form-select form-select-sm col-filter" style="font-size:0.78rem;">
+                        <select name="pay_status" form="filter-form" class="form-select form-select-sm col-filter" style="font-size:0.78rem;">
                             <option value="">All Pay Status</option>
                             <option value="paid"    {% if pay_status=='paid'    %}selected{% endif %}>✅ Paid</option>
                             <option value="pending" {% if pay_status=='pending' %}selected{% endif %}>⏳ Pending</option>
@@ -87,7 +87,7 @@
                     </td>
                     <td>
                         <!-- Order status -->
-                        <select name="status" class="form-select form-select-sm col-filter" style="font-size:0.78rem;">
+                        <select name="status" form="filter-form" class="form-select form-select-sm col-filter" style="font-size:0.78rem;">
                             <option value="">All Status</option>
                             <option value="placed"    {% if status=='placed'    %}selected{% endif %}>🟡 Placed</option>
                             <option value="confirmed" {% if status=='confirmed' %}selected{% endif %}>🔵 Confirmed</option>
@@ -98,7 +98,7 @@
                     </td>
                     <td></td>
                     <td>
-                        <button type="submit" class="btn btn-sm btn-warning w-100" title="Apply filters">
+                        <button type="submit" form="filter-form" class="btn btn-sm btn-warning w-100" title="Apply filters">
                             <i class="fas fa-filter"></i>
                         </button>
                     </td>
@@ -170,7 +170,6 @@
                 {% endfor %}
             </tbody>
         </table>
-        </form>
     </div>
 </div>
 
