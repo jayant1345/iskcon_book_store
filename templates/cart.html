@@ -116,7 +116,11 @@
           </div>
           {% if coupon_code %}
           <div class="mt-2 small" style="color:#28a745;">
+            {% if coupon_auto %}
+            🎉 Discount <strong>{{ coupon_code }}</strong> auto-applied — you save ₹{{ discount|int }}!
+            {% else %}
             ✅ Coupon <strong>{{ coupon_code }}</strong> applied — you save ₹{{ discount|int }}!
+            {% endif %}
           </div>
           {% endif %}
         </form>

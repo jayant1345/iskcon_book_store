@@ -44,6 +44,9 @@
                     {% if coupon.max_discount %}
                         <span class="badge bg-secondary">Max ₹{{ "%.0f"|format(coupon.max_discount) }}</span>
                     {% endif %}
+                    {% if coupon.auto_apply %}
+                        <span class="badge bg-primary">⚡ Auto-Apply</span>
+                    {% endif %}
                 </div>
                 <small class="text-muted">
                     {{ coupon.used_count }}/{{ coupon.max_uses }} used
@@ -117,6 +120,14 @@
                         <div class="form-check">
                             <input type="checkbox" name="active" class="form-check-input" id="activeCouponCheck" value="1" checked>
                             <label class="form-check-label" for="activeCouponCheck">Active</label>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input type="checkbox" name="auto_apply" class="form-check-input" id="autoApplyCouponCheck" value="1">
+                            <label class="form-check-label" for="autoApplyCouponCheck">
+                                Auto-apply (applies automatically once cart total reaches Minimum Order — no code needed)
+                            </label>
                         </div>
                     </div>
                 </div>

@@ -229,6 +229,7 @@ class Coupon(db.Model):
     used_count     = db.Column(db.Integer, default=0)
     active         = db.Column(db.Boolean, default=True)
     expires_at     = db.Column(db.DateTime)
+    auto_apply     = db.Column(db.Boolean, default=False)
 
     def is_valid(self, cart_total):
         if not self.active:
@@ -598,6 +599,33 @@ def cart_totals():
 
     all_ebooks = all(item["book"].is_ebook for item in items)
     shipping = 0 if all_ebooks else app.config["SHIPPING_CHARGE"]
+
+    # Re-validate any applied coupon against the current subtotal
+    code = session.get("coupon_code")
+    if code:
+        coupon = Coupon.query.filter_by(code=code).first()
+        valid = coupon.is_valid(subtotal)[0] if coupon else False
+        if coupon and valid:
+            session["coupon_discount"] = coupon.calculate_discount(subtotal)
+        else:
+            session.pop("coupon_code", None)
+            session.pop("coupon_discount", None)
+            session.pop("coupon_auto", None)
+            code = None
+
+    # No coupon applied — try to auto-apply the best matching coupon
+    if not code:
+        best, best_discount = None, 0
+        for c in Coupon.query.filter_by(active=True, auto_apply=True).all():
+            if c.is_valid(subtotal)[0]:
+                d = c.calculate_discount(subtotal)
+                if d > best_discount:
+                    best, best_discount = c, d
+        if best:
+            session["coupon_code"]     = best.code
+            session["coupon_discount"] = best_discount
+            session["coupon_auto"]     = True
+
     discount = session.get("coupon_discount", 0)
     total = max(0, subtotal + shipping - discount)
 
@@ -869,7 +897,8 @@ def add_to_cart(book_id):
 def cart():
     totals = cart_totals()
     coupon_code = session.get("coupon_code", "")
-    return render_template("cart.html", **totals, coupon_code=coupon_code)
+    coupon_auto = session.get("coupon_auto", False)
+    return render_template("cart.html", **totals, coupon_code=coupon_code, coupon_auto=coupon_auto)
 
 
 @app.route("/cart/update", methods=["POST"])
@@ -931,6 +960,7 @@ def apply_coupon():
     discount = coupon.calculate_discount(totals["subtotal"])
     session["coupon_code"]     = code
     session["coupon_discount"] = discount
+    session["coupon_auto"]     = False
     session.modified = True
     flash(f"Coupon applied! You saved ₹{discount:.0f}.", "success")
     return redirect(url_for("cart"))
@@ -3365,6 +3395,7 @@ def admin_add_coupon():
         max_discount   = float(request.form["max_discount"]) if request.form.get("max_discount") else None,
         max_uses       = int(request.form.get("max_uses", 100)),
         active         = bool(request.form.get("active")),
+        auto_apply     = bool(request.form.get("auto_apply")),
         expires_at     = datetime.strptime(expires_str, "%Y-%m-%d") if expires_str else None,
     )
     db.session.add(coupon)
@@ -3571,6 +3602,7 @@ def init_db():
             ("orders",             "donation_recipient_address", "TEXT"),
             ("orders",             "donor_message",              "TEXT"),
             ("whatsapp_inquiries", "status",                     "VARCHAR(20) DEFAULT 'open'"),
+            ("coupons",            "auto_apply",                 "BOOLEAN DEFAULT FALSE"),
             ("admin_sessions",     "token",                      "VARCHAR(64)"),
             ("admin_sessions",     "ip_address",                 "VARCHAR(45)"),
             ("admin_sessions",     "login_at",                   "TIMESTAMP"),
