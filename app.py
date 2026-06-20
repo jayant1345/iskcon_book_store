@@ -2515,7 +2515,11 @@ def admin_edit_book(book_id):
         page = request.form.get("page", 1, type=int)
         return redirect(url_for("admin_books", page=page))
 
-    return render_template("admin/book_form.html", book=book, categories=categories)
+    ebook_file_exists = bool(book.ebook_file) and os.path.exists(
+        os.path.join(app.config["EBOOK_FOLDER"], book.ebook_file)
+    )
+    return render_template("admin/book_form.html", book=book, categories=categories,
+                            ebook_file_exists=ebook_file_exists)
 
 
 @app.route("/admin/books/bulk-video", methods=["GET", "POST"])

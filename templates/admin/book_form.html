@@ -154,9 +154,15 @@
                                     </div>
                                     <div class="card-body p-3">
                                         {% if book and book.ebook_file %}
+                                        {% if ebook_file_exists %}
                                         <p class="text-success small mb-2">
                                             &#x2705; Current file: <code>{{ book.ebook_file[-12:] }}</code>
                                         </p>
+                                        {% else %}
+                                        <p class="text-danger small mb-2">
+                                            &#x26A0;&#xFE0F; File missing on disk (<code>{{ book.ebook_file[-12:] }}</code>) &mdash; re-upload required.
+                                        </p>
+                                        {% endif %}
                                         {% endif %}
                                         <input type="file" name="ebook_file" class="form-control form-control-sm"
                                                accept=".pdf,.epub">
