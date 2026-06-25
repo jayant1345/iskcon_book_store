@@ -696,18 +696,14 @@
 <script>
 // Render magazine cover thumbnail on homepage
 (function () {
-  if (typeof pdfjsLib === 'undefined') {
-    var s = document.createElement('script');
-    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
-    s.onload = loadCover;
-    document.head.appendChild(s);
-  } else {
-    loadCover();
+  function showFallback() {
+    var wrap = document.getElementById('homeMagCover');
+    if (wrap) wrap.innerHTML = '<div style="width:240px;height:320px;background:rgba(255,255,255,0.05);border-radius:12px;display:flex;align-items:center;justify-content:center;color:#FF9933;font-size:3rem;">📖</div>';
   }
   function loadCover() {
     pdfjsLib.GlobalWorkerOptions.workerSrc =
       'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-    pdfjsLib.getDocument("{{ url_for('static', filename='magazines/the-god-question.pdf') }}")
+    pdfjsLib.getDocument("{{ url_for('static', filename='magazines/the-god-question-preview.pdf') }}")
       .promise.then(function (doc) {
         return doc.getPage(1);
       }).then(function (page) {
@@ -717,10 +713,26 @@
         canvas.width  = vp.width;
         canvas.height = vp.height;
         page.render({ canvasContext: canvas.getContext('2d'), viewport: vp });
-      }).catch(function () {
-        var wrap = document.getElementById('homeMagCover');
-        if (wrap) wrap.innerHTML = '<div style="width:240px;height:320px;background:rgba(255,255,255,0.05);border-radius:12px;display:flex;align-items:center;justify-content:center;color:#FF9933;font-size:3rem;">📖</div>';
+      }).catch(showFallback);
+  }
+  function loadScript(src, cb) {
+    var s = document.createElement('script');
+    s.src = src;
+    s.onload = cb;
+    s.onerror = function () { cb(true); };
+    document.head.appendChild(s);
+  }
+  if (typeof pdfjsLib === 'undefined') {
+    // Same cdnjs → unpkg fallback chain used on the /magazine page, so a
+    // blocked/flaky CDN doesn't leave the cover blank with no placeholder.
+    loadScript('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js', function (err) {
+      if (!err) { loadCover(); return; }
+      loadScript('https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.min.js', function (err2) {
+        if (err2) showFallback(); else loadCover();
       });
+    });
+  } else {
+    loadCover();
   }
 })();
 </script>
