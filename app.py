@@ -56,7 +56,9 @@ class Config:
     MAX_CONTENT_LENGTH = 500 * 1024 * 1024         # 500 MB (ebooks can be large)
     MAX_IMAGE_SIZE     = 16 * 1024 * 1024          # 16 MB cap for book cover images
     ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "webp"}
-    EBOOK_FOLDER = os.path.join(BASE_DIR, "ebooks")
+    # Nested inside UPLOAD_FOLDER so ebooks live on the same Railway persistent
+    # volume as book cover images (Railway allows only one volume per service).
+    EBOOK_FOLDER = os.path.join(UPLOAD_FOLDER, "ebooks")
     PREVIEW_FOLDER = os.path.join(BASE_DIR, "static", "previews")
     REVIEW_VIDEO_FOLDER = os.path.join(BASE_DIR, "static", "videos", "book_reviews")
     ALLOWED_EBOOK_EXTENSIONS = {"pdf", "epub"}
