@@ -718,7 +718,7 @@ def api_shipping_rate(pincode):
     """AJAX: return Delhivery Prepaid rate for a destination pincode."""
     if not pincode.isdigit() or len(pincode) != 6:
         return jsonify({"serviceable": False, "error": "Invalid pincode"})
-    from delhivery import get_shipping_rate, check_serviceability
+    from delhivery import get_shipping_rate, check_serviceability, estimate_delivery_days
     svc = check_serviceability(pincode)
     if not svc.get("serviceable"):
         return jsonify({"serviceable": False, "error": "Delhivery does not deliver to this pincode"})
@@ -733,12 +733,15 @@ def api_shipping_rate(pincode):
     rate, zone, err = get_shipping_rate(pincode, weight_grams)
     if err or rate is None:
         return jsonify({"serviceable": False, "error": err or "Rate unavailable"})
+    eta_min, eta_max = estimate_delivery_days(zone, svc.get("oda", False))
     return jsonify({
         "serviceable": True,
-        "rate":  rate,
-        "zone":  zone,
-        "city":  svc.get("city", ""),
-        "oda":   svc.get("oda", False),
+        "rate":    rate,
+        "zone":    zone,
+        "city":    svc.get("city", ""),
+        "oda":     svc.get("oda", False),
+        "eta_min": eta_min,
+        "eta_max": eta_max,
     })
 
 

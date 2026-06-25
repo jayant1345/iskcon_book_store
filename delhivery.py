@@ -86,6 +86,29 @@ def get_shipping_rate(dest_pin, weight_grams=None):
         return None, "", str(e)
 
 
+# Delhivery's published Surface-mode TAT (business days) by rate zone.
+_ZONE_TAT   = {
+    "A": (1, 2),
+    "B": (2, 3),
+    "C": (3, 4),
+    "D": (4, 5),
+    "E": (5, 7),
+}
+_DEFAULT_TAT = (3, 6)
+_ODA_EXTRA_DAYS = 2
+
+
+def estimate_delivery_days(zone, oda=False):
+    """
+    Estimate Surface delivery TAT (business days) from the rate zone
+    returned by get_shipping_rate(). Returns (min_days, max_days).
+    """
+    low, high = _ZONE_TAT.get((zone or "").strip().upper(), _DEFAULT_TAT)
+    if oda:
+        low, high = low + _ODA_EXTRA_DAYS, high + _ODA_EXTRA_DAYS
+    return low, high
+
+
 def create_shipment(order):
     """
     Book a Prepaid Delhivery shipment for an Order object.

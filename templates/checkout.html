@@ -250,6 +250,12 @@ function fetchRate(pincode) {
         if (data.oda) {
           statusEl.innerHTML += ' <span class="badge bg-warning text-dark ms-1" style="font-size:.7rem;">ODA</span>';
         }
+        if (data.eta_min) {
+          const etaText = data.eta_min === data.eta_max
+            ? data.eta_min + ' day' + (data.eta_min > 1 ? 's' : '')
+            : data.eta_min + '–' + data.eta_max + ' days';
+          statusEl.innerHTML += '<br><span style="color:var(--text-muted);">📦 Estimated delivery: ' + etaText + '</span>';
+        }
         updateSummary(data.rate);
       } else {
         statusEl.innerHTML = '<span style="color:#dc3545;">&#10007; ' + (data.error || 'Not serviceable') + '</span>';
