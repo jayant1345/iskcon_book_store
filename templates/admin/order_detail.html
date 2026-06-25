@@ -220,14 +220,24 @@
                 </p>
                 {% for item in ebook_items %}
                 {% set dl_url = url_for('ebook_download', order_number=order.order_number, book_id=item.book_id, _external=True) %}
-                {% set ebook_msg = "Hare Krishna! 🙏 Dear " + order.customer_name + ", thank you for your purchase.\n\n📖 *" + item.book_title + "*\n\nYour eBook download link:\n" + dl_url + "\n\n(Link is order-specific and secure)\n\nHare Krishna! 🙏" %}
+                {% set ebook_msg = "Hare Krishna! 🙏 Dear " + order.customer_name + ", thank you for your purchase.\n\n📖 *" + item.book_title + "*\n\nYour eBook download link (works ONCE only, then it deactivates):\n" + dl_url + "\n\n⚠️ Please download and save it immediately — this link will stop working after the first download.\n\nHare Krishna! 🙏" %}
                 <a href="https://wa.me/{{ clean_phone }}?text={{ ebook_msg|urlencode }}"
                    target="_blank"
-                   class="btn btn-success btn-sm w-100 mb-2"
+                   class="btn btn-success btn-sm w-100 mb-1"
                    title="Send download link for {{ item.book_title }}">
                     <i class="fab fa-whatsapp me-1"></i>
                     Send: {{ item.book_title[:28] }}{% if item.book_title|length > 28 %}…{% endif %}
                 </a>
+                <div class="d-flex justify-content-between align-items-center mb-2 small">
+                  {% if item.ebook_downloaded_at %}
+                    <span class="text-muted">Downloaded {{ item.ebook_downloaded_at.strftime('%d %b %Y, %H:%M') }} UTC</span>
+                    <form method="POST" action="{{ url_for('admin_reset_ebook_download', order_id=order.id, item_id=item.id) }}" class="ms-2">
+                      <button type="submit" class="btn btn-outline-warning btn-sm py-0 px-2">Reset link</button>
+                    </form>
+                  {% else %}
+                    <span class="text-success">Not yet downloaded — link active</span>
+                  {% endif %}
+                </div>
                 {% endfor %}
                 {% endif %}
             </div>
@@ -287,8 +297,9 @@
                             <td class="fw-bold">₹{{ "%.0f"|format(item.subtotal) }}</td>
                             <td>
                                 {% if item.book and item.book.is_ebook and item.book.ebook_file %}
-                                <a href="{{ url_for('ebook_download', order_number=order.order_number, book_id=item.book_id) }}"
-                                   class="btn btn-sm btn-outline-primary" target="_blank">&#x1F4E5;</a>
+                                <a href="{{ url_for('admin_ebook_download', order_id=order.id, item_id=item.id) }}"
+                                   class="btn btn-sm btn-outline-primary" target="_blank"
+                                   title="Admin preview — does not use up the customer's link">&#x1F4E5;</a>
                                 {% else %}—{% endif %}
                             </td>
                         </tr>

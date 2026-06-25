@@ -59,6 +59,19 @@
       <h6 style="font-family:'Cinzel',serif; color:var(--brown); margin-bottom:10px; border-top:1px solid var(--border); padding-top:12px;">
         Items Ordered
       </h6>
+      {% set ebook_pending = [] %}
+      {% for item in order.items %}
+        {% if item.book and item.book.is_ebook and item.book.ebook_file and order.payment_method != 'cod' and not item.ebook_downloaded_at %}
+          {% set _ = ebook_pending.append(item) %}
+        {% endif %}
+      {% endfor %}
+      {% if ebook_pending %}
+      <div class="alert alert-warning py-2 px-3 mb-2" style="font-size:0.8rem;">
+        ⚠️ Each eBook download link works <strong>only once</strong> and deactivates immediately
+        after use. Please download and save it to your device right away — do not forward
+        the link, as that will use up your only download.
+      </div>
+      {% endif %}
       {% for item in order.items %}
       <div class="d-flex justify-content-between py-1 align-items-center">
         <span style="font-size:0.87rem;">{{ item.book_title }} × {{ item.quantity }}</span>
@@ -67,18 +80,17 @@
             ₹{{ (item.price * item.quantity)|int }}
           </span>
           {% if item.book and item.book.is_ebook and item.book.ebook_file and order.payment_method != 'cod' %}
-          {% set dl_url = url_for('ebook_download', order_number=order.order_number, book_id=item.book_id, _external=True) %}
-          {% set wa_msg = "Here is my ISKCON eBook – " + item.book_title + "\nDownload link: " + dl_url %}
-          <a href="{{ dl_url }}"
-             class="btn btn-sm btn-outline-success py-0 px-2" style="font-size:0.75rem;">
-            &#x1F4E5; Download
-          </a>
-          <a href="https://wa.me/?text={{ wa_msg|urlencode }}"
-             target="_blank"
-             class="btn btn-sm btn-success py-0 px-2" style="font-size:0.75rem;"
-             title="Share this download link via WhatsApp">
-            &#x1F4F1; WhatsApp
-          </a>
+            {% if item.ebook_downloaded_at %}
+            <span class="badge bg-secondary" style="font-size:0.7rem;"
+                  title="Downloaded {{ item.ebook_downloaded_at.strftime('%d %b %Y, %H:%M') }} UTC">
+              &#x2713; Downloaded
+            </span>
+            {% else %}
+            <a href="{{ url_for('ebook_download', order_number=order.order_number, book_id=item.book_id) }}"
+               class="btn btn-sm btn-outline-success py-0 px-2" style="font-size:0.75rem;">
+              &#x1F4E5; Download
+            </a>
+            {% endif %}
           {% endif %}
         </div>
       </div>

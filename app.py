@@ -212,6 +212,7 @@ class OrderItem(db.Model):
     book_title = db.Column(db.String(250))
     quantity   = db.Column(db.Integer, nullable=False)
     price      = db.Column(db.Float, nullable=False)
+    ebook_downloaded_at = db.Column(db.DateTime, nullable=True)
 
     @property
     def subtotal(self):
@@ -1517,6 +1518,38 @@ def ebook_download(order_number, book_id):
         flash("eBook file not found. Please contact support.", "warning")
         return redirect(url_for("order_success", order_number=order_number))
 
+    # Single-use link: once downloaded, this URL is dead. Admin can reset it
+    # from the order detail page if a customer genuinely needs it again.
+    if item.ebook_downloaded_at is not None:
+        flash(
+            "This eBook download link has already been used and is now inactive "
+            "(each link works only once). Please contact us via WhatsApp if you "
+            "need it resent.",
+            "warning"
+        )
+        return redirect(url_for("order_success", order_number=order_number))
+
+    item.ebook_downloaded_at = datetime.utcnow()
+    db.session.commit()
+
+    ext = book.ebook_file.rsplit(".", 1)[1]
+    return send_from_directory(
+        app.config["EBOOK_FOLDER"],
+        book.ebook_file,
+        as_attachment=True,
+        download_name=f"{book.title}.{ext}"
+    )
+
+
+@app.route("/admin/orders/<int:order_id>/ebook/<int:item_id>/download")
+@admin_required
+def admin_ebook_download(order_id, item_id):
+    """Admin-only file access for verification — does NOT consume the customer's single-use link."""
+    order = Order.query.get_or_404(order_id)
+    item = next((i for i in order.items if i.id == item_id), None)
+    if not item or not item.book or not item.book.is_ebook or not item.book.ebook_file:
+        abort(404)
+    book = item.book
     ext = book.ebook_file.rsplit(".", 1)[1]
     return send_from_directory(
         app.config["EBOOK_FOLDER"],
@@ -3209,6 +3242,20 @@ def admin_order_detail(order_id):
     return render_template("admin/order_detail.html", order=order)
 
 
+@app.route("/admin/orders/<int:order_id>/ebook/<int:item_id>/reset-download", methods=["POST"])
+@admin_required
+def admin_reset_ebook_download(order_id, item_id):
+    """Re-activate a single-use eBook download link for one order item."""
+    order = Order.query.get_or_404(order_id)
+    item = next((i for i in order.items if i.id == item_id), None)
+    if not item:
+        abort(404)
+    item.ebook_downloaded_at = None
+    db.session.commit()
+    flash(f"Download link reset for \"{item.book_title}\" — customer can download it again.", "success")
+    return redirect(url_for("admin_order_detail", order_id=order_id))
+
+
 @app.route("/admin/orders/update/<int:order_id>", methods=["POST"])
 @admin_required
 def admin_update_order(order_id):
@@ -3616,6 +3663,7 @@ def init_db():
             ("admin_sessions",     "ip_address",                 "VARCHAR(45)"),
             ("admin_sessions",     "login_at",                   "TIMESTAMP"),
             ("admin_sessions",     "last_seen",                  "TIMESTAMP"),
+            ("order_items",        "ebook_downloaded_at",        "TIMESTAMP"),
         ]
         for table, column, col_type in migrations:
             # Use a fresh connection per column so a failed ALTER doesn't
