@@ -468,12 +468,13 @@
           <span style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.2); color:rgba(255,255,255,0.75); padding:4px 12px; border-radius:50px; font-size:0.78rem;">🌿 Free to Read</span>
         </div>
       </div>
-      <!-- Right: mini cover preview rendered by PDF.js -->
+      <!-- Right: mini cover preview -->
       <div class="col-lg-5 text-center d-none d-lg-block">
         <div style="position:relative; display:inline-block;">
-          <div id="homeMagCover" style="width:240px; margin:0 auto; border-radius:12px; overflow:hidden; box-shadow:0 16px 60px rgba(0,0,0,0.6);">
-            <canvas id="homeMagCanvas" style="display:block; width:100%; height:auto;"></canvas>
-          </div>
+          <a href="{{ url_for('magazine') }}" style="width:240px; margin:0 auto; display:block; border-radius:12px; overflow:hidden; box-shadow:0 16px 60px rgba(0,0,0,0.6);">
+            <img src="{{ url_for('static', filename='images/magazines/the-god-question-cover.jpg') }}"
+                 alt="The God Question magazine cover" style="display:block; width:100%; height:auto;">
+          </a>
           <div style="position:absolute; top:-12px; right:-12px; background:#FF9933; color:#fff; width:52px; height:52px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:0.7rem; font-weight:700; text-align:center; line-height:1.2; box-shadow:0 4px 12px rgba(0,0,0,0.3);">NEW<br>MAG</div>
           <p style="color:rgba(255,255,255,0.5); font-size:0.78rem; margin-top:10px;">Click to preview all pages →</p>
         </div>
@@ -690,50 +691,6 @@
     });
     popup.hide();
   });
-})();
-</script>
-
-<script>
-// Render magazine cover thumbnail on homepage
-(function () {
-  function showFallback() {
-    var wrap = document.getElementById('homeMagCover');
-    if (wrap) wrap.innerHTML = '<div style="width:240px;height:320px;background:rgba(255,255,255,0.05);border-radius:12px;display:flex;align-items:center;justify-content:center;color:#FF9933;font-size:3rem;">📖</div>';
-  }
-  function loadCover() {
-    pdfjsLib.GlobalWorkerOptions.workerSrc =
-      'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-    pdfjsLib.getDocument("{{ url_for('static', filename='magazines/the-god-question-preview.pdf') }}")
-      .promise.then(function (doc) {
-        return doc.getPage(1);
-      }).then(function (page) {
-        var canvas = document.getElementById('homeMagCanvas');
-        if (!canvas) return;
-        var vp = page.getViewport({ scale: 1.2 });
-        canvas.width  = vp.width;
-        canvas.height = vp.height;
-        page.render({ canvasContext: canvas.getContext('2d'), viewport: vp });
-      }).catch(showFallback);
-  }
-  function loadScript(src, cb) {
-    var s = document.createElement('script');
-    s.src = src;
-    s.onload = cb;
-    s.onerror = function () { cb(true); };
-    document.head.appendChild(s);
-  }
-  if (typeof pdfjsLib === 'undefined') {
-    // Same cdnjs → unpkg fallback chain used on the /magazine page, so a
-    // blocked/flaky CDN doesn't leave the cover blank with no placeholder.
-    loadScript('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js', function (err) {
-      if (!err) { loadCover(); return; }
-      loadScript('https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.min.js', function (err2) {
-        if (err2) showFallback(); else loadCover();
-      });
-    });
-  } else {
-    loadCover();
-  }
 })();
 </script>
 
