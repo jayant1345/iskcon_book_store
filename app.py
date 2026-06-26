@@ -643,6 +643,14 @@ def cart_totals():
 
 # ── Admin auth ──
 
+def safe_books_return(value):
+    """Only allow redirecting back into /admin/books (with its filters/page
+    intact) — falls back to the plain list for anything else or missing."""
+    if value and value.startswith("/admin/books"):
+        return value
+    return url_for("admin_books")
+
+
 def admin_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
@@ -2470,9 +2478,10 @@ def admin_add_book():
         db.session.add(book)
         db.session.commit()
         flash("Book added successfully!", "success")
-        return redirect(url_for("admin_books"))
+        return redirect(safe_books_return(request.form.get("return_to")))
 
-    return render_template("admin/book_form.html", book=None, categories=categories)
+    return_to = safe_books_return(request.args.get("return_to"))
+    return render_template("admin/book_form.html", book=None, categories=categories, return_to=return_to)
 
 
 @app.route("/admin/books/<int:book_id>/clone-ebook", methods=["POST"])
@@ -2513,7 +2522,9 @@ def admin_clone_as_ebook(book_id):
     db.session.add(clone)
     db.session.commit()
     flash(f'Cloned "{src.title}" as a new eBook draft — upload the eBook file below, then mark it Active.', "success")
-    return redirect(url_for("admin_edit_book", book_id=clone.id))
+    from urllib.parse import quote
+    return_to = safe_books_return(request.args.get("return_to"))
+    return redirect(url_for("admin_edit_book", book_id=clone.id) + "?return_to=" + quote(return_to, safe=""))
 
 
 @app.route("/admin/books/edit/<int:book_id>", methods=["GET", "POST"])
@@ -2591,14 +2602,14 @@ def admin_edit_book(book_id):
 
         db.session.commit()
         flash("Book updated!", "success")
-        page = request.form.get("page", 1, type=int)
-        return redirect(url_for("admin_books", page=page))
+        return redirect(safe_books_return(request.form.get("return_to")))
 
     ebook_file_exists = bool(book.ebook_file) and os.path.exists(
         os.path.join(app.config["EBOOK_FOLDER"], book.ebook_file)
     )
+    return_to = safe_books_return(request.args.get("return_to"))
     return render_template("admin/book_form.html", book=book, categories=categories,
-                            ebook_file_exists=ebook_file_exists)
+                            ebook_file_exists=ebook_file_exists, return_to=return_to)
 
 
 @app.route("/admin/books/bulk-video", methods=["GET", "POST"])

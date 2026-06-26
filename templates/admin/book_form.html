@@ -16,7 +16,7 @@
                 {% endwith %}
 
                 <form method="POST" enctype="multipart/form-data">
-                    <input type="hidden" name="page" value="{{ request.args.get('page', 1) }}">
+                    <input type="hidden" name="return_to" value="{{ return_to or url_for('admin_books') }}">
                     <div class="row g-4">
                         <!-- Left Column -->
                         <div class="col-md-8">
@@ -269,7 +269,7 @@
 
                     <hr class="my-4">
                     <div class="d-flex justify-content-between">
-                        <a href="{{ url_for('admin_books') }}" class="btn btn-secondary">
+                        <a href="{{ return_to or url_for('admin_books') }}" class="btn btn-secondary">
                             <i class="fas fa-arrow-left me-2"></i>Cancel
                         </a>
                         <button type="submit" class="btn btn-warning">

@@ -168,11 +168,11 @@
                         {% endif %}
                     </td>
                     <td>
-                        <a href="{{ url_for('admin_edit_book', book_id=book.id, page=request.args.get('page', 1)) }}" class="btn btn-sm btn-primary">
+                        <a href="{{ url_for('admin_edit_book', book_id=book.id, return_to=request.full_path) }}" class="btn btn-sm btn-primary">
                             <i class="fas fa-edit"></i>
                         </a>
                         {% if not book.is_ebook %}
-                        <form method="POST" action="{{ url_for('admin_clone_as_ebook', book_id=book.id) }}" class="d-inline"
+                        <form method="POST" action="{{ url_for('admin_clone_as_ebook', book_id=book.id, return_to=request.full_path) }}" class="d-inline"
                               onsubmit="return confirm('Clone this book as a new eBook draft? You will just need to upload the eBook file and activate it.');">
                             <button type="submit" class="btn btn-sm btn-outline-success" title="Clone as eBook — reuses title, author, description, price, image, etc.">
                                 <i class="fas fa-clone"></i>
