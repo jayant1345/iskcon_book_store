@@ -171,6 +171,14 @@
                         <a href="{{ url_for('admin_edit_book', book_id=book.id, page=request.args.get('page', 1)) }}" class="btn btn-sm btn-primary">
                             <i class="fas fa-edit"></i>
                         </a>
+                        {% if not book.is_ebook %}
+                        <form method="POST" action="{{ url_for('admin_clone_as_ebook', book_id=book.id) }}" class="d-inline"
+                              onsubmit="return confirm('Clone this book as a new eBook draft? You will just need to upload the eBook file and activate it.');">
+                            <button type="submit" class="btn btn-sm btn-outline-success" title="Clone as eBook — reuses title, author, description, price, image, etc.">
+                                <i class="fas fa-clone"></i>
+                            </button>
+                        </form>
+                        {% endif %}
                         <form method="POST" action="{{ url_for('admin_delete_book', book_id=book.id) }}" class="d-inline" onsubmit="return confirm('Remove this book from store?');">
                             <button type="submit" class="btn btn-sm btn-danger">
                                 <i class="fas fa-trash"></i>

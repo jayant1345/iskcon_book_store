@@ -2475,6 +2475,47 @@ def admin_add_book():
     return render_template("admin/book_form.html", book=None, categories=categories)
 
 
+@app.route("/admin/books/<int:book_id>/clone-ebook", methods=["POST"])
+@admin_required
+def admin_clone_as_ebook(book_id):
+    """Duplicate an existing book's details into a new eBook draft so the admin
+    only has to switch the format and upload the eBook file, instead of
+    re-typing title/author/description/etc. from scratch."""
+    src = Book.query.get_or_404(book_id)
+    ebook_category = Category.query.filter_by(slug="e-book").first()
+
+    clone = Book(
+        title             = src.title,
+        author            = src.author,
+        description       = src.description,
+        short_desc        = src.short_desc,
+        price             = src.price,
+        original_price    = src.original_price,
+        image             = src.image,
+        category_id       = ebook_category.id if ebook_category else src.category_id,
+        isbn              = src.isbn,
+        language          = src.language,
+        pages             = src.pages,
+        weight_kg         = src.weight_kg,
+        publisher         = src.publisher,
+        stock             = src.stock,
+        featured          = False,
+        active            = False,   # stays hidden until the eBook file is uploaded and reviewed
+        is_ebook          = True,
+        ebook_file        = None,
+        preview_file      = None,
+        review_text       = src.review_text,
+        review_video      = src.review_video,
+        review_video_url  = src.review_video_url,
+        review_video_url2 = src.review_video_url2,
+        review_video_url3 = src.review_video_url3,
+    )
+    db.session.add(clone)
+    db.session.commit()
+    flash(f'Cloned "{src.title}" as a new eBook draft — upload the eBook file below, then mark it Active.', "success")
+    return redirect(url_for("admin_edit_book", book_id=clone.id))
+
+
 @app.route("/admin/books/edit/<int:book_id>", methods=["GET", "POST"])
 @admin_required
 def admin_edit_book(book_id):
