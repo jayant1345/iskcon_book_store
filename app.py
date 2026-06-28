@@ -1541,6 +1541,15 @@ def ebook_download(order_number, book_id):
         return redirect(url_for("order_success", order_number=order_number))
 
     item.ebook_downloaded_at = datetime.utcnow()
+
+    # All-ebook order: once every ebook in it has been downloaded, there's no
+    # courier delivery to track — the download itself is the delivery.
+    if order.order_status in ("placed", "confirmed") and all(
+        i.book and i.book.is_ebook and i.ebook_downloaded_at is not None
+        for i in order.items
+    ):
+        order.order_status = "delivered"
+
     db.session.commit()
 
     ext = book.ebook_file.rsplit(".", 1)[1]
