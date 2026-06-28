@@ -3779,6 +3779,22 @@ def init_db():
         except Exception:
             pass
 
+        # Backfill: mark all-ebook orders Delivered if every item was already
+        # downloaded before the auto-deliver logic existed (or was deployed
+        # mid-download), so they don't get stuck showing Placed/Confirmed forever.
+        try:
+            candidates = Order.query.filter(Order.order_status.in_(["placed", "confirmed"])).all()
+            for o in candidates:
+                if o.items and all(
+                    i.book and i.book.is_ebook and i.ebook_downloaded_at is not None
+                    for i in o.items
+                ):
+                    o.order_status = "delivered"
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            print(f"[WARNING] eBook delivered-status backfill failed: {e}")
+
 
 @app.route("/admin/export-data")
 def admin_export_data():
