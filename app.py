@@ -52,6 +52,10 @@ class Config:
     SECRET_KEY = os.environ.get("SECRET_KEY", "iskcon-books-super-secret-key-2024")
     SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URL", f"sqlite:///{os.path.join(BASE_DIR, 'iskcon_books.db')}")
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+    # Without pool_pre_ping, the first request after the DB (or a proxy in front
+    # of it) silently closes an idle connection gets an uncaught error -> 500,
+    # and only the retry (which gets a fresh connection) succeeds.
+    SQLALCHEMY_ENGINE_OPTIONS = {"pool_pre_ping": True, "pool_recycle": 280}
     UPLOAD_FOLDER = os.path.join(BASE_DIR, "static", "images", "books")
     MAX_CONTENT_LENGTH = 500 * 1024 * 1024         # 500 MB (ebooks can be large)
     MAX_IMAGE_SIZE     = 16 * 1024 * 1024          # 16 MB cap for book cover images
