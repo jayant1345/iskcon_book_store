@@ -170,8 +170,12 @@
             <span>Subtotal</span><span>₹{{ subtotal|int }}</span>
           </div>
           <div class="summary-row">
-            <span>Shipping <small class="text-muted">(Delhivery)</small></span>
+            <span>Shipping{% if not all_ebooks %} <small class="text-muted">(Delhivery)</small>{% endif %}</span>
+            {% if all_ebooks %}
+            <span id="shipping-display" style="color:#28a745; font-size:0.85rem;">Free (Digital delivery)</span>
+            {% else %}
             <span id="shipping-display" style="color:var(--text-muted); font-size:0.85rem;">Enter PIN code</span>
+            {% endif %}
           </div>
           {% if discount > 0 %}
           <div class="summary-row">
@@ -185,9 +189,15 @@
 
           <input type="hidden" id="shipping-rate-input" name="delhivery_shipping" value="">
 
+          {% if all_ebooks %}
+          <button type="submit" class="btn btn-saffron w-100 btn-lg mt-4" id="place-order-btn">
+            🙏 Place Order — ₹{{ (subtotal - discount)|int }}
+          </button>
+          {% else %}
           <button type="submit" class="btn btn-saffron w-100 btn-lg mt-4" id="place-order-btn" disabled>
             Enter PIN code to continue
           </button>
+          {% endif %}
 
           <div class="text-center mt-3 small text-muted">
             By placing an order you agree to our<br>
@@ -205,7 +215,8 @@
 <script>
 const subtotal = {{ subtotal|int }};
 const discount = {{ discount|int }};
-let shippingRate = null;
+const allEbooks = {{ 'true' if all_ebooks else 'false' }};
+let shippingRate = allEbooks ? 0 : null;
 let rateTimer = null;
 
 const pincodeInput  = document.getElementById('pincode-input');
@@ -268,26 +279,28 @@ function fetchRate(pincode) {
     });
 }
 
-pincodeInput.addEventListener('input', function() {
-  const pin = this.value.replace(/\D/g, '');
-  this.value = pin;
-  clearTimeout(rateTimer);
-  if (pin.length === 6) {
-    rateTimer = setTimeout(() => fetchRate(pin), 400);
-  } else {
-    statusEl.textContent = '';
-    resetSummary('Enter PIN code');
-  }
-});
+if (!allEbooks) {
+  pincodeInput.addEventListener('input', function() {
+    const pin = this.value.replace(/\D/g, '');
+    this.value = pin;
+    clearTimeout(rateTimer);
+    if (pin.length === 6) {
+      rateTimer = setTimeout(() => fetchRate(pin), 400);
+    } else {
+      statusEl.textContent = '';
+      resetSummary('Enter PIN code');
+    }
+  });
 
-// Auto-check Delhivery if pincode is pre-filled (logged-in customer)
-(function() {
-  const prePin = pincodeInput.value.replace(/\D/g, '');
-  if (prePin.length === 6) fetchRate(prePin);
-})();
+  // Auto-check Delhivery if pincode is pre-filled (logged-in customer)
+  (function() {
+    const prePin = pincodeInput.value.replace(/\D/g, '');
+    if (prePin.length === 6) fetchRate(prePin);
+  })();
+}
 
 document.getElementById('checkout-form').addEventListener('submit', function(e) {
-  if (!shippingRate && shippingRate !== 0) {
+  if (!allEbooks && !shippingRate && shippingRate !== 0) {
     e.preventDefault();
     alert('Please enter your PIN code to calculate shipping.');
     pincodeInput.focus();

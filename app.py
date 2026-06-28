@@ -1021,11 +1021,13 @@ def checkout():
 
         if not all([name, phone, address, city, pincode]):
             flash("Please fill all required fields.", "danger")
-            return render_template("checkout.html", **totals)
+            return render_template("checkout.html", **totals,
+                                   all_ebooks=all(item["book"].is_ebook for item in totals["items"]))
 
         if payment == "cod":
             flash("Cash on Delivery is not available. Please choose an online payment method.", "danger")
-            return render_template("checkout.html", **totals)
+            return render_template("checkout.html", **totals,
+                                   all_ebooks=all(item["book"].is_ebook for item in totals["items"]))
 
         # Ebook-only orders have no shipping
         all_ebooks = all(item["book"].is_ebook for item in totals["items"])
@@ -1207,7 +1209,8 @@ def checkout():
 
     return render_template("checkout.html", **totals,
                            razorpay_key=app.config["RAZORPAY_KEY_ID"],
-                           prefill=prefill)
+                           prefill=prefill,
+                           all_ebooks=all(item["book"].is_ebook for item in totals["items"]))
 
 
 @app.route("/donate/<int:book_id>", methods=["GET", "POST"])
