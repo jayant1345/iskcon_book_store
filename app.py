@@ -1506,10 +1506,10 @@ def upi_confirm(order_number):
 def ebook_download(order_number, book_id):
     order = Order.query.filter_by(order_number=order_number).first_or_404()
 
-    # Access control: COD denied; Razorpay must be paid; UPI allowed (trust-based)
+    # Access control: COD denied; every other method requires admin-confirmed payment
     if order.payment_method == "cod":
         abort(403)
-    if order.payment_method == "razorpay" and order.payment_status != "paid":
+    if order.payment_status != "paid":
         abort(403)
 
     # Verify book is actually in the order

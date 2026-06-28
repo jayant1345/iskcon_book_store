@@ -61,7 +61,7 @@
       </h6>
       {% set ebook_pending = [] %}
       {% for item in order.items %}
-        {% if item.book and item.book.is_ebook and item.book.ebook_file and order.payment_method != 'cod' and not item.ebook_downloaded_at %}
+        {% if item.book and item.book.is_ebook and item.book.ebook_file and order.payment_method != 'cod' and order.payment_status == 'paid' and not item.ebook_downloaded_at %}
           {% set _ = ebook_pending.append(item) %}
         {% endif %}
       {% endfor %}
@@ -85,11 +85,16 @@
                   title="Downloaded {{ item.ebook_downloaded_at.strftime('%d %b %Y, %H:%M') }} UTC">
               &#x2713; Downloaded
             </span>
-            {% else %}
+            {% elif order.payment_status == 'paid' %}
             <a href="{{ url_for('ebook_download', order_number=order.order_number, book_id=item.book_id) }}"
                class="btn btn-sm btn-outline-success py-0 px-2" style="font-size:0.75rem;">
               &#x1F4E5; Download
             </a>
+            {% else %}
+            <span class="badge bg-warning text-dark" style="font-size:0.7rem;"
+                  title="Download link unlocks once we confirm your payment">
+              &#x23F3; Pending verification
+            </span>
             {% endif %}
           {% endif %}
         </div>
