@@ -45,6 +45,20 @@ def to_ist(dt, fmt='%d %b %Y, %I:%M %p'):
         return ''
     return (dt + _IST).strftime(fmt)
 
+
+@app.template_filter('wa_phone')
+def wa_phone_filter(phone):
+    """Return E.164 digits for wa.me — adds 91 country code for bare 10-digit Indian numbers."""
+    if not phone:
+        return ''
+    import re as _re
+    digits = _re.sub(r'\D', '', str(phone))
+    if len(digits) == 10:
+        return '91' + digits
+    if len(digits) == 11 and digits.startswith('0'):
+        return '91' + digits[1:]
+    return digits
+
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
@@ -268,6 +282,7 @@ class WhatsAppInquiry(db.Model):
     customer_phone = db.Column(db.String(20))
     created_at     = db.Column(db.DateTime, default=datetime.utcnow)
     status         = db.Column(db.String(20), default="open")
+    admin_note     = db.Column(db.Text)
 
 
 class AdminSession(db.Model):
@@ -2227,34 +2242,73 @@ def admin_logout():
 @app.route("/admin/whatsapp-inquiries")
 @admin_required
 def admin_whatsapp_inquiries():
-    page = request.args.get("page", 1, type=int)
+    page   = request.args.get("page", 1, type=int)
+    tab    = request.args.get("tab", "open")
+    allowed = {"open", "converted", "dismissed"}
+    if tab not in allowed:
+        tab = "open"
     try:
         inquiries = (WhatsAppInquiry.query
-                     .filter_by(status="open")
+                     .filter_by(status=tab)
                      .order_by(WhatsAppInquiry.created_at.desc())
                      .paginate(page=page, per_page=50, error_out=False))
     except Exception:
         db.session.rollback()
         inquiries = (WhatsAppInquiry.query
+                     .filter_by(status=tab)
                      .order_by(WhatsAppInquiry.created_at.desc())
                      .paginate(page=page, per_page=50, error_out=False))
+    counts = {}
+    for s in allowed:
+        counts[s] = WhatsAppInquiry.query.filter_by(status=s).count()
     return render_template("admin/whatsapp_inquiries.html",
                            inquiries=inquiries,
+                           tab=tab,
+                           counts=counts,
                            active_page="whatsapp")
 
 
 @app.route("/admin/whatsapp-inquiries/<int:inq_id>/dismiss", methods=["POST"])
 @admin_required
 def admin_whatsapp_dismiss(inq_id):
-    inq = WhatsAppInquiry.query.get_or_404(inq_id)
+    inq  = WhatsAppInquiry.query.get_or_404(inq_id)
+    back = request.args.get("tab", "open")
     try:
-        db.session.delete(inq)
+        inq.status = "dismissed"
         db.session.commit()
-        flash("Lead removed.", "info")
+        flash("Lead dismissed. Notes preserved.", "info")
     except Exception:
         db.session.rollback()
-        flash("Could not remove lead.", "danger")
-    return redirect(url_for("admin_whatsapp_inquiries"))
+        flash("Could not dismiss lead.", "danger")
+    return redirect(url_for("admin_whatsapp_inquiries", tab=back))
+
+
+@app.route("/admin/whatsapp-inquiries/<int:inq_id>/restore", methods=["POST"])
+@admin_required
+def admin_whatsapp_restore(inq_id):
+    inq = WhatsAppInquiry.query.get_or_404(inq_id)
+    try:
+        inq.status = "open"
+        db.session.commit()
+        flash("Lead restored to Open.", "success")
+    except Exception:
+        db.session.rollback()
+        flash("Could not restore lead.", "danger")
+    return redirect(url_for("admin_whatsapp_inquiries", tab="dismissed"))
+
+
+@app.route("/admin/whatsapp-inquiries/<int:inq_id>/note", methods=["POST"])
+@admin_required
+def admin_whatsapp_note(inq_id):
+    inq = WhatsAppInquiry.query.get_or_404(inq_id)
+    note = (request.get_json() or {}).get("note", "").strip()
+    try:
+        inq.admin_note = note
+        db.session.commit()
+        return {"ok": True}, 200
+    except Exception:
+        db.session.rollback()
+        return {"ok": False}, 500
 
 
 @app.route("/admin/whatsapp-inquiries/<int:inq_id>/convert")
@@ -3726,6 +3780,7 @@ def init_db():
             ("orders",             "donation_recipient_address", "TEXT"),
             ("orders",             "donor_message",              "TEXT"),
             ("whatsapp_inquiries", "status",                     "VARCHAR(20) DEFAULT 'open'"),
+            ("whatsapp_inquiries", "admin_note",                 "TEXT"),
             ("coupons",            "auto_apply",                 "BOOLEAN DEFAULT FALSE"),
             ("admin_sessions",     "token",                      "VARCHAR(64)"),
             ("admin_sessions",     "ip_address",                 "VARCHAR(45)"),

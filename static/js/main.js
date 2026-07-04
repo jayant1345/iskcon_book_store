@@ -263,7 +263,9 @@ document.addEventListener('DOMContentLoaded', () => {
       const message  = encodeURIComponent(
         `🙏 Hare Krishna!\nI'd like to check my order: ${orderNum}\nThank you.`
       );
-      window.open(`https://wa.me/${phone.replace(/\D/g, '')}?text=${message}`, '_blank');
+      const rawDigits = phone.replace(/\D/g, '');
+      const waNum = rawDigits.length === 10 ? '91' + rawDigits : rawDigits;
+      window.open(`https://wa.me/${waNum}?text=${message}`, '_blank');
     });
   }
 

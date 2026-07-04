@@ -3,12 +3,12 @@
 {% block page_title %}WhatsApp Leads{% endblock %}
 {% block content %}
 
-<div class="d-flex justify-content-between align-items-center mb-4">
+<div class="d-flex justify-content-between align-items-center mb-3">
   <div>
     <h4 class="mb-1"><i class="fab fa-whatsapp me-2" style="color:#25d366;"></i>WhatsApp Leads</h4>
     <small class="text-muted">Customers who clicked "Order via WhatsApp" on a book page</small>
   </div>
-  <span class="badge bg-success fs-6">{{ inquiries.total }} total</span>
+  <span class="badge bg-success fs-6">{{ inquiries.total }} shown</span>
 </div>
 
 {% with messages = get_flashed_messages(with_categories=true) %}
@@ -16,6 +16,31 @@
     <div class="alert alert-{{ cat }}">{{ msg }}</div>
   {% endfor %}
 {% endwith %}
+
+{# ── Tabs ── #}
+<ul class="nav nav-tabs mb-3">
+  <li class="nav-item">
+    <a class="nav-link {% if tab == 'open' %}active{% endif %}"
+       href="{{ url_for('admin_whatsapp_inquiries', tab='open') }}">
+      Open
+      {% if counts.open %}<span class="badge bg-success ms-1">{{ counts.open }}</span>{% endif %}
+    </a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link {% if tab == 'converted' %}active{% endif %}"
+       href="{{ url_for('admin_whatsapp_inquiries', tab='converted') }}">
+      Converted
+      {% if counts.converted %}<span class="badge bg-primary ms-1">{{ counts.converted }}</span>{% endif %}
+    </a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link {% if tab == 'dismissed' %}active{% endif %}"
+       href="{{ url_for('admin_whatsapp_inquiries', tab='dismissed') }}">
+      Dismissed
+      {% if counts.dismissed %}<span class="badge bg-secondary ms-1">{{ counts.dismissed }}</span>{% endif %}
+    </a>
+  </li>
+</ul>
 
 <div class="card shadow-sm">
   <div class="table-responsive">
@@ -27,17 +52,18 @@
           <th>Phone</th>
           <th>Book Enquired</th>
           <th>Date &amp; Time</th>
+          <th>Notes</th>
           <th>Action</th>
         </tr>
       </thead>
       <tbody>
         {% for inq in inquiries.items %}
-        <tr>
+        <tr {% if tab == 'dismissed' %}class="table-secondary"{% endif %}>
           <td class="text-muted small">{{ (inquiries.page - 1) * 50 + loop.index }}</td>
           <td class="fw-bold">{{ inq.customer_name or '—' }}</td>
           <td>
             {% if inq.customer_phone %}
-            <a href="https://wa.me/{{ inq.customer_phone|replace('+','')|replace(' ','')|replace('-','') }}"
+            <a href="https://wa.me/{{ inq.customer_phone|wa_phone }}"
                target="_blank" class="text-success text-decoration-none fw-bold">
               <i class="fab fa-whatsapp me-1"></i>{{ inq.customer_phone }}
             </a>
@@ -54,33 +80,81 @@
             {% endif %}
           </td>
           <td><small>{{ inq.created_at | ist('%d %b %Y, %I:%M %p') }}</small></td>
+
+          {# ── Notes cell ── #}
+          <td style="min-width:200px;">
+            <div class="input-group input-group-sm">
+              <textarea class="form-control note-input" rows="2"
+                        data-id="{{ inq.id }}"
+                        placeholder="Add note…"
+                        style="font-size:0.8rem; resize:vertical;">{{ inq.admin_note or '' }}</textarea>
+              <button class="btn btn-outline-secondary save-note-btn" type="button"
+                      data-id="{{ inq.id }}" title="Save note">
+                <i class="fas fa-save"></i>
+              </button>
+            </div>
+            <small class="note-status-{{ inq.id }} text-muted" style="font-size:0.72rem;"></small>
+          </td>
+
+          {# ── Action cell — changes per tab ── #}
           <td>
             <div class="d-flex gap-1 flex-wrap">
-              {% if inq.customer_phone %}
-              <a href="https://wa.me/{{ inq.customer_phone|replace('+','')|replace(' ','')|replace('-','') }}?text={{ ('🙏 Hare Krishna! Regarding your enquiry for ' + (inq.book_title or 'our books') + ' — how can we help you?')|urlencode }}"
-                 target="_blank" class="btn btn-sm btn-success">
-                <i class="fab fa-whatsapp me-1"></i>Reply
-              </a>
+
+              {% if tab == 'open' %}
+                {% if inq.customer_phone %}
+                <a href="https://wa.me/{{ inq.customer_phone|wa_phone }}?text={{ ('🙏 Hare Krishna! Regarding your enquiry for ' + (inq.book_title or 'our books') + ' — how can we help you?')|urlencode }}"
+                   target="_blank" class="btn btn-sm btn-success">
+                  <i class="fab fa-whatsapp me-1"></i>Reply
+                </a>
+                {% endif %}
+                <a href="{{ url_for('admin_whatsapp_convert', inq_id=inq.id) }}"
+                   class="btn btn-sm btn-primary"
+                   title="Mark as converted and open manual order form">
+                  <i class="fas fa-check me-1"></i>Convert
+                </a>
+                <form method="POST"
+                      action="{{ url_for('admin_whatsapp_dismiss', inq_id=inq.id) }}?tab=open"
+                      onsubmit="return confirm('Dismiss this lead? Notes will be preserved.')">
+                  <button type="submit" class="btn btn-sm btn-outline-danger" title="Dismiss lead">
+                    <i class="fas fa-times"></i>
+                  </button>
+                </form>
+
+              {% elif tab == 'converted' %}
+                {% if inq.customer_phone %}
+                <a href="https://wa.me/{{ inq.customer_phone|wa_phone }}"
+                   target="_blank" class="btn btn-sm btn-outline-success btn-sm">
+                  <i class="fab fa-whatsapp me-1"></i>Chat
+                </a>
+                {% endif %}
+                <form method="POST"
+                      action="{{ url_for('admin_whatsapp_dismiss', inq_id=inq.id) }}?tab=converted"
+                      onsubmit="return confirm('Archive this lead? Notes will be preserved.')">
+                  <button type="submit" class="btn btn-sm btn-outline-secondary" title="Archive">
+                    <i class="fas fa-archive"></i>
+                  </button>
+                </form>
+
+              {% elif tab == 'dismissed' %}
+                <form method="POST"
+                      action="{{ url_for('admin_whatsapp_restore', inq_id=inq.id) }}">
+                  <button type="submit" class="btn btn-sm btn-outline-success" title="Restore to Open">
+                    <i class="fas fa-undo me-1"></i>Restore
+                  </button>
+                </form>
+
               {% endif %}
-              <a href="{{ url_for('admin_whatsapp_convert', inq_id=inq.id) }}"
-                 class="btn btn-sm btn-primary"
-                 title="Mark as converted and open manual order form">
-                <i class="fas fa-check me-1"></i>Convert
-              </a>
-              <form method="POST" action="{{ url_for('admin_whatsapp_dismiss', inq_id=inq.id) }}"
-                    onsubmit="return confirm('Remove this lead?')">
-                <button type="submit" class="btn btn-sm btn-outline-danger" title="Dismiss / delete this lead">
-                  <i class="fas fa-trash"></i>
-                </button>
-              </form>
+
             </div>
           </td>
         </tr>
         {% else %}
         <tr>
-          <td colspan="6" class="text-center text-muted py-5">
+          <td colspan="7" class="text-center text-muted py-5">
             <i class="fab fa-whatsapp fa-3x mb-3 d-block" style="color:#ccc;"></i>
-            No WhatsApp enquiries yet. They will appear here when customers click "Order via WhatsApp".
+            {% if tab == 'open' %}No open leads.
+            {% elif tab == 'converted' %}No converted leads yet.
+            {% else %}No dismissed leads.{% endif %}
           </td>
         </tr>
         {% endfor %}
@@ -95,7 +169,7 @@
     {% for p in inquiries.iter_pages() %}
       {% if p %}
       <li class="page-item {{ 'active' if p == inquiries.page else '' }}">
-        <a class="page-link" href="?page={{ p }}">{{ p }}</a>
+        <a class="page-link" href="?tab={{ tab }}&page={{ p }}">{{ p }}</a>
       </li>
       {% else %}
       <li class="page-item disabled"><span class="page-link">…</span></li>
@@ -105,4 +179,29 @@
 </nav>
 {% endif %}
 
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function saveNote(id) {
+  const textarea = document.querySelector(`.note-input[data-id="${id}"]`);
+  const status   = document.querySelector(`.note-status-${id}`);
+  fetch(`/admin/whatsapp-inquiries/${id}/note`, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({note: textarea.value})
+  }).then(r => {
+    status.textContent = r.ok ? '✓ Saved' : '✗ Error';
+    setTimeout(() => status.textContent = '', 2000);
+  });
+}
+
+document.querySelectorAll('.save-note-btn').forEach(btn => {
+  btn.addEventListener('click', () => saveNote(btn.dataset.id));
+});
+
+document.querySelectorAll('.note-input').forEach(ta => {
+  ta.addEventListener('blur', () => saveNote(ta.dataset.id));
+});
+</script>
 {% endblock %}

@@ -591,7 +591,8 @@
           }
           if (!valid) return;
 
-          var waPhone = this.dataset.phone.replace(/\D/g, '');
+          var rawDigits = this.dataset.phone.replace(/\D/g, '');
+          var waPhone = rawDigits.length === 10 ? '91' + rawDigits : rawDigits;
           var message = encodeURIComponent(
             '🔔 Hare Krishna!\nPlease notify me when The Wisdom Journal (Our Holy Scriptures: Myth? Or Fact?) is published.' +
             '\nMy name: ' + name +
