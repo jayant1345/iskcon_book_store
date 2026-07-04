@@ -60,19 +60,21 @@ def wa_phone_filter(phone):
     return digits
 
 def notify_admin_whatsapp(message):
-    """Fire-and-forget WhatsApp notification to admin via CallMeBot. Never blocks the request."""
-    import threading, requests as _req, urllib.parse
-    api_key = app.config.get("CALLMEBOT_API_KEY", "")
-    phone   = app.config.get("ADMIN_NOTIFY_WHATSAPP", "")
-    if not api_key or not phone:
+    """Fire-and-forget WhatsApp notification to admin via Green API. Never blocks the request."""
+    import threading, requests as _req
+    instance_id = app.config.get("GREENAPI_INSTANCE_ID", "")
+    token       = app.config.get("GREENAPI_TOKEN", "")
+    api_url     = app.config.get("GREENAPI_API_URL", "https://7107.api.greenapi.com")
+    phone       = app.config.get("ADMIN_NOTIFY_WHATSAPP", "")
+    if not instance_id or not token or not phone:
         return
     def _send():
         try:
-            url = (
-                f"https://api.callmebot.com/whatsapp.php"
-                f"?phone={phone}&text={urllib.parse.quote(message)}&apikey={api_key}"
-            )
-            _req.get(url, timeout=10)
+            url = f"{api_url}/waInstance{instance_id}/sendMessage/{token}"
+            _req.post(url, json={
+                "chatId": f"{phone}@c.us",
+                "message": message
+            }, timeout=10)
         except Exception:
             pass
     threading.Thread(target=_send, daemon=True).start()
@@ -116,7 +118,9 @@ class Config:
     DELHIVERY_DEFAULT_WEIGHT  = float(os.environ.get("DELHIVERY_DEFAULT_WEIGHT", "0.1"))
     MAIL_USERNAME = os.environ.get("MAIL_USERNAME", "noreply@iskconbooks.in")
     BREVO_API_KEY = os.environ.get("BREVO_API_KEY", "")
-    CALLMEBOT_API_KEY    = os.environ.get("CALLMEBOT_API_KEY", "")
+    GREENAPI_INSTANCE_ID = os.environ.get("GREENAPI_INSTANCE_ID", "")
+    GREENAPI_TOKEN       = os.environ.get("GREENAPI_TOKEN", "")
+    GREENAPI_API_URL     = os.environ.get("GREENAPI_API_URL", "https://7107.api.greenapi.com")
     ADMIN_NOTIFY_WHATSAPP = os.environ.get("ADMIN_NOTIFY_WHATSAPP", "917802012002")
 
 
