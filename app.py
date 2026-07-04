@@ -59,6 +59,25 @@ def wa_phone_filter(phone):
         return '91' + digits[1:]
     return digits
 
+def notify_admin_whatsapp(message):
+    """Fire-and-forget WhatsApp notification to admin via CallMeBot. Never blocks the request."""
+    import threading, requests as _req, urllib.parse
+    api_key = app.config.get("CALLMEBOT_API_KEY", "")
+    phone   = app.config.get("ADMIN_NOTIFY_WHATSAPP", "")
+    if not api_key or not phone:
+        return
+    def _send():
+        try:
+            url = (
+                f"https://api.callmebot.com/whatsapp.php"
+                f"?phone={phone}&text={urllib.parse.quote(message)}&apikey={api_key}"
+            )
+            _req.get(url, timeout=10)
+        except Exception:
+            pass
+    threading.Thread(target=_send, daemon=True).start()
+
+
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
@@ -97,6 +116,8 @@ class Config:
     DELHIVERY_DEFAULT_WEIGHT  = float(os.environ.get("DELHIVERY_DEFAULT_WEIGHT", "0.1"))
     MAIL_USERNAME = os.environ.get("MAIL_USERNAME", "noreply@iskconbooks.in")
     BREVO_API_KEY = os.environ.get("BREVO_API_KEY", "")
+    CALLMEBOT_API_KEY    = os.environ.get("CALLMEBOT_API_KEY", "")
+    ADMIN_NOTIFY_WHATSAPP = os.environ.get("ADMIN_NOTIFY_WHATSAPP", "917802012002")
 
 
 app.config.from_object(Config)
@@ -1381,6 +1402,15 @@ def payment_verify():
             order.order_status      = "confirmed"
             db.session.commit()
             send_order_confirmation(order)
+            books = ", ".join(i.book_title for i in order.items)
+            notify_admin_whatsapp(
+                f"🔔 Payment Received!\n"
+                f"Order: {order.order_number}\n"
+                f"Customer: {order.customer_name} | {order.customer_phone}\n"
+                f"Amount: ₹{order.total_amount:.0f} | Razorpay\n"
+                f"Payment ID: {rp_payment_id}\n"
+                f"Books: {books}"
+            )
             return jsonify({"success": True, "redirect": url_for("order_success", order_number=order.order_number)})
     except Exception:
         pass
@@ -1411,6 +1441,15 @@ def payment_payu_success():
             order.razorpay_payment_id = data.get("mihpayid", "")
             db.session.commit()
             send_order_confirmation(order)
+            books = ", ".join(i.book_title for i in order.items)
+            notify_admin_whatsapp(
+                f"🔔 Payment Received!\n"
+                f"Order: {order.order_number}\n"
+                f"Customer: {order.customer_name} | {order.customer_phone}\n"
+                f"Amount: ₹{order.total_amount:.0f} | PayU\n"
+                f"Payment ID: {data.get('mihpayid', '')}\n"
+                f"Books: {books}"
+            )
             flash("Payment successful! 🎉 Hare Krishna!", "success")
             return redirect(url_for("order_success", order_number=order.order_number))
         else:
@@ -1517,6 +1556,16 @@ def upi_confirm(order_number):
             )
             db.session.commit()
             flash("Transaction ID submitted! We will verify and confirm your order shortly.", "success")
+            books = ", ".join(i.book_title for i in order.items)
+            notify_admin_whatsapp(
+                f"💰 UPI Payment Pending Verification\n"
+                f"Order: {order.order_number}\n"
+                f"Customer: {order.customer_name} | {order.customer_phone}\n"
+                f"Amount: ₹{order.total_amount:.0f} | UPI\n"
+                f"UTR: {utr}\n"
+                f"Books: {books}\n"
+                f"⚠️ Please verify UTR and mark Paid."
+            )
         except Exception as e:
             db.session.rollback()
             print(f"[ERROR] upi_confirm save failed: {e}")
@@ -1875,6 +1924,13 @@ def magazine_upi_confirm(txn_ref):
         pending.status = "pending_verification"   # admin must manually confirm UPI
         db.session.commit()
         flash("Transaction ID submitted! We'll verify and activate your access shortly. 🙏", "success")
+        notify_admin_whatsapp(
+            f"📰 Magazine UPI Pending Verification\n"
+            f"Ref: {txn_ref}\n"
+            f"Amount: ₹{pending.amount:.0f} | UPI\n"
+            f"UTR: {utr}\n"
+            f"⚠️ Please verify UTR and activate access."
+        )
     return redirect(_mag_success_redirect(pending))
 
 
