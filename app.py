@@ -3619,6 +3619,62 @@ def admin_delhivery_cancel(order_id):
     return redirect(url_for("admin_order_detail", order_id=order_id))
 
 
+def sync_delhivery_deliveries():
+    """
+    Poll Delhivery API for all 'shipped' Delhivery orders and auto-mark them
+    delivered when Delhivery confirms delivery. Safe to call from background thread.
+    Returns count of orders updated.
+    """
+    from delhivery import track_shipment
+    updated = 0
+    with app.app_context():
+        shipped_orders = Order.query.filter_by(
+            courier_name="Delhivery",
+            order_status="shipped",
+            is_deleted=False,
+        ).all()
+        for order in shipped_orders:
+            if not order.tracking_number:
+                continue
+            try:
+                result, err = track_shipment(order.tracking_number)
+                if err or not result:
+                    continue
+                status = (result.get("status") or "").strip().lower()
+                if "delivered" in status:
+                    order.order_status = "delivered"
+                    db.session.commit()
+                    updated += 1
+                    # Email notification
+                    try:
+                        send_order_delivered(order)
+                    except Exception:
+                        pass
+                    # WhatsApp notification
+                    notify_admin_whatsapp(
+                        f"📦 Order Delivered (auto-sync)!\n"
+                        f"Order: {order.order_number}\n"
+                        f"Customer: {order.customer_name} | {order.customer_phone}\n"
+                        f"Waybill: {order.tracking_number}"
+                    )
+                    app.logger.info(f"[DELHIVERY SYNC] Auto-delivered order {order.order_number}")
+            except Exception as e:
+                app.logger.error(f"[DELHIVERY SYNC] Error checking {order.order_number}: {e}")
+    return updated
+
+
+@app.route("/admin/sync-delhivery", methods=["POST"])
+@admin_required
+def admin_sync_delhivery():
+    """Manually trigger Delhivery delivery sync from the admin orders page."""
+    updated = sync_delhivery_deliveries()
+    if updated:
+        flash(f"✅ {updated} order(s) auto-marked as Delivered from Delhivery tracking.", "success")
+    else:
+        flash("No new deliveries found — all shipped orders still in transit.", "info")
+    return redirect(url_for("admin_orders"))
+
+
 @app.route("/admin/orders/trash")
 @admin_required
 def admin_trash_orders():
@@ -4031,6 +4087,24 @@ try:
     init_db()
 except Exception as e:
     print(f"[ERROR] init_db failed at startup: {e}")
+
+
+# Background thread: poll Delhivery every 2 hours and auto-mark deliveries
+def _delhivery_sync_loop():
+    import time
+    time.sleep(300)  # wait 5 min after boot before first check
+    while True:
+        try:
+            n = sync_delhivery_deliveries()
+            if n:
+                print(f"[DELHIVERY SYNC] Auto-delivered {n} order(s)")
+        except Exception as e:
+            print(f"[DELHIVERY SYNC] Error: {e}")
+        time.sleep(7200)  # check every 2 hours
+
+import threading as _threading
+_sync_thread = _threading.Thread(target=_delhivery_sync_loop, daemon=True)
+_sync_thread.start()
 
 
 
