@@ -2500,6 +2500,42 @@ def admin_dashboard():
                            active_sessions=active_sessions)
 
 
+@app.route("/admin/test-email", methods=["POST"])
+@admin_required
+def admin_test_email():
+    """Send a test email of any type to verify Brevo + templates are working."""
+    email_type = request.form.get("email_type", "confirmation")
+    to_email   = request.form.get("to_email", "").strip()
+    if not to_email:
+        to_email = app.config.get("MAIL_USERNAME", "")
+
+    order = Order.query.filter_by(is_deleted=False).order_by(Order.created_at.desc()).first()
+    if not order:
+        flash("No orders in DB yet — place a test order first.", "warning")
+        return redirect(url_for("admin_dashboard"))
+
+    # Temporarily override recipient so the real customer doesn't get a test email
+    original_email = order.customer_email
+    order.customer_email = to_email
+
+    try:
+        if email_type == "placed":
+            send_order_placed(order, utr="TEST123456789")
+        elif email_type == "confirmation":
+            send_order_confirmation(order)
+        elif email_type == "shipped":
+            send_order_shipped(order)
+        elif email_type == "delivered":
+            send_order_delivered(order)
+        flash(f"✅ Test '{email_type}' email sent to {to_email} — check inbox (and spam).", "success")
+    except Exception as e:
+        flash(f"❌ Email failed: {e}", "danger")
+    finally:
+        order.customer_email = original_email  # restore — never commit this
+
+    return redirect(url_for("admin_dashboard"))
+
+
 # ── Admin: Books ──
 
 @app.route("/admin/books")
