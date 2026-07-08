@@ -126,6 +126,7 @@ class Config:
     GREENAPI_TOKEN       = os.environ.get("GREENAPI_TOKEN", "")
     GREENAPI_API_URL     = os.environ.get("GREENAPI_API_URL", "https://7107.api.greenapi.com")
     ADMIN_NOTIFY_WHATSAPP = os.environ.get("ADMIN_NOTIFY_WHATSAPP", "919157938887")
+    CRON_SECRET           = os.environ.get("CRON_SECRET", "")
 
 
 app.config.from_object(Config)
@@ -3677,6 +3678,27 @@ def admin_sync_delhivery():
     else:
         flash("No new deliveries found — all shipped orders still in transit.", "info")
     return redirect(url_for("admin_orders"))
+
+
+@app.route("/cron/sync-delhivery")
+def cron_sync_delhivery():
+    """
+    Called by Railway Cron on a schedule (e.g. every 2 hours).
+    Protected by CRON_SECRET token in the Authorization header or ?token= query param.
+    """
+    cron_secret = app.config.get("CRON_SECRET", "")
+    if not cron_secret:
+        return jsonify({"error": "CRON_SECRET not configured"}), 500
+
+    provided = (
+        request.headers.get("Authorization", "").removeprefix("Bearer ").strip()
+        or request.args.get("token", "").strip()
+    )
+    if not hmac.compare_digest(provided, cron_secret):
+        return jsonify({"error": "Unauthorized"}), 401
+
+    updated = sync_delhivery_deliveries()
+    return jsonify({"ok": True, "delivered": updated})
 
 
 @app.route("/admin/orders/trash")
