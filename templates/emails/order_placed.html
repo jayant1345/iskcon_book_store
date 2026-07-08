@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Order Confirmed — ISKCON Book Store</title>
+  <title>Order Received — ISKCON Book Store</title>
 </head>
 <body style="margin:0;padding:0;background:#f8f5f0;font-family:Arial,Helvetica,sans-serif;color:#333;">
 <table width="100%" cellpadding="0" cellspacing="0" style="background:#f8f5f0;padding:20px 0;">
@@ -19,16 +19,31 @@
         </td>
       </tr>
 
-      <!-- Confirmation Badge -->
+      <!-- Status Badge -->
       <tr>
         <td style="padding:28px 24px 0;text-align:center;">
-          <div style="display:inline-block;background:#ecfdf5;border:2px solid #16a34a;border-radius:50px;padding:8px 22px;">
-            <span style="color:#16a34a;font-weight:bold;font-size:15px;">✅ Order Confirmed</span>
+          <div style="display:inline-block;background:#fffbeb;border:2px solid #f59e0b;border-radius:50px;padding:8px 22px;">
+            <span style="color:#92400e;font-weight:bold;font-size:15px;">⏳ Order Received — Verifying Payment</span>
           </div>
           <h2 style="margin:16px 0 4px;color:#1e3a5f;font-size:20px;">Thank you, {{ order.customer_name }}!</h2>
-          <p style="margin:0;color:#666;font-size:14px;">Your order <strong style="color:#f97316;">{{ order.order_number }}</strong> has been placed successfully.</p>
+          <p style="margin:0;color:#666;font-size:14px;">
+            We've received your order <strong style="color:#f97316;">{{ order.order_number }}</strong>.<br>
+            Your UPI payment is being verified — we'll confirm shortly.
+          </p>
         </td>
       </tr>
+
+      <!-- UTR info -->
+      {% if utr %}
+      <tr>
+        <td style="padding:20px 24px 0;">
+          <div style="background:#f0f9ff;border-radius:8px;padding:14px 18px;text-align:center;">
+            <p style="margin:0;font-size:13px;color:#555;">UPI Transaction Reference (UTR)</p>
+            <p style="margin:4px 0 0;font-size:18px;font-weight:bold;color:#1d4ed8;letter-spacing:1px;">{{ utr }}</p>
+          </div>
+        </td>
+      </tr>
+      {% endif %}
 
       <!-- Order Items -->
       <tr>
@@ -47,69 +62,49 @@
               <td style="padding:10px 12px;font-size:14px;color:#333;text-align:right;border-bottom:1px solid #f5f5f5;">₹{{ "%.0f"|format(item.subtotal) }}</td>
             </tr>
             {% endfor %}
-
-            <!-- Subtotal -->
-            <tr>
-              <td colspan="2" style="padding:8px 12px;text-align:right;font-size:13px;color:#666;">Subtotal</td>
-              <td style="padding:8px 12px;text-align:right;font-size:13px;color:#333;">₹{{ "%.0f"|format(order.subtotal) }}</td>
-            </tr>
-            {% if order.shipping_charge > 0 %}
-            <tr>
-              <td colspan="2" style="padding:4px 12px;text-align:right;font-size:13px;color:#666;">Shipping</td>
-              <td style="padding:4px 12px;text-align:right;font-size:13px;color:#333;">₹{{ "%.0f"|format(order.shipping_charge) }}</td>
-            </tr>
-            {% else %}
-            <tr>
-              <td colspan="2" style="padding:4px 12px;text-align:right;font-size:13px;color:#16a34a;">Shipping</td>
-              <td style="padding:4px 12px;text-align:right;font-size:13px;color:#16a34a;">FREE</td>
-            </tr>
-            {% endif %}
-            {% if order.discount_amount > 0 %}
-            <tr>
-              <td colspan="2" style="padding:4px 12px;text-align:right;font-size:13px;color:#16a34a;">Discount ({{ order.coupon_code }})</td>
-              <td style="padding:4px 12px;text-align:right;font-size:13px;color:#16a34a;">-₹{{ "%.0f"|format(order.discount_amount) }}</td>
-            </tr>
-            {% endif %}
-            <!-- Total -->
             <tr style="background:#fff8f0;">
-              <td colspan="2" style="padding:12px;text-align:right;font-size:16px;font-weight:bold;color:#1e3a5f;border-top:2px solid #f97316;">Total Paid</td>
+              <td colspan="2" style="padding:12px;text-align:right;font-size:16px;font-weight:bold;color:#1e3a5f;border-top:2px solid #f97316;">Total</td>
               <td style="padding:12px;text-align:right;font-size:18px;font-weight:bold;color:#f97316;border-top:2px solid #f97316;">₹{{ "%.0f"|format(order.total_amount) }}</td>
             </tr>
           </table>
         </td>
       </tr>
 
-      <!-- Payment & Delivery Info Side by Side -->
+      <!-- Delivery address -->
       <tr>
         <td style="padding:0 24px 24px;">
-          <table width="100%" cellpadding="0" cellspacing="0">
-            <tr>
-              <!-- Payment Info -->
-              <td width="48%" valign="top" style="background:#f0f9ff;border-radius:8px;padding:16px;">
-                <h4 style="margin:0 0 10px;color:#1e3a5f;font-size:13px;text-transform:uppercase;letter-spacing:1px;">💳 Payment</h4>
-                <p style="margin:0 0 4px;font-size:13px;color:#555;">Method: <strong>{{ order.payment_method.upper() }}</strong></p>
-                <p style="margin:0;font-size:13px;color:#16a34a;font-weight:bold;">Status: {{ order.payment_status.capitalize() }}</p>
-              </td>
-              <td width="4%"></td>
-              <!-- Delivery Info -->
-              <td width="48%" valign="top" style="background:#fff8f0;border-radius:8px;padding:16px;">
-                <h4 style="margin:0 0 10px;color:#1e3a5f;font-size:13px;text-transform:uppercase;letter-spacing:1px;">📍 Delivery To</h4>
-                <p style="margin:0;font-size:13px;color:#555;line-height:1.7;">
-                  {{ order.customer_name }}<br>
-                  {{ order.address }}<br>
-                  {{ order.city }}{% if order.state %}, {{ order.state }}{% endif %}<br>
-                  PIN: {{ order.pincode }}
-                </p>
-              </td>
-            </tr>
-          </table>
+          <div style="background:#fff8f0;border-radius:8px;padding:16px;">
+            <h4 style="margin:0 0 10px;color:#1e3a5f;font-size:13px;text-transform:uppercase;letter-spacing:1px;">📍 Delivery To</h4>
+            <p style="margin:0;font-size:13px;color:#555;line-height:1.7;">
+              {{ order.customer_name }}<br>
+              {{ order.address }}<br>
+              {{ order.city }}{% if order.state %}, {{ order.state }}{% endif %}<br>
+              PIN: {{ order.pincode }}
+            </p>
+          </div>
         </td>
       </tr>
 
-      <!-- Track Order CTA -->
+      <!-- What happens next -->
+      <tr>
+        <td style="padding:0 24px 24px;">
+          <div style="background:#ecfdf5;border-radius:8px;padding:16px;">
+            <h4 style="margin:0 0 10px;color:#065f46;font-size:14px;">✅ What happens next?</h4>
+            <p style="margin:0;font-size:13px;color:#065f46;line-height:1.9;">
+              1. We verify your UPI payment (usually within a few hours)<br>
+              2. You receive a <strong>Payment Confirmed</strong> email<br>
+              3. We pack and dispatch your books<br>
+              4. You receive a <strong>Shipment</strong> email with tracking number<br>
+              5. Books arrive at your doorstep 🏠
+            </p>
+          </div>
+        </td>
+      </tr>
+
+      <!-- Track order -->
       <tr>
         <td style="padding:0 24px 24px;text-align:center;">
-          <a href="{{ track_url }}" style="display:inline-block;background:#f97316;color:#fff;text-decoration:none;padding:12px 28px;border-radius:6px;font-weight:bold;font-size:14px;">📦 Track Your Order</a>
+          <a href="{{ track_url }}" style="display:inline-block;background:#f97316;color:#fff;text-decoration:none;padding:12px 28px;border-radius:6px;font-weight:bold;font-size:14px;">Track Your Order</a>
         </td>
       </tr>
 

@@ -53,14 +53,31 @@ def _send(to_email, subject, html_body):
 
 # ─── Public helpers ──────────────────────────────────────────────────────────
 
+def send_order_placed(order, utr=""):
+    """Email customer immediately when a UPI order is submitted (payment pending verification)."""
+    if not order.customer_email:
+        return
+    try:
+        from flask import url_for
+        track_url = url_for("order_track", _external=True)
+        subject   = f"Order Received #{order.order_number} — Payment Verification Pending"
+        html_body = render_template("emails/order_placed.html", order=order, utr=utr, track_url=track_url)
+        _send(order.customer_email, subject, html_body)
+    except Exception as exc:
+        print(f"[EMAIL] send_order_placed error: {exc}")
+        current_app.logger.error(f"[EMAIL] send_order_placed error: {exc}")
+
+
 def send_order_confirmation(order):
     """Email customer when their order is confirmed / payment received."""
     if not order.customer_email:
         print(f"[EMAIL] Skipping confirmation for {order.order_number} — no email on record.")
         return
     try:
+        from flask import url_for
+        track_url = url_for("order_track", _external=True)
         subject   = f"Order Confirmed #{order.order_number} — Hare Krishna!"
-        html_body = render_template("emails/order_confirmation.html", order=order)
+        html_body = render_template("emails/order_confirmation.html", order=order, track_url=track_url)
         _send(order.customer_email, subject, html_body)
     except Exception as exc:
         print(f"[EMAIL] send_order_confirmation error: {exc}")
@@ -73,8 +90,10 @@ def send_order_shipped(order):
         print(f"[EMAIL] Skipping shipped for {order.order_number} — no email on record.")
         return
     try:
+        from flask import url_for
+        track_url = url_for("order_track", _external=True)
         subject   = f"Your Order #{order.order_number} Has Been Shipped!"
-        html_body = render_template("emails/order_shipped.html", order=order)
+        html_body = render_template("emails/order_shipped.html", order=order, track_url=track_url)
         _send(order.customer_email, subject, html_body)
     except Exception as exc:
         print(f"[EMAIL] send_order_shipped error: {exc}")
@@ -87,8 +106,10 @@ def send_order_delivered(order):
         print(f"[EMAIL] Skipping delivered for {order.order_number} — no email on record.")
         return
     try:
+        from flask import url_for
+        store_url = url_for("books", _external=True)
         subject   = f"Your Order #{order.order_number} Has Been Delivered!"
-        html_body = render_template("emails/order_delivered.html", order=order)
+        html_body = render_template("emails/order_delivered.html", order=order, store_url=store_url)
         _send(order.customer_email, subject, html_body)
     except Exception as exc:
         print(f"[EMAIL] send_order_delivered error: {exc}")

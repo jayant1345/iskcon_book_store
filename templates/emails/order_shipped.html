@@ -79,6 +79,16 @@
         </td>
       </tr>
 
+      <!-- Track Order CTA -->
+      <tr>
+        <td style="padding:0 24px 24px;text-align:center;">
+          <a href="{{ track_url }}" style="display:inline-block;background:#3b82f6;color:#fff;text-decoration:none;padding:12px 28px;border-radius:6px;font-weight:bold;font-size:14px;">📍 Track Your Order</a>
+          {% if order.courier_name == 'Delhivery' and order.tracking_number %}
+          <br><a href="https://www.delhivery.com/tracking?waybill={{ order.tracking_number }}" style="display:inline-block;margin-top:10px;color:#3b82f6;font-size:13px;text-decoration:underline;">Track on Delhivery Website →</a>
+          {% endif %}
+        </td>
+      </tr>
+
       <!-- Spiritual Message -->
       <tr>
         <td style="padding:0 24px 24px;">

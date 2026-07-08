@@ -29,7 +29,7 @@ from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from sqlalchemy import or_
-from email_utils import send_order_confirmation, send_order_shipped, send_order_delivered
+from email_utils import send_order_placed, send_order_confirmation, send_order_shipped, send_order_delivered
 
 # ─────────────────────────────────────────────
 # App & Configuration
@@ -1594,6 +1594,7 @@ def upi_confirm(order_number):
                 f"Books: {books}\n"
                 f"⚠️ Please verify UTR and mark Paid."
             )
+            send_order_placed(order, utr=utr)
         except Exception as e:
             db.session.rollback()
             print(f"[ERROR] upi_confirm save failed: {e}")
