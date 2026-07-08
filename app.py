@@ -4129,25 +4129,6 @@ except Exception as e:
     print(f"[ERROR] init_db failed at startup: {e}")
 
 
-# Background thread: poll Delhivery every 2 hours and auto-mark deliveries
-def _delhivery_sync_loop():
-    import time
-    time.sleep(300)  # wait 5 min after boot before first check
-    while True:
-        try:
-            n = sync_delhivery_deliveries()
-            if n:
-                print(f"[DELHIVERY SYNC] Auto-delivered {n} order(s)")
-        except Exception as e:
-            print(f"[DELHIVERY SYNC] Error: {e}")
-        time.sleep(7200)  # check every 2 hours
-
-import threading as _threading
-_sync_thread = _threading.Thread(target=_delhivery_sync_loop, daemon=True)
-_sync_thread.start()
-
-
-
 if __name__ == "__main__":
     init_db()
     debug = os.environ.get("FLASK_ENV", "development") == "development"

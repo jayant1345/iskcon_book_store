@@ -9,6 +9,15 @@ import requests as http
 from flask import current_app, render_template
 
 
+def _safe_url(endpoint, **kwargs):
+    """Build an external URL, returning '' safely if no request context exists."""
+    try:
+        from flask import url_for
+        return url_for(endpoint, _external=True, **kwargs)
+    except Exception:
+        return ""
+
+
 def _send(to_email, subject, html_body):
     """Send via Brevo HTTP API — called synchronously in the request."""
     app       = current_app._get_current_object()
@@ -58,8 +67,7 @@ def send_order_placed(order, utr=""):
     if not order.customer_email:
         return
     try:
-        from flask import url_for
-        track_url = url_for("order_track", _external=True)
+        track_url = _safe_url("order_track")
         subject   = f"Order Received #{order.order_number} — Payment Verification Pending"
         html_body = render_template("emails/order_placed.html", order=order, utr=utr, track_url=track_url)
         _send(order.customer_email, subject, html_body)
@@ -74,8 +82,7 @@ def send_order_confirmation(order):
         print(f"[EMAIL] Skipping confirmation for {order.order_number} — no email on record.")
         return
     try:
-        from flask import url_for
-        track_url = url_for("order_track", _external=True)
+        track_url = _safe_url("order_track")
         subject   = f"Order Confirmed #{order.order_number} — Hare Krishna!"
         html_body = render_template("emails/order_confirmation.html", order=order, track_url=track_url)
         _send(order.customer_email, subject, html_body)
@@ -90,8 +97,7 @@ def send_order_shipped(order):
         print(f"[EMAIL] Skipping shipped for {order.order_number} — no email on record.")
         return
     try:
-        from flask import url_for
-        track_url = url_for("order_track", _external=True)
+        track_url = _safe_url("order_track")
         subject   = f"Your Order #{order.order_number} Has Been Shipped!"
         html_body = render_template("emails/order_shipped.html", order=order, track_url=track_url)
         _send(order.customer_email, subject, html_body)
@@ -106,8 +112,7 @@ def send_order_delivered(order):
         print(f"[EMAIL] Skipping delivered for {order.order_number} — no email on record.")
         return
     try:
-        from flask import url_for
-        store_url = url_for("books", _external=True)
+        store_url = _safe_url("books")
         subject   = f"Your Order #{order.order_number} Has Been Delivered!"
         html_body = render_template("emails/order_delivered.html", order=order, store_url=store_url)
         _send(order.customer_email, subject, html_body)
@@ -119,9 +124,7 @@ def send_order_delivered(order):
 def send_password_reset(customer):
     """Email customer a password reset link."""
     try:
-        from flask import url_for
-        reset_url = url_for("customer_reset_password",
-                            token=customer.reset_token, _external=True)
+        reset_url = _safe_url("customer_reset_password", token=customer.reset_token)
         subject   = "Reset your ISKCON Book Store password"
         html_body = render_template("emails/password_reset.html",
                                     customer=customer, reset_url=reset_url)
