@@ -9,12 +9,4 @@ keepalive   = 5
 loglevel    = os.environ.get("LOG_LEVEL", "info")
 accesslog   = "-"   # stdout
 errorlog    = "-"   # stderr
-preload_app = True
-
-def on_starting(server):
-    """Initialize DB before workers fork."""
-    try:
-        from app import init_db
-        init_db()
-    except Exception as e:
-        print(f"[WARNING] DB init on_starting failed: {e}")
+preload_app = False
