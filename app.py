@@ -121,7 +121,7 @@ class Config:
     GREENAPI_INSTANCE_ID = os.environ.get("GREENAPI_INSTANCE_ID", "")
     GREENAPI_TOKEN       = os.environ.get("GREENAPI_TOKEN", "")
     GREENAPI_API_URL     = os.environ.get("GREENAPI_API_URL", "https://7107.api.greenapi.com")
-    ADMIN_NOTIFY_WHATSAPP = os.environ.get("ADMIN_NOTIFY_WHATSAPP", "919426732587")
+    ADMIN_NOTIFY_WHATSAPP = os.environ.get("ADMIN_NOTIFY_WHATSAPP", "919157938887")
 
 
 app.config.from_object(Config)
