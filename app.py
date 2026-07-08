@@ -1147,6 +1147,14 @@ def checkout():
                 cust.saved_pincode = pincode
 
         db.session.commit()
+        _books = ", ".join(ci["book"].title for ci in totals["items"])
+        notify_admin_whatsapp(
+            f"🛒 New Order Placed!\n"
+            f"Order: {order.order_number}\n"
+            f"Customer: {order.customer_name} | {order.customer_phone}\n"
+            f"Amount: ₹{order.total_amount:.0f} | {order.payment_method.upper()}\n"
+            f"Books: {_books}"
+        )
 
         # Clear cart & coupon from session
         session.pop("cart", None)
@@ -1515,6 +1523,11 @@ def whatsapp_log():
             customer_phone= phone,
         ))
         db.session.commit()
+        notify_admin_whatsapp(
+            f"📱 New WhatsApp Enquiry!\n"
+            f"Customer: {name or '—'} | {phone or '—'}\n"
+            f"Book: {book_title or 'General Enquiry'}"
+        )
     return jsonify({"success": True})
 
 
@@ -1623,6 +1636,12 @@ def ebook_download(order_number, book_id):
         order.order_status = "delivered"
 
     db.session.commit()
+    notify_admin_whatsapp(
+        f"📥 eBook Downloaded!\n"
+        f"Order: {order.order_number}\n"
+        f"Customer: {order.customer_name} | {order.customer_phone}\n"
+        f"Book: {book.title}"
+    )
 
     ext = book.ebook_file.rsplit(".", 1)[1]
     return send_from_directory(
