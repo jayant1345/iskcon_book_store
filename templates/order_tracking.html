@@ -118,6 +118,21 @@
     <h6 style="font-family:'Cinzel',serif; color:var(--brown); margin-top:16px; padding-top:16px; border-top:1px solid var(--border);">
       Items Ordered
     </h6>
+
+    {# eBook download warning #}
+    {% set ebook_pending = [] %}
+    {% for item in order.items %}
+      {% if item.book and item.book.is_ebook and item.book.ebook_file and order.payment_method != 'cod' and order.payment_status == 'paid' and not item.ebook_downloaded_at %}
+        {% set _ = ebook_pending.append(item) %}
+      {% endif %}
+    {% endfor %}
+    {% if ebook_pending %}
+    <div class="alert alert-warning py-2 px-3 mb-2" style="font-size:0.85rem;">
+      ⚠️ Each eBook download link works <strong>only once</strong> and deactivates immediately after use.
+      Please download and save to your device right away.
+    </div>
+    {% endif %}
+
     <div class="table-responsive">
       <table class="table table-sm">
         <thead>
@@ -130,7 +145,22 @@
         <tbody>
           {% for item in order.items %}
           <tr>
-            <td>{{ item.book_title }}</td>
+            <td>
+              {{ item.book_title }}
+              {% if item.book and item.book.is_ebook and item.book.ebook_file and order.payment_method != 'cod' %}
+                {% if item.ebook_downloaded_at %}
+                  <br><span class="badge bg-secondary" style="font-size:0.7rem;">✓ Downloaded</span>
+                {% elif order.payment_status == 'paid' %}
+                  <br>
+                  <a href="{{ url_for('ebook_download', order_number=order.order_number, book_id=item.book_id) }}"
+                     class="btn btn-sm btn-success mt-1" style="font-size:0.78rem;">
+                    📥 Download eBook
+                  </a>
+                {% else %}
+                  <br><span class="badge bg-warning text-dark" style="font-size:0.7rem;">Awaiting Payment</span>
+                {% endif %}
+              {% endif %}
+            </td>
             <td class="text-center">{{ item.quantity }}</td>
             <td class="text-end">₹{{ (item.price * item.quantity)|int }}</td>
           </tr>
