@@ -61,18 +61,22 @@ def wa_phone_filter(phone):
 
 def notify_admin_whatsapp(message):
     """Fire-and-forget WhatsApp notification to admin via Green API. Never blocks the request."""
-    import threading, requests as _req
+    import threading, requests as _req, re as _re
     instance_id = app.config.get("GREENAPI_INSTANCE_ID", "")
     token       = app.config.get("GREENAPI_TOKEN", "")
     api_url     = app.config.get("GREENAPI_API_URL", "https://7107.api.greenapi.com")
     phone       = app.config.get("ADMIN_NOTIFY_WHATSAPP", "")
     if not instance_id or not token or not phone:
         return
+    # Normalise to E.164 digits: add 91 if bare 10-digit Indian number
+    digits = _re.sub(r'\D', '', str(phone))
+    if len(digits) == 10:
+        digits = '91' + digits
     def _send():
         try:
             url = f"{api_url}/waInstance{instance_id}/sendMessage/{token}"
             _req.post(url, json={
-                "chatId": f"{phone}@c.us",
+                "chatId": f"{digits}@c.us",
                 "message": message
             }, timeout=10)
         except Exception:
