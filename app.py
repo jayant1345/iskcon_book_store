@@ -1335,6 +1335,13 @@ def donate_book(book_id):
     book.stock = max(0, book.stock - quantity)
     db.session.add(oi)
     db.session.commit()
+    notify_admin_whatsapp(
+        f"🙏 New Book Donation!\n"
+        f"Donor: {donor_name} | {donor_phone}\n"
+        f"Book: {book.title} × {quantity}\n"
+        f"Amount: ₹{total_amount:.0f} | {payment_method.upper()}\n"
+        f"Type: {'Gift to person' if donation_type == 'person' else 'Donate to ISKCON'}"
+    )
 
     if payment_method == "upi":
         return redirect(url_for("payment_upi_qr", order_number=order.order_number))
@@ -1978,6 +1985,14 @@ def _complete_mag_payment(pending, payment_id):
         ))
     pending.status = "completed"
     db.session.commit()
+    _type = "Issue Purchase" if pending.payment_type == "buy" else f"{(pending.plan or '').title()} Subscription"
+    notify_admin_whatsapp(
+        f"📰 Magazine Payment Confirmed!\n"
+        f"Customer: {pending.customer.name} | {pending.customer.phone}\n"
+        f"Amount: ₹{pending.amount:.0f} | {pending.payment_method.upper()}\n"
+        f"Type: {_type}\n"
+        f"Payment ID: {payment_id}"
+    )
     return _mag_success_redirect(pending)
 
 
