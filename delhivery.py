@@ -116,7 +116,7 @@ def create_shipment(order):
     """
     total_qty = sum(item.quantity for item in order.items)
     weight_kg = max(
-        sum(item.quantity * (item.book.weight_kg if item.book and item.book.weight_kg else _WEIGHT_KG)
+        sum(item.quantity * (item.book.weight_kg if item.book and item.book.weight_kg is not None and item.book.weight_kg > 0 else _WEIGHT_KG)
             for item in order.items),
         0.5
     )

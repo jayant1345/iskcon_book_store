@@ -54,6 +54,7 @@
                     <th>Format</th>
                     <th>Price</th>
                     <th>Stock</th>
+                    <th title="Shipping weight — affects Delhivery charges">Wt (kg)</th>
                     <th>Featured</th>
                     <th>Active</th>
                     <th>Actions</th>
@@ -94,6 +95,7 @@
                             <option value="ebook" {% if fmt_filter=='ebook' %}selected{% endif %}>📱 eBook</option>
                         </select>
                     </td>
+                    <td></td>
                     <td></td>
                     <td></td>
                     <td></td>
@@ -154,6 +156,17 @@
                                style="width:65px; {% if book.stock < 5 %}border-color:#dc3545; color:#dc3545;{% endif %}">
                     </td>
                     <td>
+                        {% if not book.is_ebook %}
+                        <input type="number" class="form-control form-control-sm quick-field" min="0.01" step="0.01"
+                               data-book-id="{{ book.id }}" data-field="weight_kg"
+                               value="{{ '%.2f'|format(book.weight_kg or 0.10) }}"
+                               title="Edit shipping weight (kg) — press Enter to save"
+                               style="width:72px; {% if not book.weight_kg or book.weight_kg <= 0.10 %}border-color:#fd7e14; color:#fd7e14;{% endif %}">
+                        {% else %}
+                        <span class="text-muted" style="font-size:0.8rem;">—</span>
+                        {% endif %}
+                    </td>
+                    <td>
                         <form method="POST" action="{{ url_for('toggle_featured', book_id=book.id) }}" class="d-inline">
                             <button type="submit" class="btn btn-sm {% if book.featured %}btn-warning{% else %}btn-outline-secondary{% endif %}">
                                 {% if book.featured %}<i class="fas fa-star"></i>{% else %}<i class="far fa-star"></i>{% endif %}
@@ -187,7 +200,7 @@
                     </td>
                 </tr>
                 {% else %}
-                <tr><td colspan="11" class="text-center py-4 text-muted">No books found. <a href="{{ url_for('admin_add_book') }}">Add one!</a></td></tr>
+                <tr><td colspan="12" class="text-center py-4 text-muted">No books found. <a href="{{ url_for('admin_add_book') }}">Add one!</a></td></tr>
                 {% endfor %}
             </tbody>
         </table>

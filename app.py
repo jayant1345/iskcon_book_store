@@ -2815,13 +2815,16 @@ def admin_delete_book(book_id):
 @app.route("/admin/books/quick-update/<int:book_id>", methods=["POST"])
 @admin_required
 def admin_quick_update_book(book_id):
-    book  = Book.query.get_or_404(book_id)
-    price = request.form.get("price", type=float)
-    stock = request.form.get("stock", type=int)
+    book      = Book.query.get_or_404(book_id)
+    price     = request.form.get("price", type=float)
+    stock     = request.form.get("stock", type=int)
+    weight_kg = request.form.get("weight_kg", type=float)
     if price is not None and price >= 0:
         book.price = price
     if stock is not None and stock >= 0:
         book.stock = stock
+    if weight_kg is not None and weight_kg > 0:
+        book.weight_kg = weight_kg
     db.session.commit()
     return jsonify({"success": True})
 
