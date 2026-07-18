@@ -1068,16 +1068,21 @@ def checkout():
         pincode = request.form.get("pincode", "").strip()
         age_raw = request.form.get("age", "").strip()
         profession = request.form.get("profession", "").strip()
-        try:
-            age = int(age_raw) if age_raw else None
-        except ValueError:
-            age = None
         payment = request.form.get("payment_method", "cod")
         app.logger.info(f"[CHECKOUT] payment_method received: '{payment}' | form keys: {list(request.form.keys())}")
         notes   = request.form.get("notes", "").strip()
 
-        if not all([name, phone, address, city, pincode]):
+        if not all([name, phone, address, city, pincode, age_raw, profession]):
             flash("Please fill all required fields.", "danger")
+            return render_template("checkout.html", **totals,
+                                   all_ebooks=all(item["book"].is_ebook for item in totals["items"]))
+
+        try:
+            age = int(age_raw)
+            if age < 1 or age > 120:
+                raise ValueError
+        except ValueError:
+            flash("Please enter a valid age.", "danger")
             return render_template("checkout.html", **totals,
                                    all_ebooks=all(item["book"].is_ebook for item in totals["items"]))
 
