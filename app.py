@@ -222,6 +222,8 @@ class Order(db.Model):
     city               = db.Column(db.String(100))
     state              = db.Column(db.String(100))
     pincode            = db.Column(db.String(10))
+    age                = db.Column(db.Integer, nullable=True)
+    profession         = db.Column(db.String(100), nullable=True)
     subtotal           = db.Column(db.Float, nullable=False)
     shipping_charge    = db.Column(db.Float, default=0)
     discount_amount    = db.Column(db.Float, default=0)
@@ -1064,6 +1066,12 @@ def checkout():
         city    = request.form.get("city", "").strip()
         state   = request.form.get("state", "").strip()
         pincode = request.form.get("pincode", "").strip()
+        age_raw = request.form.get("age", "").strip()
+        profession = request.form.get("profession", "").strip()
+        try:
+            age = int(age_raw) if age_raw else None
+        except ValueError:
+            age = None
         payment = request.form.get("payment_method", "cod")
         app.logger.info(f"[CHECKOUT] payment_method received: '{payment}' | form keys: {list(request.form.keys())}")
         notes   = request.form.get("notes", "").strip()
@@ -1109,6 +1117,8 @@ def checkout():
             city            = city,
             state           = state,
             pincode         = pincode,
+            age             = age,
+            profession      = profession or None,
             subtotal        = subtotal,
             shipping_charge = shipping_charge,
             discount_amount = discount,
@@ -3787,7 +3797,7 @@ def admin_backup():
         w = csv.writer(orders_buf)
         w.writerow([
             "Order #", "Date", "Customer Name", "Phone", "Email",
-            "Address", "City", "State", "Pincode", "Books Ordered",
+            "Address", "City", "State", "Pincode", "Age", "Profession", "Books Ordered",
             "Subtotal (INR)", "Shipping (INR)", "Discount (INR)", "Total (INR)",
             "Payment Method", "Payment Status", "Order Status", "Coupon Code", "Notes"
         ])
@@ -3798,6 +3808,7 @@ def admin_backup():
                 order.created_at.strftime("%d-%m-%Y %H:%M"),
                 order.customer_name, order.customer_phone, order.customer_email or "",
                 order.address, order.city or "", order.state or "", order.pincode or "",
+                order.age or "", order.profession or "",
                 books_list,
                 int(order.subtotal), int(order.shipping_charge),
                 int(order.discount_amount), int(order.total_amount),
@@ -3967,6 +3978,8 @@ def init_db():
             ("admin_sessions",     "login_at",                   "TIMESTAMP"),
             ("admin_sessions",     "last_seen",                  "TIMESTAMP"),
             ("order_items",        "ebook_downloaded_at",        "TIMESTAMP"),
+            ("orders",             "age",                        "INTEGER"),
+            ("orders",             "profession",                 "VARCHAR(100)"),
         ]
         for table, column, col_type in migrations:
             # Use a fresh connection per column so a failed ALTER doesn't

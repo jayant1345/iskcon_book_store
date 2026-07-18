@@ -89,6 +89,16 @@
                      value="{{ prefill.saved_pincode if prefill and prefill.saved_pincode else '' }}">
               <div id="pincode-status" class="form-text mt-1"></div>
             </div>
+            <div class="col-md-6">
+              <label class="form-label">Age (optional)</label>
+              <input type="number" name="age" class="form-control"
+                     placeholder="e.g. 35" min="1" max="120">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Profession (optional)</label>
+              <input type="text" name="profession" class="form-control"
+                     placeholder="e.g. Teacher" maxlength="100">
+            </div>
             <div class="col-12">
               <label class="form-label">Special Instructions (optional)</label>
               <textarea name="notes" class="form-control" rows="2"

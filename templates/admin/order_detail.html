@@ -262,6 +262,8 @@
                     <div class="col-md-6">
                         <p class="mb-2"><strong>Address:</strong><br>{{ order.address }}</p>
                         <p class="mb-2"><strong>City:</strong> {{ order.city }}, {{ order.state }} - {{ order.pincode }}</p>
+                        <p class="mb-2"><strong>Age:</strong> {{ order.age or '-' }}</p>
+                        <p class="mb-2"><strong>Profession:</strong> {{ order.profession or '-' }}</p>
                     </div>
                 </div>
                 {% if order.notes %}
