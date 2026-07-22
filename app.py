@@ -1364,7 +1364,7 @@ def donate_book(book_id):
     donor_phone   = request.form.get("donor_phone", "").strip()
     donor_email   = request.form.get("donor_email", "").strip()
     donor_message = request.form.get("donor_message", "").strip()
-    donation_type  = request.form.get("donation_type", "iskcon")
+    donation_type  = "person"
     payment_method = request.form.get("payment_method", "upi")
     try:
         quantity = max(1, int(request.form.get("quantity") or 1))
@@ -1378,12 +1378,12 @@ def donate_book(book_id):
         flash("Please fill your name and phone number.", "danger")
         return render_template("donate.html", book=book)
 
-    total_amount = round(book.price * quantity, 2)
+    if not donation_recipient or not donation_recipient_address:
+        flash("Please fill the recipient's name and delivery address.", "danger")
+        return render_template("donate.html", book=book)
 
-    if donation_type == "person":
-        order_address = donation_recipient_address or "Gift — Address not specified"
-    else:
-        order_address = "Donated to ISKCON for distribution"
+    total_amount = round(book.price * quantity, 2)
+    order_address = donation_recipient_address
 
     order = Order(
         order_number              = generate_order_number(),
@@ -1422,11 +1422,11 @@ def donate_book(book_id):
     db.session.add(oi)
     db.session.commit()
     notify_admin_whatsapp(
-        f"🙏 New Book Donation!\n"
-        f"Donor: {donor_name} | {donor_phone}\n"
+        f"🎁 New Book Gift Order!\n"
+        f"Sender: {donor_name} | {donor_phone}\n"
         f"Book: {book.title} × {quantity}\n"
         f"Amount: ₹{total_amount:.0f} | {payment_method.upper()}\n"
-        f"Type: {'Gift to person' if donation_type == 'person' else 'Donate to ISKCON'}"
+        f"Recipient: {donation_recipient}"
     )
 
     if payment_method == "upi":
@@ -1440,7 +1440,7 @@ def donate_book(book_id):
         firstname   = (order.customer_name.split()[0] if order.customer_name else "Donor")[:50]
         email_str   = order.customer_email or ""
         hash_val    = _payu_hash(key, order.order_number, amount_str,
-                                 "ISKCON Book Donation", firstname, email_str, salt)
+                                 "Iskconbooks Gift Order", firstname, email_str, salt)
         payu_url    = ("https://test.payu.in/_payment" if env == "test"
                        else "https://secure.payu.in/_payment")
         return render_template("payment_payu.html",

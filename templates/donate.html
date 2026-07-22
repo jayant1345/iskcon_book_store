@@ -62,45 +62,21 @@
       </div>
     </div>
 
-    <!-- Donation type -->
-    <div class="mb-4">
-      <label class="form-label fw-bold">Who receives the book?</label>
-      <div class="row g-3">
-        <div class="col-6">
-          <input type="radio" class="btn-check" name="donation_type" id="typeIskcon"
-                 value="iskcon" checked>
-          <label class="btn btn-outline-warning w-100 py-3 text-start" for="typeIskcon"
-                 style="border-radius:12px;">
-            <div style="font-size:1.5rem; line-height:1; margin-bottom:6px;">🙏</div>
-            <div class="fw-bold" style="font-size:0.9rem;">ISKCON Distribution</div>
-            <div class="text-muted" style="font-size:0.78rem; line-height:1.4;">Books given to new devotees, book marathons &amp; temple programs</div>
-          </label>
-        </div>
-        <div class="col-6">
-          <input type="radio" class="btn-check" name="donation_type" id="typePerson"
-                 value="person">
-          <label class="btn btn-outline-warning w-100 py-3 text-start" for="typePerson"
-                 style="border-radius:12px;">
-            <div style="font-size:1.5rem; line-height:1; margin-bottom:6px;">🎁</div>
-            <div class="fw-bold" style="font-size:0.9rem;">Gift to Someone</div>
-            <div class="text-muted" style="font-size:0.78rem; line-height:1.4;">Send the book directly to a friend or family member's address</div>
-          </label>
-        </div>
-      </div>
-    </div>
+    <input type="hidden" name="donation_type" value="person">
 
-    <!-- Recipient section (shown only for "person") -->
+    <!-- Recipient details -->
     <div id="recipientSection" class="mb-4 p-3"
-         style="display:none; background:#fff8e7; border:1px solid #ffe082; border-radius:12px;">
+         style="background:#fff8e7; border:1px solid #ffe082; border-radius:12px;">
       <h6 class="fw-bold mb-3"><i class="bi bi-person-heart me-2 text-warning"></i>Recipient Details</h6>
+      <p class="text-muted small mb-3">Send the book directly to a friend or family member's address.</p>
       <div class="mb-3">
         <label class="form-label small fw-bold">Recipient Name *</label>
-        <input type="text" name="donation_recipient" class="form-control"
+        <input type="text" name="donation_recipient" class="form-control" required
                placeholder="Person's full name">
       </div>
       <div class="mb-2">
         <label class="form-label small fw-bold">Recipient Address *</label>
-        <textarea name="donation_recipient_address" class="form-control" rows="3"
+        <textarea name="donation_recipient_address" class="form-control" rows="3" required
                   placeholder="Full delivery address, city, pincode"></textarea>
       </div>
     </div>
@@ -222,14 +198,6 @@
     });
   });
   qtyInput.addEventListener('input', updateTotal);
-
-  // Donation type toggle
-  var recipientSection = document.getElementById('recipientSection');
-  document.querySelectorAll('input[name="donation_type"]').forEach(function(radio) {
-    radio.addEventListener('change', function() {
-      recipientSection.style.display = (this.value === 'person') ? 'block' : 'none';
-    });
-  });
 })();
 </script>
 {% endblock %}
