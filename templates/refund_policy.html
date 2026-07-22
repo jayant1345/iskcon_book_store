@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Refund & Cancellation Policy — {{ store_name }}{% endblock %}
+{% block meta_description %}Refund and Cancellation Policy of Iskconbooks (iskconbooks.in) — how refunds are processed for cancelled or returned orders.{% endblock %}
+
+{% block content %}
+<div class="container py-4" style="max-width:800px;">
+  <h2 class="section-title text-center mb-2">💳 Refund & Cancellation Policy</h2>
+  <p class="text-center text-muted mb-4">Last updated: July 2026</p>
+
+  <div class="checkout-section mb-4">
+    <h5 style="font-family:'Cinzel',serif; color:var(--brown);">Order Cancellation</h5>
+    <ul>
+      <li>You may cancel an order free of charge as long as it has not yet been dispatched. Contact us with your order number as soon as possible.</li>
+      <li>Once an order has been dispatched, it can no longer be cancelled — you may instead request a return once it is delivered (see our <a href="{{ url_for('shipping_policy') }}">Shipping & Return Policy</a>).</li>
+      <li>eBook orders are delivered instantly and cannot be cancelled once the download link has been generated.</li>
+    </ul>
+
+    <h5 style="font-family:'Cinzel',serif; color:var(--brown);" class="mt-4">Refunds</h5>
+    <ul>
+      <li>Refunds are issued for: cancelled orders (before dispatch), approved returns (damaged/defective/wrong item), and duplicate or failed payments where money was debited but the order was not placed.</li>
+      <li>Once a refund is approved, it is processed to the original payment method (Card / UPI / Net Banking / Wallet) used at checkout.</li>
+      <li>Refunds typically reflect in your account within 5–10 business days, depending on your bank or payment provider.</li>
+      <li>No refunds are issued for eBooks/digital downloads once the file has been delivered, except in case of a technical error on our part.</li>
+    </ul>
+
+    <h5 style="font-family:'Cinzel',serif; color:var(--brown);" class="mt-4">Failed / Duplicate Payments</h5>
+    <p>
+      If an amount is debited from your account but the order does not reflect on our
+      website, please do not place a fresh order immediately. Contact us with your
+      payment reference / transaction ID and we will verify and refund the amount if no
+      corresponding order was created.
+    </p>
+
+    <h5 style="font-family:'Cinzel',serif; color:var(--brown);" class="mt-4">Contact for Refunds</h5>
+    <p class="mb-0">
+      📞 <a href="tel:+917802012002">+91 78020 12002</a> &nbsp;|&nbsp;
+      ✉️ <a href="mailto:iskonbooks.in@gmail.com">iskonbooks.in@gmail.com</a> &nbsp;|&nbsp;
+      💬 <a href="https://wa.me/{{ whatsapp_num|replace('+','') }}">WhatsApp</a>
+    </p>
+  </div>
+</div>
+{% endblock %}

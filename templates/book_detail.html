@@ -174,15 +174,15 @@
       </div>
       {% endif %}
 
-      <!-- Donate This Book -->
+      <!-- Gift This Book -->
       {% if not book.is_ebook %}
       <div class="mb-3">
         <a href="{{ url_for('donate_book', book_id=book.id) }}"
            class="btn btn-outline-warning px-4"
            style="border-radius:20px; font-weight:600; border-width:2px;">
-          <i class="bi bi-gift-fill me-2" style="color:var(--saffron);"></i>Donate This Book
+          <i class="bi bi-gift-fill me-2" style="color:var(--saffron);"></i>Gift This Book
         </a>
-        <small class="text-muted ms-2" style="font-size:0.8rem;">Gift it to a devotee or sponsor ISKCON distribution</small>
+        <small class="text-muted ms-2" style="font-size:0.8rem;">Send it to a devotee or sponsor a copy for ISKCON distribution</small>
       </div>
       {% endif %}
 

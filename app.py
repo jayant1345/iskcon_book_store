@@ -768,10 +768,36 @@ def inject_globals():
         "whatsapp_num":     app.config["WHATSAPP_NUMBER"],
         "upi_id":           app.config["UPI_ID"],
         "upi_name":         app.config["UPI_NAME"],
+        "shipping_charge":      app.config["SHIPPING_CHARGE"],
+        "free_shipping_above":  app.config["FREE_SHIPPING_ABOVE"],
         "current_customer": get_current_customer(),
         "now":              datetime.utcnow(),
         "settings_get":     Setting.get,
     }
+
+
+# ─────────────────────────────────────────────
+# Static info pages (About, Privacy, Shipping, Refund)
+# ─────────────────────────────────────────────
+
+@app.route("/about")
+def about():
+    return render_template("about.html")
+
+
+@app.route("/privacy-policy")
+def privacy_policy():
+    return render_template("privacy_policy.html")
+
+
+@app.route("/shipping-policy")
+def shipping_policy():
+    return render_template("shipping_policy.html")
+
+
+@app.route("/refund-policy")
+def refund_policy():
+    return render_template("refund_policy.html")
 
 
 # ─────────────────────────────────────────────
@@ -846,7 +872,7 @@ def sitemap():
     books  = Book.query.filter_by(active=True, deleted=False).all()
     lines  = ['<?xml version="1.0" encoding="UTF-8"?>',
               '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">']
-    for path in ["/", "/books", "/order/track"]:
+    for path in ["/", "/books", "/order/track", "/about", "/privacy-policy", "/shipping-policy", "/refund-policy"]:
         lines.append(f"<url><loc>{domain}{path}</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>")
     for book in books:
         lines.append(f"<url><loc>{domain}/book/{book.id}</loc><changefreq>monthly</changefreq><priority>0.9</priority></url>")

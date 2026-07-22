@@ -6,8 +6,8 @@
   <div class="success-card">
     {% if order.is_donation %}
     <div class="success-icon">🎁</div>
-    <h2 class="section-title text-center mt-3" style="color:#28a745;">Donation Confirmed!</h2>
-    <p class="text-muted">🙏 Hare Krishna! Thank you for your generous donation.</p>
+    <h2 class="section-title text-center mt-3" style="color:#28a745;">Gift Order Confirmed!</h2>
+    <p class="text-muted">🙏 Hare Krishna! Thank you for your generous gift.</p>
     <div class="alert text-start mb-3" style="background:#fff8e7; border:1px solid #ffe082; border-radius:12px;">
       {% if order.donation_type == 'iskcon' %}
         <strong>🙏 Your books will be distributed by ISKCON</strong><br>
@@ -190,7 +190,7 @@
 
     <p class="text-muted small mt-4">
       {% if order.is_donation %}
-        🙏 Your donation helps spread Vedic wisdom across the world. Hare Krishna!
+        🙏 Your gift helps spread Vedic wisdom across the world. Hare Krishna!
       {% else %}
         🙏 Your purchase helps spread Vedic wisdom across the world. Hare Krishna!
       {% endif %}

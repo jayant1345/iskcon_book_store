@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Donate "{{ book.title }}" — {{ store_name }}{% endblock %}
+{% block title %}Gift "{{ book.title }}" — {{ store_name }}{% endblock %}
 
 {% block content %}
 <div class="container py-4" style="max-width:680px;">
@@ -9,14 +9,14 @@
     <ol class="breadcrumb breadcrumb-iskcon">
       <li class="breadcrumb-item"><a href="{{ url_for('index') }}">🏠 Home</a></li>
       <li class="breadcrumb-item"><a href="{{ url_for('book_detail', book_id=book.id) }}">{{ book.title[:35] }}{% if book.title|length > 35 %}…{% endif %}</a></li>
-      <li class="breadcrumb-item active">Donate This Book</li>
+      <li class="breadcrumb-item active">Gift This Book</li>
     </ol>
   </nav>
 
   <!-- Header -->
   <div class="text-center mb-4">
     <div style="font-size:3.5rem; line-height:1;">🎁</div>
-    <h2 style="font-family:'Cinzel',serif; color:var(--brown); margin-top:10px;">Donate a Book</h2>
+    <h2 style="font-family:'Cinzel',serif; color:var(--brown); margin-top:10px;">Gift a Book</h2>
     <p class="text-muted">Sponsor the gift of Vedic wisdom — a book that can change someone's life.</p>
   </div>
 
@@ -174,7 +174,7 @@
     <div class="d-flex justify-content-between align-items-center p-3 mb-4"
          style="background:#fff3e0; border-radius:12px; border:1px solid #ffcc80;">
       <div>
-        <div class="text-muted small">Donation Amount</div>
+        <div class="text-muted small">Order Total</div>
         <div id="donate-summary-qty" style="font-size:0.85rem;">1 copy × ₹{{ book.price|int }}</div>
       </div>
       <div style="font-size:1.5rem; font-weight:700; color:var(--saffron);" id="donate-summary-total">
@@ -183,7 +183,7 @@
     </div>
 
     <button type="submit" class="btn btn-saffron btn-lg w-100 fw-bold py-3">
-      <i class="bi bi-gift me-2"></i>Proceed to Pay &amp; Donate
+      <i class="bi bi-gift me-2"></i>Proceed to Pay &amp; Gift
     </button>
 
     <p class="text-center text-muted small mt-3">

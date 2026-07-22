@@ -169,7 +169,7 @@
   <div class="container">
     <div class="row g-4">
       <!-- About -->
-      <div class="col-lg-4 col-md-6">
+      <div class="col-lg-3 col-md-6">
         <div class="d-flex align-items-center gap-3 mb-2">
           <img src="{{ url_for('static', filename='images/iskcon_logo.png') }}" alt="ISKCON" style="height:48px; width:auto;">
           <img src="{{ url_for('static', filename='images/bbt_logo.png') }}" alt="BBT" style="height:48px; width:auto; filter:invert(1); mix-blend-mode:screen;">
@@ -199,15 +199,24 @@
         <a href="{{ url_for('magazine') }}">📰 Magazine</a>
         <a href="{{ url_for('cart') }}">🛒 Cart</a>
         <a href="{{ url_for('order_track') }}">📦 Track Order</a>
+        <a href="{{ url_for('about') }}">ℹ️ About Us</a>
         <a href="{{ url_for('admin_login') }}">⚙️ Admin</a>
       </div>
 
       <!-- Categories -->
-      <div class="col-lg-3 col-md-6">
+      <div class="col-lg-2 col-md-6">
         <h5>Categories</h5>
         {% for cat in categories[:6] %}
         <a href="{{ url_for('books', category=cat.slug) }}">{{ cat.icon }} {{ cat.name }}</a>
         {% endfor %}
+      </div>
+
+      <!-- Policies -->
+      <div class="col-lg-2 col-md-6">
+        <h5>Policies</h5>
+        <a href="{{ url_for('privacy_policy') }}">Privacy Policy</a>
+        <a href="{{ url_for('shipping_policy') }}">Shipping &amp; Return Policy</a>
+        <a href="{{ url_for('refund_policy') }}">Refund &amp; Cancellation</a>
       </div>
 
       <!-- Contact -->
@@ -225,13 +234,26 @@
         </p>
         <p style="font-size:0.88rem; color:#C8A070; margin-top:8px;">
           <i class="bi bi-envelope me-2"></i>
-          <a href="mailto:books@iskcon.org" style="color:#C8A070;">books@iskcon.org</a>
+          <a href="mailto:iskonbooks.in@gmail.com" style="color:#C8A070;">iskonbooks.in@gmail.com</a>
         </p>
         <div style="margin-top:16px;">
           <a href="https://wa.me/{{ whatsapp_num|replace('+','') }}" class="whatsapp-btn" target="_blank">
             💬 WhatsApp Order
           </a>
         </div>
+      </div>
+    </div>
+
+    <!-- Registered business details (for legal / payment gateway compliance) -->
+    <div class="row mt-4 pt-3" style="border-top:1px solid rgba(200,160,112,0.25);">
+      <div class="col-12">
+        <p style="font-size:0.82rem; color:#C8A070; margin:0;">
+          <strong>Iskconbooks</strong> is owned and operated by
+          <strong>Someshvar Bhavesh Mansukhbhai</strong> &nbsp;|&nbsp;
+          Registered address: B-704, Vraj Galaxy Appartment, Naroda-Dahegam Road,
+          Hanspura, Naroda, Ahmedabad, Gujarat – 382330, India &nbsp;|&nbsp;
+          Mobile: <a href="tel:+917802012002" style="color:#C8A070;">+91 78020 12002</a>
+        </p>
       </div>
     </div>
   </div>
