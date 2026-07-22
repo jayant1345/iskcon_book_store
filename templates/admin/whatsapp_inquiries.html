@@ -51,6 +51,7 @@
           <th>Customer Name</th>
           <th>Phone</th>
           <th>Book Enquired</th>
+          <th>Address</th>
           <th>Date &amp; Time</th>
           <th>Notes</th>
           <th>Action</th>
@@ -77,6 +78,16 @@
             </a>
             {% else %}
             <span class="text-muted" style="font-size:0.88rem;">{{ inq.book_title or 'General Enquiry' }}</span>
+            {% endif %}
+          </td>
+          <td style="min-width:180px; font-size:0.8rem;">
+            {% if inq.address or inq.pincode %}
+              {{ inq.address or '' }}{% if inq.address and (inq.city or inq.pincode) %}<br>{% endif %}
+              {{ inq.city or '' }}{% if inq.city and inq.state %}, {{ inq.state }}{% endif %}
+              {% if inq.pincode %} - {{ inq.pincode }}{% endif %}
+              {% if inq.shipping_rate %}<br><span class="text-success">📦 ₹{{ inq.shipping_rate|int }}</span>{% endif %}
+            {% else %}
+              <span class="text-muted">—</span>
             {% endif %}
           </td>
           <td><small>{{ inq.created_at | ist('%d %b %Y, %I:%M %p') }}</small></td>
@@ -150,7 +161,7 @@
         </tr>
         {% else %}
         <tr>
-          <td colspan="7" class="text-center text-muted py-5">
+          <td colspan="8" class="text-center text-muted py-5">
             <i class="fab fa-whatsapp fa-3x mb-3 d-block" style="color:#ccc;"></i>
             {% if tab == 'open' %}No open leads.
             {% elif tab == 'converted' %}No converted leads yet.

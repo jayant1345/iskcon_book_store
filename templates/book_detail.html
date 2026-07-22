@@ -236,6 +236,32 @@
                        value="{{ current_customer.phone if current_customer else '' }}">
                 <div id="wa-phone-err" class="text-danger small mt-1" style="display:none;">Please enter your phone number.</div>
               </div>
+              {% if not book.is_ebook %}
+              <div class="mb-3">
+                <label class="form-label fw-bold small">Full Address <span class="text-danger">*</span></label>
+                <textarea id="wa-address" class="form-control" rows="2"
+                          placeholder="House No., Street, Area"></textarea>
+                <div id="wa-address-err" class="text-danger small mt-1" style="display:none;">Please enter your address.</div>
+              </div>
+              <div class="row g-2 mb-3">
+                <div class="col-5">
+                  <label class="form-label fw-bold small">City <span class="text-danger">*</span></label>
+                  <input type="text" id="wa-city" class="form-control" placeholder="Mumbai">
+                  <div id="wa-city-err" class="text-danger small mt-1" style="display:none;">Required.</div>
+                </div>
+                <div class="col-3">
+                  <label class="form-label fw-bold small">State</label>
+                  <input type="text" id="wa-state" class="form-control" placeholder="MH">
+                </div>
+                <div class="col-4">
+                  <label class="form-label fw-bold small">PIN Code <span class="text-danger">*</span></label>
+                  <input type="text" id="wa-pincode" class="form-control" maxlength="6"
+                         pattern="[0-9]{6}" placeholder="400001">
+                  <div id="wa-pincode-err" class="text-danger small mt-1" style="display:none;">Required.</div>
+                </div>
+              </div>
+              <div id="wa-shipping-status" class="mb-3 small"></div>
+              {% endif %}
               <div class="p-2 rounded" style="background:#e7f5ff; font-size:0.82rem; color:#555;">
                 📖 Enquiring about: <strong>{{ book.title }}</strong>
               </div>
@@ -247,7 +273,8 @@
                       style="background:#25d366; color:white; border:none;"
                       data-phone="{{ whatsapp_num }}"
                       data-book-id="{{ book.id }}"
-                      data-book-title="{{ book.title|replace('"', '&quot;') }}">
+                      data-book-title="{{ book.title|replace('"', '&quot;') }}"
+                      data-is-ebook="{{ 'true' if book.is_ebook else 'false' }}">
                 <i class="fab fa-whatsapp me-2"></i>Open WhatsApp
               </button>
             </div>
@@ -256,48 +283,120 @@
       </div>
 
       <script>
-      document.getElementById('wa-go-btn').addEventListener('click', function () {
-        var nameInput  = document.getElementById('wa-name');
-        var phoneInput = document.getElementById('wa-phone');
-        var name       = nameInput.value.trim();
-        var phone      = phoneInput.value.trim();
-        var nameErr    = document.getElementById('wa-name-err');
-        var phoneErr   = document.getElementById('wa-phone-err');
+      var waGoBtn         = document.getElementById('wa-go-btn');
+      var waIsEbook       = waGoBtn.dataset.isEbook === 'true';
+      var waShippingRate  = null;
+      var waShippingTimer = null;
+      var waPincodeInput  = document.getElementById('wa-pincode');
+      var waShippingEl    = document.getElementById('wa-shipping-status');
 
-        // Validate
+      function waFetchRate(pincode) {
+        waShippingRate = null;
+        waShippingEl.innerHTML = '<span class="spinner-border spinner-border-sm me-1" style="width:.8rem;height:.8rem;"></span> Checking courier charge…';
+        waShippingEl.style.color = 'var(--text-muted)';
+
+        fetch('/api/shipping-rate-book/' + pincode + '/{{ book.id }}')
+          .then(r => r.json())
+          .then(data => {
+            if (data.serviceable) {
+              waShippingRate = data.rate;
+              var etaText = '';
+              if (data.eta_min) {
+                etaText = data.eta_min === data.eta_max
+                  ? data.eta_min + ' day' + (data.eta_min > 1 ? 's' : '')
+                  : data.eta_min + '–' + data.eta_max + ' days';
+              }
+              waShippingEl.innerHTML = '<span style="color:#28a745;">📦 Courier charge: ₹' + Math.round(data.rate) + '</span>' +
+                (etaText ? ' <span class="text-muted">(' + etaText + ')</span>' : '');
+            } else {
+              waShippingEl.innerHTML = '<span style="color:#dc3545;">' + (data.error || 'Not serviceable') + '</span>';
+            }
+          })
+          .catch(function() {
+            waShippingEl.innerHTML = '<span style="color:#dc3545;">Could not fetch courier charge.</span>';
+          });
+      }
+
+      if (!waIsEbook && waPincodeInput) {
+        waPincodeInput.addEventListener('input', function() {
+          var pin = this.value.replace(/\D/g, '');
+          this.value = pin;
+          clearTimeout(waShippingTimer);
+          if (pin.length === 6) {
+            waShippingTimer = setTimeout(function(){ waFetchRate(pin); }, 400);
+          } else {
+            waShippingRate = null;
+            waShippingEl.innerHTML = '';
+          }
+        });
+      }
+
+      waGoBtn.addEventListener('click', function () {
+        var nameInput    = document.getElementById('wa-name');
+        var phoneInput   = document.getElementById('wa-phone');
+        var name         = nameInput.value.trim();
+        var phone        = phoneInput.value.trim();
+        var address = '', city = '', state = '', pincode = '';
+
+        var fields = [
+          { input: nameInput,  err: 'wa-name-err',  value: name },
+          { input: phoneInput, err: 'wa-phone-err', value: phone },
+        ];
+
+        if (!waIsEbook) {
+          var addressInput = document.getElementById('wa-address');
+          var cityInput    = document.getElementById('wa-city');
+          var stateInput   = document.getElementById('wa-state');
+          address = addressInput.value.trim();
+          city    = cityInput.value.trim();
+          state   = stateInput.value.trim();
+          pincode = waPincodeInput.value.trim();
+          fields.push(
+            { input: addressInput,   err: 'wa-address-err', value: address },
+            { input: cityInput,      err: 'wa-city-err',    value: city },
+            { input: waPincodeInput, err: 'wa-pincode-err', value: pincode }
+          );
+        }
+
         var valid = true;
-        if (!name) {
-          nameErr.style.display = 'block';
-          nameInput.classList.add('is-invalid');
-          valid = false;
-        } else {
-          nameErr.style.display = 'none';
-          nameInput.classList.remove('is-invalid');
-        }
-        if (!phone) {
-          phoneErr.style.display = 'block';
-          phoneInput.classList.add('is-invalid');
-          valid = false;
-        } else {
-          phoneErr.style.display = 'none';
-          phoneInput.classList.remove('is-invalid');
-        }
+        fields.forEach(function(f) {
+          var errEl = document.getElementById(f.err);
+          if (!f.value) {
+            errEl.style.display = 'block';
+            f.input.classList.add('is-invalid');
+            valid = false;
+          } else {
+            errEl.style.display = 'none';
+            f.input.classList.remove('is-invalid');
+          }
+        });
         if (!valid) return;
 
         var bookId    = this.dataset.bookId;
         var bookTitle = this.dataset.bookTitle;
         var waPhone   = this.dataset.phone.replace(/\D/g, '');
+        var extraLines = '';
+        if (!waIsEbook) {
+          var addressLine = address + ', ' + city + (state ? ', ' + state : '') + ' - ' + pincode;
+          var shippingLine = waShippingRate ? ('\nCourier charge: ₹' + Math.round(waShippingRate)) : '';
+          extraLines = '\nAddress: ' + addressLine + shippingLine;
+        }
         var message   = encodeURIComponent(
           '🙏 Hare Krishna!\nI would like to order: ' + bookTitle +
           '\nMy name: ' + name +
-          '\nPhone: ' + phone
+          '\nPhone: ' + phone +
+          extraLines
         );
 
         // Log the enquiry silently
         fetch('/whatsapp/log', {
           method:  'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: name, phone: phone, book_id: bookId, book_title: bookTitle })
+          body: JSON.stringify({
+            name: name, phone: phone, book_id: bookId, book_title: bookTitle,
+            address: address, city: city, state: state, pincode: pincode,
+            shipping_rate: waIsEbook ? null : waShippingRate
+          })
         }).catch(function(){});
 
         // Open WhatsApp
@@ -309,11 +408,16 @@
 
       // Clear validation state when modal is reopened
       document.getElementById('waEnquiryModal').addEventListener('show.bs.modal', function () {
-        ['wa-name', 'wa-phone'].forEach(function(id) {
+        var ids = waIsEbook ? ['wa-name', 'wa-phone'] : ['wa-name', 'wa-phone', 'wa-address', 'wa-city', 'wa-pincode'];
+        ids.forEach(function(id) {
           document.getElementById(id).classList.remove('is-invalid');
         });
-        document.getElementById('wa-name-err').style.display = 'none';
-        document.getElementById('wa-phone-err').style.display = 'none';
+        var errIds = waIsEbook ? ['wa-name-err', 'wa-phone-err'] : ['wa-name-err', 'wa-phone-err', 'wa-address-err', 'wa-city-err', 'wa-pincode-err'];
+        errIds.forEach(function(id) {
+          document.getElementById(id).style.display = 'none';
+        });
+        waShippingRate = null;
+        if (waShippingEl) waShippingEl.innerHTML = '';
       });
       </script>
 

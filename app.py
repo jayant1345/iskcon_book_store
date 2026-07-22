@@ -312,6 +312,11 @@ class WhatsAppInquiry(db.Model):
     book_title     = db.Column(db.String(250))
     customer_name  = db.Column(db.String(200))
     customer_phone = db.Column(db.String(20))
+    address        = db.Column(db.Text, nullable=True)
+    city           = db.Column(db.String(100), nullable=True)
+    state          = db.Column(db.String(100), nullable=True)
+    pincode        = db.Column(db.String(10), nullable=True)
+    shipping_rate  = db.Column(db.Float, nullable=True)
     created_at     = db.Column(db.DateTime, default=datetime.utcnow)
     status         = db.Column(db.String(20), default="open")
     admin_note     = db.Column(db.Text)
@@ -798,6 +803,36 @@ def api_shipping_rate(pincode):
         "serviceable": True,
         "rate":    rate,
         "zone":    zone,
+        "city":    svc.get("city", ""),
+        "oda":     svc.get("oda", False),
+        "eta_min": eta_min,
+        "eta_max": eta_max,
+    })
+
+
+@app.route("/api/shipping-rate-book/<pincode>/<int:book_id>")
+def api_shipping_rate_book(pincode, book_id):
+    """AJAX: Delhivery rate for a single book (used by the WhatsApp enquiry
+    modal on the book page, before anything is in the cart)."""
+    if not pincode.isdigit() or len(pincode) != 6:
+        return jsonify({"serviceable": False, "error": "Invalid pincode"})
+    book = Book.query.get(book_id)
+    if not book:
+        return jsonify({"serviceable": False, "error": "Book not found"})
+    from delhivery import get_shipping_rate, check_serviceability, estimate_delivery_days
+    svc = check_serviceability(pincode)
+    if not svc.get("serviceable"):
+        return jsonify({"serviceable": False, "error": "Delhivery does not deliver to this pincode"})
+    if not svc.get("pre_paid"):
+        return jsonify({"serviceable": False, "error": "Prepaid delivery not available at this pincode"})
+    weight_grams = max(int((book.weight_kg or app.config["DELHIVERY_DEFAULT_WEIGHT"]) * 1000), 500)
+    rate, zone, err = get_shipping_rate(pincode, weight_grams)
+    if err or rate is None:
+        return jsonify({"serviceable": False, "error": err or "Rate unavailable"})
+    eta_min, eta_max = estimate_delivery_days(zone, svc.get("oda", False))
+    return jsonify({
+        "serviceable": True,
+        "rate":    rate,
         "city":    svc.get("city", ""),
         "oda":     svc.get("oda", False),
         "eta_min": eta_min,
@@ -1547,17 +1582,32 @@ def whatsapp_log():
     phone      = (data.get("phone") or "").strip()
     book_id    = data.get("book_id")
     book_title = (data.get("book_title") or "").strip()
+    address    = (data.get("address") or "").strip()
+    city       = (data.get("city") or "").strip()
+    state      = (data.get("state") or "").strip()
+    pincode    = (data.get("pincode") or "").strip()
+    shipping_rate = data.get("shipping_rate")
+    try:
+        shipping_rate = float(shipping_rate) if shipping_rate else None
+    except (TypeError, ValueError):
+        shipping_rate = None
     if name or phone:
         db.session.add(WhatsAppInquiry(
             book_id       = int(book_id) if book_id else None,
             book_title    = book_title,
             customer_name = name,
             customer_phone= phone,
+            address       = address or None,
+            city          = city or None,
+            state         = state or None,
+            pincode       = pincode or None,
+            shipping_rate = shipping_rate,
         ))
         db.session.commit()
+        location = f" | {city}, {pincode}" if city or pincode else ""
         notify_admin_whatsapp(
             f"📱 New WhatsApp Enquiry!\n"
-            f"Customer: {name or '—'} | {phone or '—'}\n"
+            f"Customer: {name or '—'} | {phone or '—'}{location}\n"
             f"Book: {book_title or 'General Enquiry'}"
         )
     return jsonify({"success": True})
@@ -2443,7 +2493,9 @@ def admin_whatsapp_convert(inq_id):
     name  = inq.customer_name  or ""
     phone = inq.customer_phone or ""
     note  = f"WhatsApp enquiry for: {inq.book_title or 'general'}"
-    return redirect(url_for("admin_create_manual_order", name=name, phone=phone, note=note))
+    return redirect(url_for("admin_create_manual_order", name=name, phone=phone, note=note,
+                             address=inq.address or "", city=inq.city or "",
+                             state=inq.state or "", pincode=inq.pincode or ""))
 
 
 @app.route("/admin/test-email", methods=["GET", "POST"])
@@ -3990,6 +4042,11 @@ def init_db():
             ("order_items",        "ebook_downloaded_at",        "TIMESTAMP"),
             ("orders",             "age",                        "INTEGER"),
             ("orders",             "profession",                 "VARCHAR(100)"),
+            ("whatsapp_inquiries", "address",                    "TEXT"),
+            ("whatsapp_inquiries", "city",                       "VARCHAR(100)"),
+            ("whatsapp_inquiries", "state",                      "VARCHAR(100)"),
+            ("whatsapp_inquiries", "pincode",                    "VARCHAR(10)"),
+            ("whatsapp_inquiries", "shipping_rate",              "FLOAT"),
         ]
         for table, column, col_type in migrations:
             # Use a fresh connection per column so a failed ALTER doesn't

@@ -45,19 +45,19 @@
                     </div>
                     <div class="col-12">
                         <label class="form-label">Address *</label>
-                        <textarea name="address" class="form-control" rows="2" required placeholder="House / Flat, Street, Locality"></textarea>
+                        <textarea name="address" class="form-control" rows="2" required placeholder="House / Flat, Street, Locality">{{ request.args.get('address', '') }}</textarea>
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">City</label>
-                        <input type="text" name="city" class="form-control" placeholder="City">
+                        <input type="text" name="city" class="form-control" placeholder="City" value="{{ request.args.get('city', '') }}">
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">State</label>
-                        <input type="text" name="state" class="form-control" placeholder="State">
+                        <input type="text" name="state" class="form-control" placeholder="State" value="{{ request.args.get('state', '') }}">
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">Pincode</label>
-                        <input type="text" name="pincode" class="form-control" placeholder="6-digit pincode" maxlength="6">
+                        <input type="text" name="pincode" class="form-control" placeholder="6-digit pincode" maxlength="6" value="{{ request.args.get('pincode', '') }}">
                     </div>
                 </div>
             </div>
