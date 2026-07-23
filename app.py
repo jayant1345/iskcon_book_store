@@ -3614,6 +3614,38 @@ def admin_order_detail(order_id):
     return render_template("admin/order_detail.html", order=order)
 
 
+@app.route("/admin/orders/<int:order_id>/update-contact", methods=["POST"])
+@admin_required
+def admin_update_order_contact(order_id):
+    """Let admin correct customer name/phone/email on an existing order —
+    e.g. a mistyped mobile number entered before checkout validation caught it."""
+    order = Order.query.get_or_404(order_id)
+
+    name  = request.form.get("customer_name", "").strip()
+    phone = request.form.get("customer_phone", "").strip()
+    email = request.form.get("customer_email", "").strip()
+
+    if not name:
+        flash("Name cannot be empty.", "danger")
+        return redirect(url_for("admin_order_detail", order_id=order_id))
+
+    normalized_phone = valid_indian_phone(phone)
+    if not normalized_phone:
+        flash("Please enter a valid 10-digit mobile number.", "danger")
+        return redirect(url_for("admin_order_detail", order_id=order_id))
+
+    if not valid_email(email):
+        flash("Please enter a valid email address.", "danger")
+        return redirect(url_for("admin_order_detail", order_id=order_id))
+
+    order.customer_name  = name
+    order.customer_phone = normalized_phone
+    order.customer_email = email or None
+    db.session.commit()
+    flash("Customer contact details updated.", "success")
+    return redirect(url_for("admin_order_detail", order_id=order_id))
+
+
 @app.route("/admin/orders/<int:order_id>/ebook/<int:item_id>/reset-download", methods=["POST"])
 @admin_required
 def admin_reset_ebook_download(order_id, item_id):
