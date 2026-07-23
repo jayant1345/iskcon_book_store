@@ -46,6 +46,33 @@ def to_ist(dt, fmt='%d %b %Y, %I:%M %p'):
     return (dt + _IST).strftime(fmt)
 
 
+_EMAIL_RE = __import__("re").compile(r'^[^\s@]+@[^\s@]+\.[^\s@]+$')
+
+def valid_indian_phone(phone):
+    """Return the bare 10-digit mobile number if valid, else None.
+
+    Accepts a bare 10-digit number, or one prefixed with a leading 0
+    or country code 91, as long as the 10-digit core starts with 6-9
+    (the valid range for Indian mobile numbers).
+    """
+    import re as _re
+    digits = _re.sub(r'\D', '', str(phone or ''))
+    if len(digits) == 12 and digits.startswith('91'):
+        digits = digits[2:]
+    elif len(digits) == 11 and digits.startswith('0'):
+        digits = digits[1:]
+    if _re.fullmatch(r'[6-9]\d{9}', digits):
+        return digits
+    return None
+
+
+def valid_email(email):
+    """Return True if email is blank (optional field) or looks like a real address."""
+    if not email:
+        return True
+    return bool(_EMAIL_RE.match(email))
+
+
 @app.template_filter('wa_phone')
 def wa_phone_filter(phone):
     """Return E.164 digits for wa.me — adds 91 country code for bare 10-digit Indian numbers."""
@@ -1138,6 +1165,18 @@ def checkout():
             return render_template("checkout.html", **totals,
                                    all_ebooks=all(item["book"].is_ebook for item in totals["items"]))
 
+        normalized_phone = valid_indian_phone(phone)
+        if not normalized_phone:
+            flash("Please enter a valid 10-digit mobile number.", "danger")
+            return render_template("checkout.html", **totals,
+                                   all_ebooks=all(item["book"].is_ebook for item in totals["items"]))
+        phone = normalized_phone
+
+        if not valid_email(email):
+            flash("Please enter a valid email address.", "danger")
+            return render_template("checkout.html", **totals,
+                                   all_ebooks=all(item["book"].is_ebook for item in totals["items"]))
+
         try:
             age = int(age_raw)
             if age < 1 or age > 120:
@@ -1376,6 +1415,16 @@ def donate_book(book_id):
 
     if not donor_name or not donor_phone:
         flash("Please fill your name and phone number.", "danger")
+        return render_template("donate.html", book=book)
+
+    normalized_donor_phone = valid_indian_phone(donor_phone)
+    if not normalized_donor_phone:
+        flash("Please enter a valid 10-digit mobile number.", "danger")
+        return render_template("donate.html", book=book)
+    donor_phone = normalized_donor_phone
+
+    if not valid_email(donor_email):
+        flash("Please enter a valid email address.", "danger")
         return render_template("donate.html", book=book)
 
     if not donation_recipient or not donation_recipient_address:

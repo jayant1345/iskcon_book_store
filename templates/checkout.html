@@ -55,6 +55,8 @@
               <label class="form-label">Phone Number *</label>
               <input type="tel" name="phone" class="form-control" required
                      placeholder="+91 9876543210" maxlength="20"
+                     pattern="^\+?[0-9\s-]{10,15}$"
+                     title="Enter a valid 10-digit Indian mobile number"
                      value="{{ prefill.phone if prefill else '' }}">
             </div>
             <div class="col-12">
