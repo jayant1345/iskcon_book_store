@@ -236,7 +236,7 @@
                 </button>
                 <div class="d-flex justify-content-between align-items-center mb-2 small">
                   {% if item.ebook_downloaded_at %}
-                    <span class="text-muted">Downloaded {{ item.ebook_downloaded_at.strftime('%d %b %Y, %H:%M') }} UTC</span>
+                    <span class="text-muted">Downloaded {{ item.ebook_downloaded_at | ist }}</span>
                     <form method="POST" action="{{ url_for('admin_reset_ebook_download', order_id=order.id, item_id=item.id) }}" class="ms-2">
                       <button type="submit" class="btn btn-outline-warning btn-sm py-0 px-2">Reset link</button>
                     </form>
