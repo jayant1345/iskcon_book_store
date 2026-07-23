@@ -228,6 +228,12 @@
                     <i class="fab fa-whatsapp me-1"></i>
                     Send: {{ item.book_title[:28] }}{% if item.book_title|length > 28 %}…{% endif %}
                 </a>
+                <button type="button"
+                        class="btn btn-outline-secondary btn-sm w-100 mb-1 js-copy-ebook-link"
+                        data-url="{{ dl_url }}"
+                        title="Copy download link for {{ item.book_title }} — for customers without WhatsApp">
+                    <i class="fas fa-copy me-1"></i>Copy Link
+                </button>
                 <div class="d-flex justify-content-between align-items-center mb-2 small">
                   {% if item.ebook_downloaded_at %}
                     <span class="text-muted">Downloaded {{ item.ebook_downloaded_at.strftime('%d %b %Y, %H:%M') }} UTC</span>
@@ -388,6 +394,16 @@
 
 {% block extra_js %}
 <script>
+document.querySelectorAll('.js-copy-ebook-link').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+        navigator.clipboard.writeText(btn.dataset.url).then(function () {
+            var original = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-check me-1"></i>Copied!';
+            setTimeout(function () { btn.innerHTML = original; }, 1500);
+        });
+    });
+});
+
 function loadTracking() {
     const box = document.getElementById('delhivery-tracking');
     if (!box) return;
