@@ -893,6 +893,56 @@ def api_shipping_rate_book(pincode, book_id):
     })
 
 
+@app.route("/admin/api/shipping-rate-multi/<pincode>")
+@admin_required
+def admin_api_shipping_rate_multi(pincode):
+    """AJAX: Delhivery rate for an arbitrary set of books+quantities, keyed
+    by 'book_id:qty' pairs — used by the manual order form (WhatsApp/phone/
+    walk-in orders) since those items never pass through the session cart."""
+    if not pincode.isdigit() or len(pincode) != 6:
+        return jsonify({"serviceable": False, "error": "Invalid pincode"})
+
+    items_param = request.args.get("items", "")
+    total_weight_kg = 0.0
+    any_physical = False
+    for pair in items_param.split(","):
+        if ":" not in pair:
+            continue
+        bid_str, qty_str = pair.split(":", 1)
+        try:
+            bid, qty = int(bid_str), int(qty_str)
+        except ValueError:
+            continue
+        book = Book.query.get(bid)
+        if not book or book.is_ebook or qty <= 0:
+            continue
+        any_physical = True
+        total_weight_kg += (book.weight_kg or app.config["DELHIVERY_DEFAULT_WEIGHT"]) * qty
+
+    if not any_physical:
+        return jsonify({"serviceable": True, "rate": 0, "note": "No physical books — no shipping needed"})
+
+    from delhivery import get_shipping_rate, check_serviceability, estimate_delivery_days
+    svc = check_serviceability(pincode)
+    if not svc.get("serviceable"):
+        return jsonify({"serviceable": False, "error": "Delhivery does not deliver to this pincode"})
+    if not svc.get("pre_paid"):
+        return jsonify({"serviceable": False, "error": "Prepaid delivery not available at this pincode"})
+
+    weight_grams = max(int(total_weight_kg * 1000), 500)
+    rate, zone, err = get_shipping_rate(pincode, weight_grams)
+    if err or rate is None:
+        return jsonify({"serviceable": False, "error": err or "Rate unavailable"})
+    eta_min, eta_max = estimate_delivery_days(zone, svc.get("oda", False))
+    return jsonify({
+        "serviceable": True,
+        "rate":    rate,
+        "city":    svc.get("city", ""),
+        "eta_min": eta_min,
+        "eta_max": eta_max,
+    })
+
+
 @app.route("/sitemap.xml")
 def sitemap():
     domain = "https://iskconbooks.in"
@@ -3675,6 +3725,17 @@ def admin_update_order(order_id):
     order.status_note    = request.form.get("status_note", "").strip() or None
     order.courier_name   = request.form.get("courier_name", "").strip() or None
     order.tracking_number = request.form.get("tracking_number", "").strip() or None
+
+    shipping_raw = request.form.get("shipping_charge", "").strip()
+    if shipping_raw:
+        try:
+            new_shipping = max(0.0, float(shipping_raw))
+        except ValueError:
+            new_shipping = order.shipping_charge
+        if new_shipping != order.shipping_charge:
+            order.shipping_charge = new_shipping
+            order.total_amount = order.subtotal + order.shipping_charge - order.discount_amount
+
     exp_del = request.form.get("expected_delivery", "").strip()
     if exp_del:
         try:

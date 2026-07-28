@@ -57,7 +57,7 @@
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">Pincode</label>
-                        <input type="text" name="pincode" class="form-control" placeholder="6-digit pincode" maxlength="6" value="{{ request.args.get('pincode', '') }}">
+                        <input type="text" name="pincode" id="pincodeInput" class="form-control" placeholder="6-digit pincode" maxlength="6" value="{{ request.args.get('pincode', '') }}" oninput="calculateShipping(false)">
                     </div>
                 </div>
             </div>
@@ -135,9 +135,15 @@
                 </div>
                 <hr>
                 <div class="mb-3">
-                    <label class="form-label">Shipping Charge (₹)</label>
+                    <label class="form-label d-flex justify-content-between align-items-center">
+                        <span>Shipping Charge (₹)</span>
+                        <button type="button" class="btn btn-link btn-sm p-0" onclick="calculateShipping(true)">
+                            <i class="fas fa-sync-alt me-1"></i>Recalculate
+                        </button>
+                    </label>
                     <input type="number" name="shipping_charge" id="shippingCharge"
                            class="form-control" value="0" min="0" step="1" oninput="updateTotal()">
+                    <small class="text-muted" id="shippingStatus">Enter a pincode and add books to auto-calculate.</small>
                 </div>
                 <div class="mb-3">
                     <label class="form-label">Discount Amount (₹)</label>
@@ -210,14 +216,14 @@ function addBookRow(bookId, qty, price) {
     tr.id = `row_${id}`;
     tr.innerHTML = `
         <td>
-            <select name="book_id" class="form-select form-select-sm" onchange="onBookChange(this, ${id})">
+            <select name="book_id" class="form-select form-select-sm" onchange="onBookChange(this, ${id}); calculateShipping(false)">
                 <option value="">-- Select Book --</option>
                 ${options}
             </select>
         </td>
         <td>
             <input type="number" name="quantity" id="qty_${id}" class="form-control form-control-sm"
-                   value="${qty || 1}" min="1" style="width:70px" oninput="updateTotal()">
+                   value="${qty || 1}" min="1" style="width:70px" oninput="updateTotal(); calculateShipping(false)">
         </td>
         <td>
             <input type="number" name="unit_price" id="price_${id}" class="form-control form-control-sm"
@@ -274,5 +280,58 @@ function updateTotal() {
 
 // Start with one empty row
 addBookRow();
+
+// ── Auto-calculate shipping from pincode + selected books ──
+let shippingDebounce = null;
+
+function collectItemsParam() {
+    const parts = [];
+    document.querySelectorAll('#bookRows tr').forEach(tr => {
+        const id  = tr.id.split('_')[1];
+        const sel = tr.querySelector('select[name="book_id"]');
+        const qty = document.getElementById(`qty_${id}`);
+        if (sel && sel.value && qty && parseInt(qty.value) > 0) {
+            parts.push(`${sel.value}:${qty.value}`);
+        }
+    });
+    return parts.join(',');
+}
+
+function calculateShipping(force) {
+    clearTimeout(shippingDebounce);
+    shippingDebounce = setTimeout(() => doCalculateShipping(force), 400);
+}
+
+function doCalculateShipping(force) {
+    const pincode   = (document.getElementById('pincodeInput').value || '').trim();
+    const statusEl  = document.getElementById('shippingStatus');
+    const shipEl    = document.getElementById('shippingCharge');
+    const items     = collectItemsParam();
+
+    if (!/^\d{6}$/.test(pincode) || !items) {
+        if (force) statusEl.textContent = 'Enter a valid 6-digit pincode and at least one book first.';
+        return;
+    }
+    // Don't clobber a manually-typed charge unless explicitly asked to recalculate
+    if (!force && parseFloat(shipEl.value) > 0) return;
+
+    statusEl.textContent = 'Calculating shipping…';
+    fetch(`/admin/api/shipping-rate-multi/${pincode}?items=${encodeURIComponent(items)}`)
+        .then(r => r.json())
+        .then(data => {
+            if (data.serviceable) {
+                shipEl.value = data.rate;
+                updateTotal();
+                statusEl.textContent = data.rate > 0
+                    ? `Auto-calculated ₹${data.rate} for ${pincode}${data.city ? ' (' + data.city + ')' : ''}`
+                    : 'No physical books in this order — no shipping needed.';
+            } else {
+                statusEl.textContent = (data.error || 'Could not calculate shipping') + ' — enter it manually.';
+            }
+        })
+        .catch(() => {
+            statusEl.textContent = 'Could not calculate shipping — enter it manually.';
+        });
+}
 </script>
 {% endblock %}
