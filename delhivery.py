@@ -120,6 +120,7 @@ def create_shipment(order):
             for item in order.items),
         0.5
     )
+    weight_grams = int(weight_kg * 1000)
     products     = ", ".join(item.book_title for item in order.items)[:100]
 
     payload = {
@@ -138,7 +139,7 @@ def create_shipment(order):
             "products_desc": products,
             "hsn_code":      "4901",
             "quantity":      total_qty,
-            "weight":        weight_kg,
+            "weight":        weight_grams,
             "shipping_mode": _SHIP_MODE,
             "seller_name":   _RETURN_NAME,
             "seller_add":    _RETURN_ADDR,
