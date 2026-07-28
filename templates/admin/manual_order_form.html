@@ -205,6 +205,9 @@ const BOOKS = {
 let rowCount = 0;
 
 function addBookRow(bookId, qty, price) {
+    if (bookId && BOOKS[bookId] && !price) {
+        price = BOOKS[bookId].price;
+    }
     rowCount++;
     const id = rowCount;
     const tbody = document.getElementById('bookRows');
@@ -237,6 +240,7 @@ function addBookRow(bookId, qty, price) {
         </td>`;
     tbody.appendChild(tr);
     updateTotal();
+    calculateShipping(false);
 }
 
 function onBookChange(sel, id) {
@@ -278,8 +282,8 @@ function updateTotal() {
     document.getElementById('summaryTotal').textContent    = '₹' + total.toFixed(0);
 }
 
-// Start with one empty row
-addBookRow();
+// Start with one row — pre-selected with the enquiry's book when converting from WhatsApp
+addBookRow({{ request.args.get('book_id', '')|tojson }} || undefined, 1);
 
 // ── Auto-calculate shipping from pincode + selected books ──
 let shippingDebounce = null;

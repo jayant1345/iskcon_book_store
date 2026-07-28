@@ -2620,7 +2620,8 @@ def admin_whatsapp_convert(inq_id):
     note  = f"WhatsApp enquiry for: {inq.book_title or 'general'}"
     return redirect(url_for("admin_create_manual_order", name=name, phone=phone, note=note,
                              address=inq.address or "", city=inq.city or "",
-                             state=inq.state or "", pincode=inq.pincode or ""))
+                             state=inq.state or "", pincode=inq.pincode or "",
+                             book_id=inq.book_id or ""))
 
 
 @app.route("/admin/test-email", methods=["GET", "POST"])
