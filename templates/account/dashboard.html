@@ -72,6 +72,22 @@
   {# ── Order history ── #}
   <h5 class="fw-bold mb-3">Order History</h5>
 
+  {% set ebook_pending = [] %}
+  {% for o in orders %}
+    {% for item in o.items %}
+      {% if item.book and item.book.is_ebook and item.book.ebook_file and o.payment_method != 'cod' and o.payment_status == 'paid' and not item.ebook_downloaded_at %}
+        {% set _ = ebook_pending.append(item) %}
+      {% endif %}
+    {% endfor %}
+  {% endfor %}
+  {% if ebook_pending %}
+  <div class="alert alert-warning py-2 px-3 mb-3" style="font-size:0.8rem;">
+    ⚠️ Each eBook download link works <strong>only once</strong> and deactivates immediately
+    after use. Please download and save it to your device right away — do not forward
+    the link, as that will use up your only download.
+  </div>
+  {% endif %}
+
   {% if orders %}
   <div class="table-responsive">
     <table class="table align-middle table-hover">
@@ -91,7 +107,27 @@
           <td>{{ o.created_at | ist('%d %b %Y') }}</td>
           <td>
             {% for item in o.items %}
-              <div style="font-size:.85rem;">{{ item.book_title }} × {{ item.quantity }}</div>
+              <div class="d-flex align-items-center gap-2 mb-1">
+                <span style="font-size:.85rem;">{{ item.book_title }} × {{ item.quantity }}</span>
+                {% if item.book and item.book.is_ebook and item.book.ebook_file and o.payment_method != 'cod' %}
+                  {% if item.ebook_downloaded_at %}
+                  <span class="badge bg-secondary" style="font-size:.7rem;"
+                        title="Downloaded {{ item.ebook_downloaded_at.strftime('%d %b %Y, %H:%M') }} UTC">
+                    &#x2713; Downloaded
+                  </span>
+                  {% elif o.payment_status == 'paid' %}
+                  <a href="{{ url_for('ebook_download', order_number=o.order_number, book_id=item.book_id) }}"
+                     class="btn btn-sm btn-outline-success py-0 px-2" style="font-size:.7rem;">
+                    &#x1F4E5; Download
+                  </a>
+                  {% else %}
+                  <span class="badge bg-warning text-dark" style="font-size:.7rem;"
+                        title="Download link unlocks once we confirm your payment">
+                    &#x23F3; Pending verification
+                  </span>
+                  {% endif %}
+                {% endif %}
+              </div>
             {% endfor %}
           </td>
           <td>₹{{ "%.0f"|format(o.total_amount) }}</td>

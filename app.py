@@ -23,7 +23,7 @@ load_dotenv()
 
 from flask import (
     Flask, render_template, request, session, redirect,
-    url_for, flash, jsonify, abort, send_from_directory, send_file
+    url_for, flash, jsonify, abort, send_from_directory, send_file, Response
 )
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -530,6 +530,9 @@ def save_image(file):
         file.save(os.path.join(app.config["UPLOAD_FOLDER"], filename))
         return filename
     return None
+
+
+_EBOOK_MIMETYPES = {"pdf": "application/pdf", "epub": "application/epub+zip"}
 
 
 def allowed_ebook_file(filename):
@@ -1833,31 +1836,61 @@ def ebook_download(order_number, book_id):
         )
         return redirect(url_for("order_success", order_number=order_number))
 
-    item.ebook_downloaded_at = datetime.utcnow()
-
-    # All-ebook order: once every ebook in it has been downloaded, there's no
-    # courier delivery to track — the download itself is the delivery.
-    if order.order_status in ("placed", "confirmed") and all(
-        i.book and i.book.is_ebook and i.ebook_downloaded_at is not None
-        for i in order.items
-    ):
-        order.order_status = "delivered"
-
-    db.session.commit()
-    notify_admin_whatsapp(
-        f"📥 eBook Downloaded!\n"
-        f"Order: {order.order_number}\n"
-        f"Customer: {order.customer_name} | {order.customer_phone}\n"
-        f"Book: {book.title}"
-    )
-
     ext = book.ebook_file.rsplit(".", 1)[1]
-    return send_from_directory(
-        app.config["EBOOK_FOLDER"],
-        book.ebook_file,
-        as_attachment=True,
-        download_name=f"{book.title}.{ext}"
+    file_size = os.path.getsize(ebook_path)
+    mimetype = _EBOOK_MIMETYPES.get(ext.lower(), "application/octet-stream")
+    download_name = f"{book.title}.{ext}"
+
+    # Capture primitives only — `item`/`order`/`book` are detached (and their
+    # session torn down) by the time this request's context is popped, which
+    # happens before the WSGI server iterates a streaming response body.
+    item_id, order_id = item.id, order.id
+    order_number_, customer_name, customer_phone, book_title = (
+        order.order_number, order.customer_name, order.customer_phone, book.title
     )
+
+    def generate():
+        bytes_sent = 0
+        try:
+            with open(ebook_path, "rb") as f:
+                while True:
+                    chunk = f.read(65536)
+                    if not chunk:
+                        break
+                    bytes_sent += len(chunk)
+                    yield chunk
+        finally:
+            # Only mark the link "used" once the whole file was actually
+            # handed off. A dropped connection (or a link-preview bot that
+            # aborts early) raises GeneratorExit here with bytes_sent short
+            # of file_size, so the single-use link stays alive.
+            if bytes_sent >= file_size:
+                with app.app_context():
+                    try:
+                        fresh_item = OrderItem.query.get(item_id)
+                        if fresh_item and fresh_item.ebook_downloaded_at is None:
+                            fresh_item.ebook_downloaded_at = datetime.utcnow()
+                            fresh_order = Order.query.get(order_id)
+                            if fresh_order and fresh_order.order_status in ("placed", "confirmed") and all(
+                                i.book and i.book.is_ebook and i.ebook_downloaded_at is not None
+                                for i in fresh_order.items
+                            ):
+                                fresh_order.order_status = "delivered"
+                            db.session.commit()
+                            notify_admin_whatsapp(
+                                f"📥 eBook Downloaded!\n"
+                                f"Order: {order_number_}\n"
+                                f"Customer: {customer_name} | {customer_phone}\n"
+                                f"Book: {book_title}"
+                            )
+                    except Exception:
+                        db.session.rollback()
+                        app.logger.exception("ebook_download: failed to record completed download")
+
+    response = Response(generate(), mimetype=mimetype)
+    response.headers.set("Content-Disposition", "attachment", filename=download_name)
+    response.headers["Content-Length"] = str(file_size)
+    return response
 
 
 @app.route("/admin/orders/<int:order_id>/ebook/<int:item_id>/download")
@@ -2382,6 +2415,24 @@ def customer_login():
 
         if customer and customer.check_password(password):
             session["customer_id"] = customer.id
+
+            # Pull in any guest orders (no account at checkout time) placed
+            # with this same email/phone, so they show up in the dashboard.
+            linked = Order.query.filter(
+                Order.customer_id.is_(None),
+                or_(Order.customer_email == customer.email, Order.customer_phone == customer.phone),
+            ).all()
+            if linked:
+                try:
+                    for o in linked:
+                        o.customer_id = customer.id
+                    customer.update_tier()
+                    db.session.commit()
+                    flash(f"{len(linked)} previous order(s) linked to your account.", "info")
+                except Exception:
+                    db.session.rollback()
+                    app.logger.exception("customer_login: guest-order auto-link failed")
+
             raw_next = request.form.get("next", "")
             # Only allow local redirects — reject absolute URLs to prevent open redirect
             from urllib.parse import urlparse

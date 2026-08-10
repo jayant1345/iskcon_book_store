@@ -83,8 +83,22 @@ def send_order_confirmation(order):
         return
     try:
         track_url = _safe_url("order_track")
+
+        # Ebooks: payment is confirmed at this point (this email fires when
+        # admin marks the order paid), so any not-yet-downloaded ebook items
+        # get a direct link here — this is the one channel that reaches a
+        # guest customer even if their checkout-time browser session is gone.
+        ebook_links = {}
+        if order.payment_method != "cod" and order.payment_status == "paid":
+            for item in order.items:
+                if item.book and item.book.is_ebook and item.book.ebook_file and not item.ebook_downloaded_at:
+                    ebook_links[item.id] = _safe_url(
+                        "ebook_download", order_number=order.order_number, book_id=item.book_id
+                    )
+
         subject   = f"Order Confirmed #{order.order_number} — Hare Krishna!"
-        html_body = render_template("emails/order_confirmation.html", order=order, track_url=track_url)
+        html_body = render_template("emails/order_confirmation.html", order=order, track_url=track_url,
+                                     ebook_links=ebook_links)
         _send(order.customer_email, subject, html_body)
     except Exception as exc:
         print(f"[EMAIL] send_order_confirmation error: {exc}")
