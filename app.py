@@ -1801,7 +1801,7 @@ def upi_confirm(order_number):
     return redirect(url_for("order_success", order_number=order_number))
 
 
-@app.route("/ebook/download/<order_number>/<int:book_id>")
+@app.route("/ebook/download/<order_number>/<int:book_id>", methods=["GET", "POST"])
 def ebook_download(order_number, book_id):
     order = Order.query.filter_by(order_number=order_number).first_or_404()
 
@@ -1835,6 +1835,15 @@ def ebook_download(order_number, book_id):
             "warning"
         )
         return redirect(url_for("order_success", order_number=order_number))
+
+    # GET only shows a landing page — it must never trigger the actual file
+    # transfer, because email providers and corporate mail filters (Gmail,
+    # Outlook Safe Links, etc.) automatically fetch every link in an email to
+    # scan it, which would otherwise burn the single-use link before the
+    # customer ever clicks it. The real download only starts on the POST
+    # below, which a scanner won't submit.
+    if request.method == "GET":
+        return render_template("ebook_landing.html", order=order, book=book)
 
     ext = book.ebook_file.rsplit(".", 1)[1]
     file_size = os.path.getsize(ebook_path)

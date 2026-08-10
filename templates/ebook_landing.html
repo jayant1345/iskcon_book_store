@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Download Your eBook — {{ store_name }}{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+  <div class="success-card text-center">
+    <div class="success-icon">📚</div>
+    <h2 class="section-title mt-3" style="color:#28a745;">Your eBook is Ready!</h2>
+    <p class="text-muted mb-1">🙏 Hare Krishna, {{ order.customer_name }}!</p>
+
+    <div style="background:var(--cream-dark); border-radius:10px; padding:20px; margin:20px 0;">
+      <div class="fw-bold mb-1" style="font-size:1.1rem;">{{ book.title }}</div>
+      <div class="text-muted small">Order {{ order.order_number }}</div>
+    </div>
+
+    <div class="alert alert-warning text-start py-2 px-3 mb-3" style="font-size:0.85rem;">
+      ⚠️ This link works <strong>only once</strong>. Click the button below to start your
+      download and save the file to your device right away.
+    </div>
+
+    <form id="ebookDownloadForm" method="POST"
+          action="{{ url_for('ebook_download', order_number=order.order_number, book_id=book.id) }}">
+      <button id="ebookDownloadBtn" type="submit" class="btn btn-success fw-bold px-4 py-2"
+              style="border-radius:10px; font-size:1rem;">
+        📥 Download Now
+      </button>
+    </form>
+
+    <div id="ebookDownloadStatus" class="alert alert-success text-start py-2 px-3 mt-3" style="font-size:0.85rem; display:none;">
+      ✅ Your download has started! It won't open in this tab — check your browser's
+      download notification/bar, or your device's <strong>Downloads</strong> folder.
+      Didn't see anything? Wait a few seconds, then check there before contacting us —
+      this page won't be able to offer the link again once the click has fired.
+    </div>
+  </div>
+</div>
+
+<script>
+  document.getElementById('ebookDownloadForm').addEventListener('submit', function () {
+    document.getElementById('ebookDownloadBtn').disabled = true;
+    document.getElementById('ebookDownloadBtn').textContent = 'Downloading…';
+    document.getElementById('ebookDownloadStatus').style.display = 'block';
+  });
+</script>
+{% endblock %}
