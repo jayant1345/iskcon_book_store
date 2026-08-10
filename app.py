@@ -3542,8 +3542,21 @@ def admin_create_manual_order():
         quantities = request.form.getlist("quantity")
         prices     = request.form.getlist("unit_price")
 
-        if not customer_name or not customer_phone or not address:
-            flash("Customer name, phone and address are required.", "danger")
+        age_str    = request.form.get("age", "").strip()
+        profession = request.form.get("profession", "").strip() or None
+        age = None
+        if age_str:
+            try:
+                age = int(age_str)
+            except ValueError:
+                age = None
+
+        if not customer_name or not customer_phone or not address or not customer_email:
+            flash("Customer name, phone, address and email are required.", "danger")
+            return render_template("admin/manual_order_form.html", books=books)
+
+        if not valid_email(customer_email):
+            flash("Please enter a valid email address.", "danger")
             return render_template("admin/manual_order_form.html", books=books)
 
         order_items_data = []
@@ -3586,6 +3599,8 @@ def admin_create_manual_order():
             city            = city,
             state           = state,
             pincode         = pincode,
+            age             = age,
+            profession      = profession,
             subtotal        = subtotal,
             shipping_charge = shipping,
             discount_amount = discount,
