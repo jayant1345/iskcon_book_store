@@ -339,6 +339,9 @@ class WhatsAppInquiry(db.Model):
     book_title     = db.Column(db.String(250))
     customer_name  = db.Column(db.String(200))
     customer_phone = db.Column(db.String(20))
+    customer_email = db.Column(db.String(200), nullable=True)
+    age            = db.Column(db.Integer, nullable=True)
+    profession     = db.Column(db.String(100), nullable=True)
     address        = db.Column(db.Text, nullable=True)
     city           = db.Column(db.String(100), nullable=True)
     state          = db.Column(db.String(100), nullable=True)
@@ -1708,12 +1711,19 @@ def whatsapp_log():
     data       = request.get_json() or request.form.to_dict()
     name       = (data.get("name") or "").strip()
     phone      = (data.get("phone") or "").strip()
+    email      = (data.get("email") or "").strip()
     book_id    = data.get("book_id")
     book_title = (data.get("book_title") or "").strip()
     address    = (data.get("address") or "").strip()
     city       = (data.get("city") or "").strip()
     state      = (data.get("state") or "").strip()
     pincode    = (data.get("pincode") or "").strip()
+    profession = (data.get("profession") or "").strip()
+    age        = data.get("age")
+    try:
+        age = int(age) if age else None
+    except (TypeError, ValueError):
+        age = None
     shipping_rate = data.get("shipping_rate")
     try:
         shipping_rate = float(shipping_rate) if shipping_rate else None
@@ -1725,6 +1735,9 @@ def whatsapp_log():
             book_title    = book_title,
             customer_name = name,
             customer_phone= phone,
+            customer_email= email if valid_email(email) else None,
+            age           = age,
+            profession    = profession or None,
             address       = address or None,
             city          = city or None,
             state         = state or None,
@@ -2679,6 +2692,8 @@ def admin_whatsapp_convert(inq_id):
     phone = inq.customer_phone or ""
     note  = f"WhatsApp enquiry for: {inq.book_title or 'general'}"
     return redirect(url_for("admin_create_manual_order", name=name, phone=phone, note=note,
+                             email=inq.customer_email or "",
+                             age=inq.age or "", profession=inq.profession or "",
                              address=inq.address or "", city=inq.city or "",
                              state=inq.state or "", pincode=inq.pincode or "",
                              book_id=inq.book_id or ""))
@@ -4291,6 +4306,9 @@ def init_db():
             ("whatsapp_inquiries", "state",                      "VARCHAR(100)"),
             ("whatsapp_inquiries", "pincode",                    "VARCHAR(10)"),
             ("whatsapp_inquiries", "shipping_rate",              "FLOAT"),
+            ("whatsapp_inquiries", "customer_email",             "VARCHAR(200)"),
+            ("whatsapp_inquiries", "age",                        "INTEGER"),
+            ("whatsapp_inquiries", "profession",                 "VARCHAR(100)"),
         ]
         for table, column, col_type in migrations:
             # Use a fresh connection per column so a failed ALTER doesn't

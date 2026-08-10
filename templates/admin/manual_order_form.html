@@ -43,7 +43,7 @@
                         <label class="form-label">Email *
                           <small class="text-muted">(needed to send order confirmation / eBook download link)</small>
                         </label>
-                        <input type="email" name="customer_email" class="form-control" required placeholder="customer@example.com">
+                        <input type="email" name="customer_email" class="form-control" required placeholder="customer@example.com" value="{{ request.args.get('email', '') }}">
                     </div>
                     <div class="col-12">
                         <label class="form-label">Address *</label>
@@ -63,11 +63,11 @@
                     </div>
                     <div class="col-md-6">
                         <label class="form-label">Age <small class="text-muted">(optional)</small></label>
-                        <input type="number" name="age" class="form-control" placeholder="e.g. 35" min="1" max="120">
+                        <input type="number" name="age" class="form-control" placeholder="e.g. 35" min="1" max="120" value="{{ request.args.get('age', '') }}">
                     </div>
                     <div class="col-md-6">
                         <label class="form-label">Profession <small class="text-muted">(optional)</small></label>
-                        <input type="text" name="profession" class="form-control" placeholder="e.g. Teacher" maxlength="100">
+                        <input type="text" name="profession" class="form-control" placeholder="e.g. Teacher" maxlength="100" value="{{ request.args.get('profession', '') }}">
                     </div>
                 </div>
             </div>

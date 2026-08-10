@@ -236,6 +236,23 @@
                        value="{{ current_customer.phone if current_customer else '' }}">
                 <div id="wa-phone-err" class="text-danger small mt-1" style="display:none;">Please enter your phone number.</div>
               </div>
+              <div class="mb-3">
+                <label class="form-label fw-bold small">Email <span class="text-danger">*</span></label>
+                <input type="email" id="wa-email" class="form-control"
+                       placeholder="you@example.com"
+                       value="{{ current_customer.email if current_customer else '' }}">
+                <div id="wa-email-err" class="text-danger small mt-1" style="display:none;">Please enter a valid email address.</div>
+              </div>
+              <div class="row g-2 mb-3">
+                <div class="col-6">
+                  <label class="form-label fw-bold small">Age <small class="text-muted">(optional)</small></label>
+                  <input type="number" id="wa-age" class="form-control" min="1" max="120" placeholder="e.g. 35">
+                </div>
+                <div class="col-6">
+                  <label class="form-label fw-bold small">Profession <small class="text-muted">(optional)</small></label>
+                  <input type="text" id="wa-profession" class="form-control" placeholder="e.g. Teacher">
+                </div>
+              </div>
               {% if not book.is_ebook %}
               <div class="mb-3">
                 <label class="form-label fw-bold small">Full Address <span class="text-danger">*</span></label>
@@ -334,13 +351,21 @@
       waGoBtn.addEventListener('click', function () {
         var nameInput    = document.getElementById('wa-name');
         var phoneInput   = document.getElementById('wa-phone');
+        var emailInput   = document.getElementById('wa-email');
+        var ageInput     = document.getElementById('wa-age');
+        var professionInput = document.getElementById('wa-profession');
         var name         = nameInput.value.trim();
         var phone        = phoneInput.value.trim();
+        var email        = emailInput.value.trim();
+        var age          = ageInput.value.trim();
+        var profession   = professionInput.value.trim();
         var address = '', city = '', state = '', pincode = '';
 
         var fields = [
           { input: nameInput,  err: 'wa-name-err',  value: name },
           { input: phoneInput, err: 'wa-phone-err', value: phone },
+          { input: emailInput, err: 'wa-email-err', value: email,
+            isValid: /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) },
         ];
 
         if (!waIsEbook) {
@@ -361,7 +386,8 @@
         var valid = true;
         fields.forEach(function(f) {
           var errEl = document.getElementById(f.err);
-          if (!f.value) {
+          var ok = f.value && (f.isValid === undefined || f.isValid);
+          if (!ok) {
             errEl.style.display = 'block';
             f.input.classList.add('is-invalid');
             valid = false;
@@ -393,7 +419,8 @@
           method:  'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            name: name, phone: phone, book_id: bookId, book_title: bookTitle,
+            name: name, phone: phone, email: email, age: age, profession: profession,
+            book_id: bookId, book_title: bookTitle,
             address: address, city: city, state: state, pincode: pincode,
             shipping_rate: waIsEbook ? null : waShippingRate
           })
@@ -408,7 +435,7 @@
 
       // Clear validation state when modal is reopened
       document.getElementById('waEnquiryModal').addEventListener('show.bs.modal', function () {
-        var ids = waIsEbook ? ['wa-name', 'wa-phone'] : ['wa-name', 'wa-phone', 'wa-address', 'wa-city', 'wa-pincode'];
+        var ids = waIsEbook ? ['wa-name', 'wa-phone', 'wa-email'] : ['wa-name', 'wa-phone', 'wa-email', 'wa-address', 'wa-city', 'wa-pincode'];
         ids.forEach(function(id) {
           document.getElementById(id).classList.remove('is-invalid');
         });
