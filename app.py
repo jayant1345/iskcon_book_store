@@ -1247,8 +1247,8 @@ def checkout():
             return render_template("checkout.html", **totals,
                                    all_ebooks=all(item["book"].is_ebook for item in totals["items"]))
 
-        if payment in ("payu", "razorpay"):
-            flash("This payment option is temporarily unavailable. Please pay via UPI.", "danger")
+        if payment == "payu":
+            flash("This payment option is temporarily unavailable. Please pay via UPI or Razorpay.", "danger")
             return render_template("checkout.html", **totals,
                                    all_ebooks=all(item["book"].is_ebook for item in totals["items"]))
 
