@@ -269,6 +269,7 @@ class Order(db.Model):
     upi_transaction_id = db.Column(db.String(100))
     status_note        = db.Column(db.Text)
     is_deleted         = db.Column(db.Boolean, default=False)
+    stock_deducted     = db.Column(db.Boolean, default=False)
     is_donation               = db.Column(db.Boolean, default=False)
     donation_type             = db.Column(db.String(20), nullable=True)   # "iskcon" | "person"
     donation_recipient        = db.Column(db.String(200), nullable=True)
@@ -294,6 +295,28 @@ class OrderItem(db.Model):
     @property
     def subtotal(self):
         return self.price * self.quantity
+
+
+def deduct_order_stock(order):
+    """Decrement physical-book stock once, at ship time. eBooks are never stock-tracked."""
+    if order.stock_deducted:
+        return
+    for item in order.items:
+        book = item.book if hasattr(item, "book") else Book.query.get(item.book_id)
+        if book and not book.is_ebook:
+            book.stock = max(0, book.stock - item.quantity)
+    order.stock_deducted = True
+
+
+def restore_order_stock(order):
+    """Undo deduct_order_stock — used when a shipment is cancelled/reverted."""
+    if not order.stock_deducted:
+        return
+    for item in order.items:
+        book = item.book if hasattr(item, "book") else Book.query.get(item.book_id)
+        if book and not book.is_ebook:
+            book.stock = book.stock + item.quantity
+    order.stock_deducted = False
 
 
 class Coupon(db.Model):
@@ -1307,8 +1330,8 @@ def checkout():
                 quantity   = cart_item["qty"],
                 price      = cart_item["book"].price,
             )
-            # Reduce stock
-            cart_item["book"].stock = max(0, cart_item["book"].stock - cart_item["qty"])
+            # Stock is deducted at ship time (deduct_order_stock), not at order
+            # creation — an unpaid/abandoned order must never reduce stock.
             db.session.add(oi)
 
         # Update coupon usage
@@ -1523,7 +1546,6 @@ def donate_book(book_id):
         quantity   = quantity,
         price      = book.price,
     )
-    book.stock = max(0, book.stock - quantity)
     db.session.add(oi)
     db.session.commit()
     notify_admin_whatsapp(
@@ -3637,9 +3659,12 @@ def admin_create_manual_order():
                 price      = item_data["price"],
             )
             db.session.add(oi)
-            # Deduct stock only for paper books
-            if not item_data["book"].is_ebook:
-                item_data["book"].stock = max(0, item_data["book"].stock - item_data["qty"])
+
+        # Only deduct stock if this manual order is being recorded as
+        # already shipped/delivered; otherwise it deducts at ship time
+        # like every other order (see deduct_order_stock).
+        if ord_status in ("shipped", "delivered"):
+            deduct_order_stock(order)
 
         db.session.commit()
         flash(f"Manual order {order.order_number} created successfully!", "success")
@@ -3836,6 +3861,15 @@ def admin_update_order(order_id):
             pass
     else:
         order.expected_delivery = None
+
+    # Physical stock is deducted once the order first reaches shipped/delivered,
+    # and restored if it's reverted back before that (see deduct/restore_order_stock).
+    SHIPPED_OR_LATER = ("shipped", "delivered")
+    if new_order_status in SHIPPED_OR_LATER and prev_order_status not in SHIPPED_OR_LATER:
+        deduct_order_stock(order)
+    elif new_order_status not in SHIPPED_OR_LATER and prev_order_status in SHIPPED_OR_LATER:
+        restore_order_stock(order)
+
     db.session.commit()
 
     # Respect the admin's "Send email notification" checkbox
@@ -3912,6 +3946,7 @@ def admin_delhivery_book(order_id):
         order.courier_name    = "Delhivery"
         order.tracking_number = waybill
         order.order_status    = "shipped"
+        deduct_order_stock(order)
         db.session.commit()
         send_order_shipped(order)
         flash(f"Delhivery pickup booked! Waybill: {waybill}", "success")
@@ -3948,6 +3983,7 @@ def admin_delhivery_cancel(order_id):
         order.courier_name    = None
         order.tracking_number = None
         order.order_status    = "confirmed"
+        restore_order_stock(order)
         db.session.commit()
         flash("Delhivery shipment cancelled. Order reverted to Confirmed.", "success")
     else:
@@ -4309,6 +4345,7 @@ def init_db():
             ("whatsapp_inquiries", "customer_email",             "VARCHAR(200)"),
             ("whatsapp_inquiries", "age",                        "INTEGER"),
             ("whatsapp_inquiries", "profession",                 "VARCHAR(100)"),
+            ("orders",             "stock_deducted",             "BOOLEAN DEFAULT FALSE"),
         ]
         for table, column, col_type in migrations:
             # Use a fresh connection per column so a failed ALTER doesn't
@@ -4375,6 +4412,39 @@ def init_db():
         except Exception as e:
             db.session.rollback()
             print(f"[WARNING] eBook delivered-status backfill failed: {e}")
+
+        # One-time backfill for the stock-deduction timing fix (order-creation ->
+        # ship-time). Orders already shipped/delivered had stock correctly taken
+        # under the old logic, so just flag them. Orders that never shipped
+        # (still open, or abandoned/cancelled) had stock wrongly taken at
+        # creation and never given back — restore it. Runs exactly once,
+        # guarded by a Setting marker so restarts never repeat it.
+        try:
+            MARKER = "stock_ship_time_backfill_2026_08_11"
+            if not Setting.get(MARKER):
+                shipped_marked, restored_orders, restored_units = 0, 0, 0
+                for o in Order.query.filter(Order.order_status.in_(("shipped", "delivered"))).all():
+                    if not o.stock_deducted:
+                        o.stock_deducted = True
+                        shipped_marked += 1
+                for o in Order.query.filter(~Order.order_status.in_(("shipped", "delivered"))).all():
+                    if o.stock_deducted:
+                        continue
+                    units = 0
+                    for item in o.items:
+                        book = item.book
+                        if book and not book.is_ebook:
+                            book.stock += item.quantity
+                            units += item.quantity
+                    if units:
+                        restored_orders += 1
+                        restored_units += units
+                Setting.set(MARKER, f"shipped_marked={shipped_marked} restored_orders={restored_orders} restored_units={restored_units}")
+                db.session.commit()
+                print(f"[STOCK BACKFILL] shipped_marked={shipped_marked} restored_orders={restored_orders} restored_units={restored_units}")
+        except Exception as e:
+            db.session.rollback()
+            print(f"[WARNING] Stock ship-time backfill failed: {e}")
 
 
 @app.route("/admin/export-data")
