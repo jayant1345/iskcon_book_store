@@ -27,19 +27,60 @@
     </form>
 
     <div id="ebookDownloadStatus" class="alert alert-success text-start py-2 px-3 mt-3" style="font-size:0.85rem; display:none;">
-      ✅ Your download has started! It won't open in this tab — check your browser's
-      download notification/bar, or your device's <strong>Downloads</strong> folder.
-      Didn't see anything? Wait a few seconds, then check there before contacting us —
-      this page won't be able to offer the link again once the click has fired.
+      ✅ <strong>Downloaded!</strong> Check your browser's download notification/bar, or
+      your device's <strong>Downloads</strong> folder.
+    </div>
+
+    <div id="ebookDownloadError" class="alert alert-danger text-start py-2 px-3 mt-3" style="font-size:0.85rem; display:none;">
+      ❌ The download didn't go through. Please tap "Download Now" to try again.
+      If it keeps failing, message us on
+      <a href="https://wa.me/{{ whatsapp_num|replace('+','') }}" target="_blank" style="font-weight:600;">WhatsApp ({{ whatsapp_num }})</a>
+      with your order number <strong>{{ order.order_number }}</strong> and we'll send the eBook directly.
     </div>
   </div>
 </div>
 
 <script>
-  document.getElementById('ebookDownloadForm').addEventListener('submit', function () {
-    document.getElementById('ebookDownloadBtn').disabled = true;
-    document.getElementById('ebookDownloadBtn').textContent = 'Downloading…';
-    document.getElementById('ebookDownloadStatus').style.display = 'block';
+(function () {
+  var form    = document.getElementById('ebookDownloadForm');
+  var btn     = document.getElementById('ebookDownloadBtn');
+  var okBox   = document.getElementById('ebookDownloadStatus');
+  var errBox  = document.getElementById('ebookDownloadError');
+
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    btn.disabled = true;
+    btn.textContent = 'Downloading…';
+    okBox.style.display  = 'none';
+    errBox.style.display = 'none';
+
+    fetch(form.action, { method: 'POST' })
+      .then(function (resp) {
+        if (!resp.ok) throw new Error('Server returned ' + resp.status);
+        var disposition = resp.headers.get('Content-Disposition') || '';
+        var match = disposition.match(/filename="?([^"]+)"?/);
+        var filename = match ? match[1] : 'ebook';
+        return resp.blob().then(function (blob) { return { blob: blob, filename: filename }; });
+      })
+      .then(function (result) {
+        var url = URL.createObjectURL(result.blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = result.filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+
+        btn.textContent = '✅ Downloaded';
+        okBox.style.display = 'block';
+      })
+      .catch(function () {
+        btn.disabled = false;
+        btn.textContent = '📥 Download Now';
+        errBox.style.display = 'block';
+      });
   });
+})();
 </script>
 {% endblock %}
