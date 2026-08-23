@@ -73,6 +73,20 @@ def valid_email(email):
     return bool(_EMAIL_RE.match(email))
 
 
+def safe_download_filename(name):
+    """
+    ASCII-only filename for Content-Disposition. Werkzeug's `filename=` kwarg
+    does not RFC-5987-encode non-Latin1 characters (e.g. book titles with an
+    em dash or Devanagari script) — the raw bytes reach gunicorn's stricter
+    header validator, which then rejects the whole response outright.
+    """
+    name = (name.replace('—', '-').replace('–', '-')
+                .replace('’', "'").replace('‘', "'")
+                .replace('“', '"').replace('”', '"'))
+    name = name.encode('ascii', 'ignore').decode('ascii').strip()
+    return name or "ebook"
+
+
 @app.template_filter('wa_phone')
 def wa_phone_filter(phone):
     """Return E.164 digits for wa.me — adds 91 country code for bare 10-digit Indian numbers."""
@@ -1883,7 +1897,7 @@ def ebook_download(order_number, book_id):
     ext = book.ebook_file.rsplit(".", 1)[1]
     file_size = os.path.getsize(ebook_path)
     mimetype = _EBOOK_MIMETYPES.get(ext.lower(), "application/octet-stream")
-    download_name = f"{book.title}.{ext}"
+    download_name = safe_download_filename(f"{book.title}.{ext}")
 
     # Capture primitives only — `item`/`order`/`book` are detached (and their
     # session torn down) by the time this request's context is popped, which
@@ -1951,7 +1965,7 @@ def admin_ebook_download(order_id, item_id):
         app.config["EBOOK_FOLDER"],
         book.ebook_file,
         as_attachment=True,
-        download_name=f"{book.title}.{ext}"
+        download_name=safe_download_filename(f"{book.title}.{ext}")
     )
 
 
@@ -2290,7 +2304,7 @@ def magazine_download(mag_id):
         return redirect(url_for("magazine_detail", mag_id=mag_id))
     mag_dir = os.path.join(app.static_folder, "magazines")
     return send_from_directory(mag_dir, mag.pdf_filename, as_attachment=True,
-                               download_name=f"{mag.title}.pdf")
+                               download_name=safe_download_filename(f"{mag.title}.pdf"))
 
 
 # ── Admin: Magazine management ──
