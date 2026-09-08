@@ -14,7 +14,8 @@
         {% endif %}
     </form>
     <div class="d-flex gap-2">
-        <a href="{{ url_for('export_stock_csv') }}" class="btn btn-outline-success">
+        <a href="{{ url_for('export_stock_csv', q=query, tf=title_f, af=author_f, category_id=category_id, lang=lang_filter, fmt=fmt_filter, status=status_filter) }}" class="btn btn-outline-success"
+           title="Downloads the books matching your current filters above, with a total/eBook/Paper count summary">
             <i class="fas fa-file-csv me-2"></i>Download Stock CSV
         </a>
         <form method="POST" action="{{ url_for('admin_reset_book_weights') }}"

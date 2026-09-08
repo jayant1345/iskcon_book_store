@@ -2878,11 +2878,60 @@ def admin_books():
 @app.route("/admin/books/export-stock-csv")
 @admin_required
 def export_stock_csv():
-    """Download all books as a CSV stock receipt for physical records."""
-    all_books = Book.query.order_by(Book.category_id, Book.title).all()
+    """Download books as a CSV stock receipt for physical records — respects
+    the same search/category/language/format/status filters as Manage Books,
+    and includes a summary of total / eBook / Paper counts."""
+    query         = request.args.get("q", "")
+    category_id   = request.args.get("category_id", type=int)
+    title_f       = request.args.get("tf", "")
+    author_f      = request.args.get("af", "")
+    lang_filter   = request.args.get("lang", "")
+    fmt_filter    = request.args.get("fmt", "")
+    status_filter = request.args.get("status", "")
+
+    bq = Book.query.filter_by(deleted=False)
+    if query:
+        import re
+        for word in query.split():
+            word = re.sub(r"[^\w]", "", word)
+            if not word:
+                continue
+            bq = bq.filter(or_(
+                Book.title.ilike(f"%{word}%"),
+                Book.author.ilike(f"%{word}%"),
+            ))
+    if title_f:
+        bq = bq.filter(Book.title.ilike(f"%{title_f}%"))
+    if author_f:
+        bq = bq.filter(Book.author.ilike(f"%{author_f}%"))
+    if category_id:
+        bq = bq.filter_by(category_id=category_id)
+    if lang_filter:
+        bq = bq.filter(Book.language == lang_filter)
+    if fmt_filter == 'ebook':
+        bq = bq.filter(Book.is_ebook == True)
+    elif fmt_filter == 'paper':
+        bq = bq.filter(Book.is_ebook == False)
+    if status_filter == 'active':
+        bq = bq.filter(Book.active == True)
+    elif status_filter == 'inactive':
+        bq = bq.filter(Book.active == False)
+
+    all_books = bq.order_by(Book.category_id, Book.title).all()
+
+    total_count = len(all_books)
+    ebook_count = sum(1 for b in all_books if b.is_ebook)
+    paper_count = total_count - ebook_count
 
     output = io.StringIO()
     writer = csv.writer(output)
+
+    # Summary block
+    writer.writerow(["Stock Report Summary"])
+    writer.writerow(["Total Books:", total_count])
+    writer.writerow(["eBooks:", ebook_count])
+    writer.writerow(["Hard Copy (Paper):", paper_count])
+    writer.writerow([])
 
     # Header row
     writer.writerow([
@@ -2912,7 +2961,8 @@ def export_stock_csv():
 
     csv_bytes = output.getvalue().encode("utf-8-sig")   # utf-8-sig adds BOM for Excel
     from flask import Response
-    filename = f"stock_report_{datetime.now().strftime('%Y%m%d_%H%M')}.csv"
+    tag = f"_{fmt_filter}" if fmt_filter else ""
+    filename = f"stock_report{tag}_{datetime.now().strftime('%Y%m%d_%H%M')}.csv"
     return Response(
         csv_bytes,
         mimetype="text/csv",
