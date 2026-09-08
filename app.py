@@ -1140,6 +1140,8 @@ def add_to_cart(book_id):
     flash(f'"{book.title}" added to cart!', "success")
     if request.headers.get("X-Requested-With") == "XMLHttpRequest":
         return jsonify({"success": True, "cart_count": cart_item_count()})
+    if request.form.get("buy_now"):
+        return redirect(url_for("checkout"))
     return redirect(request.referrer or url_for("cart"))
 
 

@@ -160,10 +160,13 @@
                    id="detail-qty" style="width:60px;text-align:center;border:none;font-weight:700;">
             <button type="button" data-action="plus">+</button>
           </div>
+          <button type="submit" name="buy_now" value="1" class="btn btn-gold btn-lg px-4">
+            <i class="bi bi-lightning-fill me-2"></i>Buy Now
+          </button>
           <button type="submit" class="btn btn-saffron btn-lg px-4">
             <i class="bi bi-cart-plus me-2"></i>Add to Cart
           </button>
-          <a href="{{ url_for('cart') }}" class="btn btn-gold btn-lg px-4">
+          <a href="{{ url_for('cart') }}" class="btn btn-outline-saffron btn-lg px-4">
             🛒 View Cart
           </a>
         </div>
