@@ -357,6 +357,20 @@ img { max-width: 100%; height: auto; }
   .hero-slide-lotus { font-size: 200px; opacity: 0.05; }
 }
 
+/* ═══════════════ HOME PAGE — SIMPLIFIED MOBILE LAYOUT ═══════════════ */
+/* Fewer competing blocks per screen: tighter section spacing, smaller
+   decorative elements, so phone visitors scroll through calmer, less
+   "busy" content instead of many full-height stacked sections. */
+@media (max-width: 768px) {
+  .home-page section.py-5 { padding-top: 32px !important; padding-bottom: 32px !important; }
+  .home-page .hero-slide { min-height: 360px; }
+  .home-page .hero-slide-content { padding: 36px 0 52px; }
+  .home-page .section-title { font-size: 1.4rem; margin-bottom: 4px; }
+  .home-page .section-subtitle { font-size: 0.88rem; }
+  .home-page .category-card { padding: 18px 12px; }
+  .home-page .category-icon { font-size: 1.6rem; }
+}
+
 /* ═══════════════ BUTTONS ═══════════════ */
 .btn-saffron {
   background: linear-gradient(135deg, var(--saffron), var(--saffron-dark));

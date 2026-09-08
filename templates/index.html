@@ -32,6 +32,7 @@
 {% endblock %}
 
 {% block content %}
+<div class="home-page">
 
 <!-- ═══════ HERO CAROUSEL ═══════ -->
 <div id="heroCarousel" class="carousel slide" data-bs-ride="carousel" data-bs-interval="10000">
@@ -678,6 +679,7 @@
 (function () {
   var popupEl = document.getElementById('wisdomJournalPopup');
   if (!popupEl) return;
+  if (window.innerWidth < 768) return; // don't auto-pop on mobile — too intrusive on small screens
   if (!sessionStorage.getItem('wisdomJournalPopupShown')) {
     sessionStorage.setItem('wisdomJournalPopupShown', '1');
     setTimeout(function () {
@@ -712,4 +714,5 @@
   </div>
 </section>
 
+</div>
 {% endblock %}
