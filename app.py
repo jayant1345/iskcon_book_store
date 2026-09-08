@@ -716,7 +716,7 @@ def cart_totals():
     items, subtotal = [], 0
     for book_id_str, item in cart.items():
         book = books.get(int(book_id_str))
-        if not book:
+        if not book or book.deleted or not book.active:
             continue
         line_total = book.price * item["qty"]
         subtotal += line_total
@@ -1102,6 +1102,8 @@ def books():
 def book_detail(book_id):
     import re
     book    = Book.query.get_or_404(book_id)
+    if book.deleted or not book.active:
+        abort(404)
     related = Book.query.filter_by(category_id=book.category_id, active=True)\
                         .filter(Book.id != book_id).limit(4).all()
 
@@ -1125,6 +1127,8 @@ def book_detail(book_id):
 @app.route("/cart/add/<int:book_id>", methods=["POST"])
 def add_to_cart(book_id):
     book = Book.query.get_or_404(book_id)
+    if book.deleted or not book.active:
+        abort(404)
     qty  = int(request.form.get("qty", 1))
     cart = get_cart()
     key  = str(book_id)
