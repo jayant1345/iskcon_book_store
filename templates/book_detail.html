@@ -169,8 +169,36 @@
           <a href="{{ url_for('cart') }}" class="btn btn-outline-saffron btn-lg px-4">
             🛒 View Cart
           </a>
+          <button type="button" id="share-book-btn" class="btn btn-outline-saffron btn-lg px-4"
+                  data-title="{{ book.title|e }}"
+                  data-text="Check out {{ book.title }} by {{ book.author }} on ISKCON Books"
+                  data-url="https://iskconbooks.in/book/{{ book.id }}">
+            <i class="bi bi-share-fill me-2"></i>Share
+          </button>
         </div>
       </form>
+      <script>
+      document.getElementById('share-book-btn').addEventListener('click', function () {
+        var btn  = this;
+        var data = { title: btn.dataset.title, text: btn.dataset.text, url: btn.dataset.url };
+        if (navigator.share) {
+          navigator.share(data).catch(function () {});
+          return;
+        }
+        var original = btn.innerHTML;
+        function showCopied() {
+          btn.innerHTML = '<i class="bi bi-check-lg me-2"></i>Link Copied!';
+          setTimeout(function () { btn.innerHTML = original; }, 2000);
+        }
+        if (navigator.clipboard) {
+          navigator.clipboard.writeText(data.url).then(showCopied).catch(function () {
+            window.prompt('Copy this link:', data.url);
+          });
+        } else {
+          window.prompt('Copy this link:', data.url);
+        }
+      });
+      </script>
       {% else %}
       <div class="alert alert-iskcon-warning">
         😔 This book is currently out of stock. Check back soon!
