@@ -132,11 +132,11 @@
       {% endif %}
 
       <!-- Price -->
-      <div class="mb-4">
+      <div class="mb-4 d-flex align-items-center flex-wrap gap-2">
         <span class="product-price-big">₹{{ book.price|int }}</span>
         {% if book.original_price %}
-        <span class="product-original-price">₹{{ book.original_price|int }}</span>
-        <span class="badge ms-2" style="background:#e74c3c; font-size:0.85rem;">
+        <del class="product-original-price text-muted text-decoration-line-through" style="text-decoration: line-through !important;">₹{{ book.original_price|int }}</del>
+        <span class="badge" style="background:#e74c3c; font-size:0.85rem; padding:6px 12px; border-radius:6px;">
           Save ₹{{ (book.original_price - book.price)|int }}
         </span>
         {% endif %}

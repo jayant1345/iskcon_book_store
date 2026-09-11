@@ -829,6 +829,22 @@ img {
   text-decoration: line-through;
 }
 
+.product-price-big {
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--text);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+}
+
+.product-original-price {
+  font-size: 1.25rem;
+  color: #8E7067;
+  text-decoration: line-through !important;
+  text-decoration-thickness: 2px;
+  font-weight: 500;
+  margin-left: 8px;
+}
+
 .book-card-actions {
   display: flex;
   gap: 6px;
