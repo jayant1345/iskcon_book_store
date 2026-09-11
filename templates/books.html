@@ -53,7 +53,7 @@
             <label class="filter-option">
               <input type="radio" name="language" value="" {{ 'checked' if not language }}> All Languages
             </label>
-            {% for lang in languages %}
+            {% for lang in ['Gujarati', 'Hindi', 'English'] %}
             <label class="filter-option">
               <input type="radio" name="language" value="{{ lang }}" {{ 'checked' if language == lang }}> {{ lang }}
             </label>
