@@ -135,6 +135,12 @@
       </a>
       {% endif %}
 
+      <!-- Wishlist -->
+      <a class="nav-link position-relative me-1" href="{{ url_for('wishlist') }}" style="color:#E8C99A !important;">
+        <i class="bi bi-heart" style="font-size:1.2rem;"></i>
+        <span class="wishlist-badge">{{ wishlist_count }}</span>
+      </a>
+
       <!-- Cart -->
       <a class="nav-link position-relative me-2" href="{{ url_for('cart') }}" style="color:#E8C99A !important;">
         <i class="bi bi-cart3" style="font-size:1.3rem;"></i>

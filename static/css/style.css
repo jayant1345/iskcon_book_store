@@ -129,7 +129,7 @@ img { max-width: 100%; height: auto; }
   background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba(255,179,0,1)' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e") !important;
 }
 
-.cart-badge {
+.cart-badge, .wishlist-badge {
   background: var(--gold);
   color: var(--brown);
   font-size: 0.65rem;
@@ -486,6 +486,83 @@ img { max-width: 100%; height: auto; }
   font-weight: 700;
   padding: 3px 8px;
   border-radius: 20px;
+}
+
+.book-card-icons {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.icon-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.92);
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+  color: var(--brown);
+  font-size: 0.9rem;
+  cursor: pointer;
+  padding: 0;
+  transition: all var(--transition);
+}
+
+.icon-btn:hover {
+  background: white;
+  transform: scale(1.12);
+}
+
+.wishlist-toggle-btn.active i {
+  color: #e74c3c;
+}
+
+.book-card-hover-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(61, 26, 0, 0.78) 0%, rgba(61, 26, 0, 0) 55%);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 16px;
+  opacity: 0;
+  transition: opacity var(--transition);
+  pointer-events: none;
+}
+
+.book-card-img-wrap:hover .book-card-hover-overlay {
+  opacity: 1;
+}
+
+.book-card-view-details-btn {
+  pointer-events: auto;
+  background: var(--gold);
+  color: var(--brown) !important;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 7px 16px;
+  border-radius: 20px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  transform: translateY(10px);
+  transition: transform var(--transition), background var(--transition);
+}
+
+.book-card-img-wrap:hover .book-card-view-details-btn {
+  transform: translateY(0);
+}
+
+.book-card-view-details-btn:hover {
+  background: var(--gold-light);
 }
 
 .book-card-body {

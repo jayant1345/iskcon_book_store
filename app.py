@@ -701,6 +701,21 @@ def save_cart(cart):
     session.modified = True
 
 
+# ── Wishlist helpers (stored in Flask session, same pattern as cart) ──
+
+def get_wishlist():
+    return session.get("wishlist", [])
+
+
+def save_wishlist(wishlist):
+    session["wishlist"] = wishlist
+    session.modified = True
+
+
+def wishlist_item_count():
+    return len(get_wishlist())
+
+
 def cart_item_count():
     return sum(item["qty"] for item in get_cart().values())
 
@@ -833,6 +848,8 @@ def customer_login_required(f):
 def inject_globals():
     return {
         "cart_count":       cart_item_count(),
+        "wishlist_ids":     get_wishlist(),
+        "wishlist_count":   wishlist_item_count(),
         "categories":       Category.query.order_by(Category.sort_order).all(),
         "store_name":       app.config["STORE_NAME"],
         "whatsapp_num":     app.config["WHATSAPP_NUMBER"],
@@ -1143,6 +1160,35 @@ def add_to_cart(book_id):
     if request.form.get("buy_now"):
         return redirect(url_for("checkout"))
     return redirect(request.referrer or url_for("cart"))
+
+
+@app.route("/wishlist/toggle/<int:book_id>", methods=["POST"])
+def wishlist_toggle(book_id):
+    book = Book.query.get_or_404(book_id)
+    wishlist = get_wishlist()
+    key = str(book_id)
+    if key in wishlist:
+        wishlist.remove(key)
+        added = False
+    else:
+        wishlist.append(key)
+        added = True
+    save_wishlist(wishlist)
+    if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+        return jsonify({"success": True, "in_wishlist": added, "wishlist_count": len(wishlist)})
+    flash(f'"{book.title}" {"added to" if added else "removed from"} your wishlist.', "success")
+    return redirect(request.referrer or url_for("books"))
+
+
+@app.route("/wishlist")
+def wishlist():
+    ids = [int(i) for i in get_wishlist()]
+    books = []
+    if ids:
+        books = Book.query.filter(Book.id.in_(ids), Book.deleted == False).all()
+        order = {book_id: idx for idx, book_id in enumerate(ids)}
+        books.sort(key=lambda b: order.get(b.id, 0), reverse=True)
+    return render_template("wishlist.html", books=books)
 
 
 @app.route("/cart")

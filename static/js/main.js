@@ -100,6 +100,58 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   /* ──────────────────────────────────
+     Wishlist Toggle (AJAX)
+  ────────────────────────────────── */
+  document.querySelectorAll('.wishlist-toggle-btn').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.preventDefault();
+      const bookId = btn.dataset.bookId;
+      const icon = btn.querySelector('i');
+      btn.disabled = true;
+      try {
+        const res = await fetch(`/wishlist/toggle/${bookId}`, {
+          method: 'POST',
+          headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        });
+        const data = await res.json();
+        if (data.success) {
+          btn.classList.toggle('active', data.in_wishlist);
+          if (icon) icon.className = data.in_wishlist ? 'bi bi-heart-fill' : 'bi bi-heart';
+          document.querySelectorAll('.wishlist-badge').forEach(badge => {
+            badge.textContent = data.wishlist_count;
+          });
+          showToast(data.in_wishlist ? 'Saved to wishlist 💛' : 'Removed from wishlist', 'success', 1800);
+        }
+      } catch (err) {
+        showToast('Something went wrong. Try again.', 'danger');
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  });
+
+  /* ──────────────────────────────────
+     Share Book (Card)
+  ────────────────────────────────── */
+  document.querySelectorAll('.share-card-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      const data = { title: btn.dataset.title, text: btn.dataset.text, url: btn.dataset.url };
+      if (navigator.share) {
+        navigator.share(data).catch(() => {});
+        return;
+      }
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(data.url)
+          .then(() => showToast('Link copied! 🔗', 'success', 1800))
+          .catch(() => window.prompt('Copy this link:', data.url));
+      } else {
+        window.prompt('Copy this link:', data.url);
+      }
+    });
+  });
+
+  /* ──────────────────────────────────
      Cart Page: Update on qty change
   ────────────────────────────────── */
   const cartForm = document.getElementById('cart-form');

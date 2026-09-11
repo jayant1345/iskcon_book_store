@@ -1,0 +1,82 @@
+<div class="book-card">
+  <div class="book-card-img-wrap">
+    <a href="{{ url_for('book_detail', book_id=book.id) }}">
+      <img src="{{ url_for('static', filename='images/books/' + book.image) }}"
+           alt="{{ book.title }}"
+           onerror="this.src='https://via.placeholder.com/300x400/FF6600/FFF?text=📖'">
+    </a>
+    {% if not book.in_stock %}
+    <div style="position:absolute;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;">
+      <span style="color:white;font-weight:700;font-size:0.8rem;">Out of Stock</span>
+    </div>
+    {% endif %}
+    {% if book.discount_percent %}
+    <span class="discount-badge">-{{ book.discount_percent }}%</span>
+    {% endif %}
+    {% if book.featured %}
+    <span class="book-card-badge badge-featured">⭐</span>
+    {% endif %}
+
+    <div class="book-card-icons" {% if book.discount_percent %}style="top:46px;"{% endif %}>
+      <button type="button"
+              class="icon-btn wishlist-toggle-btn {{ 'active' if book.id|string in wishlist_ids else '' }}"
+              data-book-id="{{ book.id }}"
+              aria-label="Save to wishlist" title="Save for later">
+        <i class="bi {{ 'bi-heart-fill' if book.id|string in wishlist_ids else 'bi-heart' }}"></i>
+      </button>
+      <button type="button" class="icon-btn share-card-btn"
+              data-title="{{ book.title|e }}"
+              data-text="Check out {{ book.title }} by {{ book.author }} on ISKCON Books"
+              data-url="https://iskconbooks.in/book/{{ book.id }}"
+              aria-label="Share this book" title="Share">
+        <i class="bi bi-share-fill"></i>
+      </button>
+    </div>
+
+    <div class="book-card-hover-overlay">
+      <a href="{{ url_for('book_detail', book_id=book.id) }}" class="book-card-view-details-btn">
+        <i class="bi bi-eye-fill"></i> View Details
+      </a>
+    </div>
+  </div>
+
+  <div class="book-card-body">
+    <div class="book-category">{{ book.category.name if book.category else '' }}</div>
+    <a href="{{ url_for('book_detail', book_id=book.id) }}" class="text-decoration-none">
+      <h6 class="book-title">{{ book.title }}</h6>
+    </a>
+    <p class="book-author">{{ book.author }}</p>
+    <div class="book-price-wrap">
+      <span class="book-price">₹{{ book.price|int }}</span>
+      {% if book.original_price %}
+      <span class="book-price-original">₹{{ book.original_price|int }}</span>
+      {% endif %}
+    </div>
+    <div class="book-card-actions">
+      {% if book.in_stock %}
+      <form class="ajax-add-to-cart" action="{{ url_for('add_to_cart', book_id=book.id) }}" method="post">
+        <input type="hidden" name="qty" value="1">
+        <button type="submit" class="btn btn-saffron w-100" style="font-size:0.8rem; padding:6px;">
+          <i class="bi bi-cart-plus"></i> Add
+        </button>
+      </form>
+      <form action="{{ url_for('add_to_cart', book_id=book.id) }}" method="post">
+        <input type="hidden" name="qty" value="1">
+        <input type="hidden" name="buy_now" value="1">
+        <button type="submit" class="btn btn-gold w-100" style="font-size:0.8rem; padding:6px;">
+          <i class="bi bi-lightning-fill"></i> Buy
+        </button>
+      </form>
+      <a href="{{ url_for('book_detail', book_id=book.id) }}"
+         class="btn btn-outline-saffron" style="font-size:0.8rem; padding:6px 10px;">
+        View
+      </a>
+      {% else %}
+      <button class="btn w-100" disabled
+              style="background:var(--cream-dark); color:var(--text-muted); font-size:0.8rem;">
+        Out of Stock
+      </button>
+      {% endif %}
+    </div>
+  </div>
+</div>
