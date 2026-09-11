@@ -58,6 +58,7 @@
 html {
   scroll-behavior: smooth;
   -webkit-text-size-adjust: 100%;
+  overflow-x: hidden;
 }
 
 body {
@@ -288,6 +289,19 @@ img {
   inset: 0;
   background: radial-gradient(circle at 78% 45%, rgba(254, 243, 199, 0.28) 0%, rgba(245, 158, 11, 0.12) 40%, transparent 70%);
   pointer-events: none;
+}
+
+.hero-slide-lotus {
+  position: absolute;
+  top: 50%;
+  right: 5%;
+  transform: translateY(-50%);
+  font-size: 260px;
+  line-height: 1;
+  opacity: 0.06;
+  pointer-events: none;
+  user-select: none;
+  z-index: 1;
 }
 
 .hero-slide-content {
@@ -1472,14 +1486,112 @@ img {
 }
 
 /* ═══════════════ RESPONSIVE MOBILE POLISH ═══════════════ */
+@media (max-width: 991px) {
+  .navbar-iskcon .nav-link {
+    padding: 10px 14px !important;
+  }
+  .navbar-iskcon .nav-link::after {
+    display: none !important;
+  }
+  .navbar-iskcon .nav-link.dropdown-toggle::after {
+    display: inline-block !important;
+    border-top: 0.3em solid;
+    border-right: 0.3em solid transparent;
+    border-bottom: 0;
+    border-left: 0.3em solid transparent;
+    width: auto;
+    height: auto;
+    background: none;
+    position: static;
+    transform: none;
+    margin-left: 0.35em;
+    vertical-align: 0.2em;
+  }
+}
+
 @media (max-width: 768px) {
-  .hero-slide { min-height: 400px; }
-  .hero-slide-content { padding-top: 36px; padding-bottom: 48px; }
-  .hero-slide-lotus { font-size: 180px; opacity: 0.04; }
+  html, body {
+    overflow-x: hidden;
+    max-width: 100vw;
+  }
+  .home-page {
+    overflow-x: hidden;
+    width: 100%;
+  }
+  .hero-slide {
+    min-height: auto;
+    display: block;
+  }
+  .hero-slide-content {
+    padding-top: 28px;
+    padding-bottom: 38px;
+    width: 100%;
+  }
+  .hero-slide-lotus {
+    display: none !important;
+  }
+  #heroCarousel .carousel-control-prev,
+  #heroCarousel .carousel-control-next {
+    width: 36px;
+    height: 36px;
+    margin: 0 4px;
+    opacity: 0.7;
+  }
+  #heroCarousel .carousel-control-prev-icon,
+  #heroCarousel .carousel-control-next-icon {
+    width: 16px;
+    height: 16px;
+  }
+  #heroCarousel .carousel-indicators {
+    bottom: 10px;
+  }
+  .hero-slide .hero-title {
+    font-size: clamp(1.5rem, 5.2vw, 2.05rem);
+    line-height: 1.2;
+    margin-bottom: 8px;
+  }
+  .hero-slide-author {
+    font-size: 0.92rem;
+    margin-bottom: 10px;
+    line-height: 1.35;
+  }
+  .hero-slide .hero-subtitle {
+    font-size: 0.88rem;
+    line-height: 1.5;
+    margin-bottom: 14px;
+  }
+  .hero-slide .hero-quote {
+    font-size: 0.84rem;
+    padding: 9px 12px;
+    margin-top: 10px;
+    margin-bottom: 14px;
+    line-height: 1.5;
+  }
+  .hero-slide .btn-lg {
+    padding: 9px 16px !important;
+    font-size: 0.9rem !important;
+  }
+  .hero-trust-row {
+    gap: 6px;
+    margin-top: 12px;
+  }
+  .hero-trust-item {
+    font-size: 0.7rem;
+    padding: 3px 8px;
+  }
   .book-card-actions { flex-direction: column; }
   .search-input-nav { min-width: 140px; }
   .section-title { font-size: 1.45rem; }
   .book-title { font-size: 0.95rem; }
   .book-card-body { padding: 10px 8px; }
   .cart-table th, .cart-table td { padding: 10px 8px; }
+  .mobile-bottom-dock {
+    max-width: 100vw;
+    box-sizing: border-box;
+  }
+  /* Prevent row gutter overflow on small screens */
+  .row.g-5 {
+    --bs-gutter-x: 1.25rem;
+    --bs-gutter-y: 1.25rem;
+  }
 }
