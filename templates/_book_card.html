@@ -34,6 +34,10 @@
     </div>
 
     <div class="book-card-hover-overlay">
+      {% set preview_text = (book.short_desc or book.description or '')|truncate(110, True, '…') %}
+      {% if preview_text %}
+      <p class="book-card-hover-desc">{{ preview_text }}</p>
+      {% endif %}
       <a href="{{ url_for('book_detail', book_id=book.id) }}" class="book-card-view-details-btn">
         <i class="bi bi-eye-fill"></i> View Details
       </a>
