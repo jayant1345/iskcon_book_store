@@ -1519,31 +1519,31 @@ img {
     width: 100%;
   }
   .hero-slide {
-    min-height: auto;
-    display: block;
+    min-height: 430px;
+    display: flex;
+    align-items: center;
   }
   .hero-slide-content {
-    padding-top: 28px;
-    padding-bottom: 38px;
+    padding-top: 24px;
+    padding-bottom: 36px;
     width: 100%;
   }
   .hero-slide-lotus {
     display: none !important;
   }
+  /* On mobile touch devices, hide floating arrows that block text/quotes.
+     Users swipe horizontally and use the bottom indicator pills. */
   #heroCarousel .carousel-control-prev,
   #heroCarousel .carousel-control-next {
-    width: 36px;
-    height: 36px;
-    margin: 0 4px;
-    opacity: 0.7;
-  }
-  #heroCarousel .carousel-control-prev-icon,
-  #heroCarousel .carousel-control-next-icon {
-    width: 16px;
-    height: 16px;
+    display: none !important;
   }
   #heroCarousel .carousel-indicators {
-    bottom: 10px;
+    bottom: 12px;
+  }
+  #heroCarousel .carousel-indicators button {
+    width: 24px;
+    height: 5px;
+    border-radius: 4px;
   }
   .hero-slide .hero-title {
     font-size: clamp(1.5rem, 5.2vw, 2.05rem);
