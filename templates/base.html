@@ -192,11 +192,11 @@
           <img src="{{ url_for('static', filename='images/bbt_logo.png') }}" alt="BBT" style="height:48px; width:auto; filter:invert(1); mix-blend-mode:screen;">
         </div>
         <h5>ISKCON Book Store</h5>
-        <p style="font-size:0.88rem; color:#C8A070; line-height:1.8;">
+        <p style="font-size:0.88rem; color:#D1E4FF; line-height:1.8;">
           Spreading the wisdom of Vedic literature worldwide. Books by His Divine Grace
           A.C. Bhaktivedanta Swami Prabhupada and other Vaishnava authors.
         </p>
-        <p style="font-size:0.9rem; color:var(--gold-light); font-style:italic; margin-top:12px;">
+        <p style="font-size:0.92rem; color:#FEF08A; font-style:italic; margin-top:12px; font-family:'EB Garamond',serif;">
           "Hare Krishna, Hare Krishna,<br>Krishna Krishna, Hare Hare,<br>
           Hare Rama, Hare Rama,<br>Rama Rama, Hare Hare"
         </p>
@@ -239,19 +239,19 @@
       <!-- Contact -->
       <div class="col-lg-3 col-md-6">
         <h5>Contact Us</h5>
-        <p style="font-size:0.88rem; color:#C8A070;">
-          <i class="bi bi-geo-alt me-2"></i>Radha Govind Dham, ISKCON Temple,<br>
+        <p style="font-size:0.88rem; color:#D1E4FF; line-height:1.7;">
+          <i class="bi bi-geo-alt me-2 text-warning"></i>Radha Govind Dham, ISKCON Temple,<br>
           &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Sarkhej - Gandhinagar Highway,<br>
           &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Bhaktivedant Street, Satellite Road,<br>
           &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Ahmedabad, Gujarat - 380059
         </p>
-        <p style="font-size:0.88rem; color:#C8A070; margin-top:8px;">
-          <i class="bi bi-telephone me-2"></i>
-          <a href="tel:{{ whatsapp_num }}" style="color:#C8A070;">{{ whatsapp_num }}</a>
+        <p style="font-size:0.88rem; color:#D1E4FF; margin-top:8px;">
+          <i class="bi bi-telephone me-2 text-warning"></i>
+          <a href="tel:{{ whatsapp_num }}" style="color:#99F6E4; text-decoration:none; font-weight:600;">{{ whatsapp_num }}</a>
         </p>
-        <p style="font-size:0.88rem; color:#C8A070; margin-top:8px;">
-          <i class="bi bi-envelope me-2"></i>
-          <a href="mailto:iskonbooks.in@gmail.com" style="color:#C8A070;">iskonbooks.in@gmail.com</a>
+        <p style="font-size:0.88rem; color:#D1E4FF; margin-top:8px;">
+          <i class="bi bi-envelope me-2 text-warning"></i>
+          <a href="mailto:iskonbooks.in@gmail.com" style="color:#99F6E4; text-decoration:none;">iskonbooks.in@gmail.com</a>
         </p>
         <div style="margin-top:16px;">
           <a href="https://wa.me/{{ whatsapp_num|replace('+','') }}" class="whatsapp-btn" target="_blank">
@@ -263,12 +263,12 @@
       <!-- Chandkheda Center -->
       <div class="col-lg-3 col-md-6">
         <h5>Visit Our Center</h5>
-        <div style="background:rgba(200,160,112,0.08); border:1px solid rgba(200,160,112,0.25); border-radius:10px; padding:14px 16px;">
-          <p style="font-size:0.9rem; color:var(--gold-light); font-weight:600; margin-bottom:6px;">
+        <div style="background:rgba(13, 148, 136, 0.18); border:1px solid rgba(107, 216, 203, 0.35); border-radius:10px; padding:14px 16px;">
+          <p style="font-size:0.92rem; color:#FEF08A; font-weight:600; margin-bottom:6px;">
             🛕 ISKCON Chandkheda Center
           </p>
-          <p style="font-size:0.88rem; color:#C8A070; margin:0; line-height:1.8;">
-            <i class="bi bi-geo-alt me-2"></i>14, Aamrakunj Lakeview Bungalow,<br>
+          <p style="font-size:0.88rem; color:#D1E4FF; margin:0; line-height:1.8;">
+            <i class="bi bi-geo-alt me-2 text-warning"></i>14, Aamrakunj Lakeview Bungalow,<br>
             &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Near Suryansh Vedura Circle,<br>
             &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;TP44 Road, Nigama Nagar,<br>
             &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Chandkheda - 382424
@@ -278,14 +278,14 @@
     </div>
 
     <!-- Registered business details (for legal / payment gateway compliance) -->
-    <div class="row mt-4 pt-3" style="border-top:1px solid rgba(200,160,112,0.25);">
+    <div class="row mt-4 pt-3" style="border-top:1px solid rgba(13, 148, 136, 0.25);">
       <div class="col-12">
-        <p style="font-size:0.82rem; color:#C8A070; margin:0;">
+        <p style="font-size:0.82rem; color:#A7F3D0; margin:0;">
           <strong>Iskconbooks</strong> is operated by
-          <strong>Someshvar Bhavesh Mansukhbhai</strong> &nbsp;|&nbsp;
+          <strong style="color:#FEF08A;">Someshvar Bhavesh Mansukhbhai</strong> &nbsp;|&nbsp;
           Registered address: B-704, Vraj Galaxy Appartment, Naroda-Dahegam Road,
           Hanspura, Naroda, Ahmedabad, Gujarat – 382330, India &nbsp;|&nbsp;
-          Mobile: <a href="tel:+917802012002" style="color:#C8A070;">+91 78020 12002</a>
+          Mobile: <a href="tel:+917802012002" style="color:#FEF08A; text-decoration:none; font-weight:600;">+91 78020 12002</a>
         </p>
       </div>
     </div>
@@ -294,7 +294,7 @@
   <hr class="footer-divider">
   <div class="footer-bottom">
     <div class="container">
-      © {{ 2024 }} <span>{{ store_name }}</span> · All Rights Reserved ·
+      © {{ now.year }} <span>{{ store_name }}</span> · All Rights Reserved ·
       Built with 🙏 for spreading Vedic wisdom
     </div>
   </div>

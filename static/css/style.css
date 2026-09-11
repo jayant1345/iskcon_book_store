@@ -1278,47 +1278,60 @@ img {
   color: #1E3A8A;
 }
 
-/* ═══════════════ FOOTER ═══════════════ */
+/* ═══════════════ FOOTER (Morpankh Celestial Peacock & Gold) ═══════════════ */
 .footer-iskcon {
-  background: linear-gradient(135deg, #431407 0%, #7C2D12 50%, #431407 100%);
+  background: linear-gradient(135deg, #031726 0%, #062B44 35%, #0A3D56 70%, #041B2D 100%);
   color: #FEF3C7;
   padding: 56px 0 0;
   margin-top: 56px;
-  border-top: 2px solid var(--gold);
+  border-top: 3px solid #D97706;
+  position: relative;
+}
+
+.footer-iskcon::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, #0E7490, #D97706, #10B981, #D97706, #0E7490);
 }
 
 .footer-iskcon h5 {
   font-family: 'EB Garamond', 'Cinzel', serif;
-  color: var(--gold-light);
+  color: #FBBF24;
   margin-bottom: 18px;
-  font-size: 1.1rem;
+  font-size: 1.15rem;
+  letter-spacing: 0.5px;
 }
 
 .footer-iskcon a {
-  color: #D6C2AA;
+  color: #99F6E4;
   display: block;
   margin-bottom: 8px;
   font-size: 0.88rem;
   transition: all var(--transition);
 }
 .footer-iskcon a:hover {
-  color: var(--gold-light);
+  color: #FDE047;
   padding-left: 4px;
 }
 
 .footer-divider {
-  border-color: rgba(255,255,255,0.08);
+  border-color: rgba(15, 118, 110, 0.25);
   margin: 36px 0 0;
 }
 
 .footer-bottom {
-  background: rgba(0,0,0,0.3);
+  background: rgba(2, 18, 32, 0.65);
   padding: 16px 0;
   text-align: center;
   font-size: 0.82rem;
-  color: rgba(255,255,255,0.55);
+  color: rgba(204, 251, 241, 0.7);
+  border-top: 1px solid rgba(20, 184, 166, 0.15);
 }
-.footer-bottom span { color: var(--gold-light); }
+.footer-bottom span { color: #FBBF24; font-weight: 600; }
 
 .social-icons a {
   display: inline-flex;
