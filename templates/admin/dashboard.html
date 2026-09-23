@@ -65,7 +65,17 @@
         <div class="card shadow-sm">
             <div class="card-header py-2 d-flex align-items-center justify-content-between">
                 <span><i class="fas fa-user-shield me-2 text-warning"></i><strong>Active Admin Sessions</strong></span>
-                <span class="badge bg-warning text-dark">{{ active_sessions|length }} active</span>
+                <div class="d-flex align-items-center gap-2">
+                    <span class="badge bg-warning text-dark">{{ active_sessions|length }} active</span>
+                    {% if active_sessions|length > 1 %}
+                    <form method="POST" action="{{ url_for('admin_clear_other_sessions') }}"
+                          onsubmit="return confirm('Sign out every other admin session? Your own session stays logged in.')">
+                        <button type="submit" class="btn btn-sm btn-outline-danger">
+                            <i class="fas fa-broom me-1"></i>Clear Others
+                        </button>
+                    </form>
+                    {% endif %}
+                </div>
             </div>
             <div class="card-body p-0">
                 {% if active_sessions %}
@@ -76,6 +86,7 @@
                             <th>IP Address</th>
                             <th>Logged In At</th>
                             <th>Last Active</th>
+                            <th></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -85,6 +96,15 @@
                             <td><code>{{ s.ip_address }}</code> {% if s.token == session.get('admin_session_token') %}<span class="badge bg-warning text-dark">You</span>{% endif %}</td>
                             <td>{{ s.login_at | ist('%d %b %Y %I:%M %p') }}</td>
                             <td>{{ s.last_seen | ist('%I:%M:%S %p') }}</td>
+                            <td>
+                                {% if s.token != session.get('admin_session_token') %}
+                                <form method="POST" action="{{ url_for('admin_revoke_session', session_id=s.id) }}">
+                                    <button type="submit" class="btn btn-sm btn-outline-secondary py-0 px-2" title="Revoke this session">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </form>
+                                {% endif %}
+                            </td>
                         </tr>
                         {% endfor %}
                     </tbody>

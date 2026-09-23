@@ -3029,6 +3029,31 @@ def admin_logout():
     return redirect(url_for("admin_login"))
 
 
+@app.route("/admin/sessions/clear-others", methods=["POST"])
+@admin_required
+def admin_clear_other_sessions():
+    """Revoke every tracked admin session except the one making this
+    request — useful for clearing out stale/automated logins."""
+    my_token = session.get("admin_session_token")
+    n = AdminSession.query.filter(AdminSession.token != my_token).delete()
+    db.session.commit()
+    flash(f"Cleared {n} other session(s).", "success")
+    return redirect(url_for("admin_dashboard"))
+
+
+@app.route("/admin/sessions/<int:session_id>/revoke", methods=["POST"])
+@admin_required
+def admin_revoke_session(session_id):
+    sess_row = AdminSession.query.get_or_404(session_id)
+    if sess_row.token == session.get("admin_session_token"):
+        flash("You can't revoke your own current session — use Logout instead.", "warning")
+    else:
+        db.session.delete(sess_row)
+        db.session.commit()
+        flash("Session revoked.", "success")
+    return redirect(url_for("admin_dashboard"))
+
+
 @app.route("/admin/combos")
 @admin_required
 def admin_combos():
