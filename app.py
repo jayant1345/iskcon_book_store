@@ -240,6 +240,9 @@ class Book(db.Model):
     review_video_url3 = db.Column(db.String(500), nullable=True)
     created_at     = db.Column(db.DateTime, default=datetime.utcnow)
     order_items    = db.relationship("OrderItem", backref="book", lazy=True)
+    gallery_images = db.relationship("BookImage", backref="book", lazy=True,
+                                      order_by="BookImage.sort_order",
+                                      cascade="all, delete-orphan")
 
     @property
     def discount_percent(self):
@@ -253,6 +256,17 @@ class Book(db.Model):
 
     def __repr__(self):
         return f"<Book {self.title}>"
+
+
+class BookImage(db.Model):
+    """Extra photos for a book (front/back cover, inside pages, etc.) shown
+    as a thumbnail gallery on the book detail page, in addition to the
+    book's single main `image`."""
+    __tablename__ = "book_images"
+    id         = db.Column(db.Integer, primary_key=True)
+    book_id    = db.Column(db.Integer, db.ForeignKey("books.id"), nullable=False)
+    filename   = db.Column(db.String(200), nullable=False)
+    sort_order = db.Column(db.Integer, default=0)
 
 
 class Order(db.Model):
@@ -3521,6 +3535,14 @@ def admin_add_book():
             review_video_url3 = _make_embed_url(request.form.get("review_video_url3", "").strip()),
         )
         db.session.add(book)
+        db.session.flush()  # get book.id for gallery photos
+
+        for extra_file in request.files.getlist("gallery_images"):
+            if extra_file and extra_file.filename:
+                saved = save_image(extra_file)
+                if saved:
+                    db.session.add(BookImage(book_id=book.id, filename=saved))
+
         db.session.commit()
         flash("Book added successfully!", "success")
         return redirect(safe_books_return(request.form.get("return_to")))
@@ -3645,6 +3667,16 @@ def admin_edit_book(book_id):
                 os.remove(old_vid)
             book.review_video = None
 
+        # Append any newly-uploaded gallery photos (existing ones are
+        # managed separately via admin_delete_book_photo, not replaced here)
+        next_sort = max([bi.sort_order for bi in book.gallery_images], default=-1) + 1
+        for extra_file in request.files.getlist("gallery_images"):
+            if extra_file and extra_file.filename:
+                saved = save_image(extra_file)
+                if saved:
+                    db.session.add(BookImage(book_id=book.id, filename=saved, sort_order=next_sort))
+                    next_sort += 1
+
         db.session.commit()
         flash("Book updated!", "success")
         return redirect(safe_books_return(request.form.get("return_to")))
@@ -3655,6 +3687,20 @@ def admin_edit_book(book_id):
     return_to = safe_books_return(request.args.get("return_to"))
     return render_template("admin/book_form.html", book=book, categories=categories,
                             ebook_file_exists=ebook_file_exists, return_to=return_to)
+
+
+@app.route("/admin/books/<int:book_id>/photo/<int:photo_id>/delete", methods=["POST"])
+@admin_required
+def admin_delete_book_photo(book_id, photo_id):
+    photo = BookImage.query.filter_by(id=photo_id, book_id=book_id).first_or_404()
+    photo_path = os.path.join(app.config["UPLOAD_FOLDER"], photo.filename)
+    if os.path.exists(photo_path):
+        os.remove(photo_path)
+    db.session.delete(photo)
+    db.session.commit()
+    flash("Photo removed.", "info")
+    return redirect(url_for("admin_edit_book", book_id=book_id,
+                             return_to=request.args.get("return_to", "")))
 
 
 @app.route("/admin/books/bulk-video", methods=["GET", "POST"])
