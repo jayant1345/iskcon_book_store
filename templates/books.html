@@ -16,150 +16,167 @@
     </ol>
   </nav>
 
-  <div class="row g-4">
-
-    <!-- ── Sidebar Filters ── -->
-    <div class="col-lg-3">
-      <div class="filter-sidebar">
-        <h6 class="filter-title">🔍 Search</h6>
-        <form action="{{ url_for('books') }}" method="get" class="mb-4">
-          {% if active_cat %}<input type="hidden" name="category" value="{{ active_cat.slug }}">{% endif %}
-          <div class="input-group">
-            <input type="search" class="form-control" name="q" value="{{ query }}" placeholder="Title, author…">
-            <button class="btn btn-saffron" type="submit"><i class="bi bi-search"></i></button>
-          </div>
-        </form>
-
-        <h6 class="filter-title">📂 Categories</h6>
-        <div class="mb-4">
-          <a href="{{ url_for('books') }}"
-             class="filter-option d-flex justify-content-between {{ 'fw-bold text-saffron' if not active_cat }}">
-            <span>📚 All Books</span>
-          </a>
-          {% for cat in categories %}
-          <a href="{{ url_for('books', category=cat.slug) }}"
-             class="filter-option d-flex justify-content-between {{ 'fw-bold' if active_cat and active_cat.slug == cat.slug }}">
-            <span>{{ cat.name }}</span>
-            <span style="color:var(--saffron);font-size:0.8rem;">{{ cat.books|selectattr('active')|list|length }}</span>
-          </a>
-          {% endfor %}
-        </div>
-
-        <h6 class="filter-title">🌐 Language</h6>
-        <form action="{{ url_for('books') }}" method="get">
-          {% if active_cat %}<input type="hidden" name="category" value="{{ active_cat.slug }}">{% endif %}
-          {% if query %}<input type="hidden" name="q" value="{{ query }}">{% endif %}
-          <div class="mb-3">
-            <label class="filter-option">
-              <input type="radio" name="language" value="" {{ 'checked' if not language }}> All Languages
-            </label>
-            {% for lang in ['Gujarati', 'Hindi', 'English'] %}
-            <label class="filter-option">
-              <input type="radio" name="language" value="{{ lang }}" {{ 'checked' if language == lang }}> {{ lang }}
-            </label>
-            {% endfor %}
-          </div>
-          <button type="submit" class="btn btn-outline-saffron w-100 btn-sm">Apply Filter</button>
-        </form>
-
-        {% if query or active_cat or language %}
-        <div class="mt-3">
-          <a href="{{ url_for('books') }}" class="btn btn-sm w-100" style="background:var(--cream-dark); color:var(--brown);">
-            ✕ Clear Filters
-          </a>
-        </div>
+  <!-- Toolbar: title/count + Search / Filters / Sort -->
+  <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+    <div>
+      <h4 class="section-title mb-0">
+        {% if active_cat %}{{ active_cat.name }}
+        {% elif query %}Results for "{{ query }}"
+        {% elif sort == 'newest' %}🌸 New Arrivals
+        {% elif sort == 'price_low' %}💰 Price: Low to High
+        {% elif sort == 'price_high' %}💰 Price: High to Low
+        {% else %}📚 All Books
         {% endif %}
+      </h4>
+      <small class="text-muted">{{ pagination.total }} book{{ 's' if pagination.total != 1 }}</small>
+    </div>
+    <div class="d-flex gap-2 flex-wrap align-items-center">
+      <button class="btn btn-outline-saffron btn-sm" type="button"
+              data-bs-toggle="collapse" data-bs-target="#searchCollapse">
+        <i class="bi bi-search"></i> Search
+      </button>
+      <button class="btn btn-outline-saffron btn-sm position-relative" type="button"
+              data-bs-toggle="offcanvas" data-bs-target="#filterOffcanvas">
+        <i class="bi bi-funnel"></i> Filters
+        {% if active_cat or language %}
+        <span class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle"></span>
+        {% endif %}
+      </button>
+      <form action="{{ url_for('books') }}" method="get" class="d-flex gap-2 align-items-center">
+        {% if active_cat %}<input type="hidden" name="category" value="{{ active_cat.slug }}">{% endif %}
+        {% if query %}<input type="hidden" name="q" value="{{ query }}">{% endif %}
+        {% if language %}<input type="hidden" name="language" value="{{ language }}">{% endif %}
+        <select name="sort" class="form-select form-select-sm" style="width:auto;" onchange="this.form.submit()">
+          <option value="title"      {{ 'selected' if sort=='title' }}>Sort: Title A–Z</option>
+          <option value="price_low"  {{ 'selected' if sort=='price_low' }}>Sort: Price Low→High</option>
+          <option value="price_high" {{ 'selected' if sort=='price_high' }}>Sort: Price High→Low</option>
+          <option value="newest"     {{ 'selected' if sort=='newest' }}>Sort: Newest First</option>
+        </select>
+      </form>
+    </div>
+  </div>
+
+  <!-- Collapsible search bar -->
+  <div class="collapse mb-3" id="searchCollapse">
+    <form action="{{ url_for('books') }}" method="get">
+      {% if active_cat %}<input type="hidden" name="category" value="{{ active_cat.slug }}">{% endif %}
+      {% if language %}<input type="hidden" name="language" value="{{ language }}">{% endif %}
+      <div class="input-group">
+        <input type="search" class="form-control" name="q" value="{{ query }}"
+               placeholder="Search by title, author…" autofocus>
+        <button class="btn btn-saffron" type="submit"><i class="bi bi-search"></i></button>
       </div>
+    </form>
+  </div>
+
+  {% if query or active_cat or language %}
+  <div class="mb-3 d-flex flex-wrap gap-2 align-items-center">
+    <span class="text-muted small">Active:</span>
+    {% if active_cat %}<span class="badge" style="background:var(--cream-dark); color:var(--brown);">{{ active_cat.name }}</span>{% endif %}
+    {% if language %}<span class="badge" style="background:var(--cream-dark); color:var(--brown);">{{ language }}</span>{% endif %}
+    {% if query %}<span class="badge" style="background:var(--cream-dark); color:var(--brown);">"{{ query }}"</span>{% endif %}
+    <a href="{{ url_for('books') }}" class="small text-saffron">✕ Clear all</a>
+  </div>
+  {% endif %}
+
+  <!-- ── Book Grid (shown immediately, full width) ── -->
+  {% if books %}
+  <div class="row g-3">
+    {% for book in books %}
+    <div class="col-6 col-md-4 col-xl-3">
+      {% include '_book_card.html' %}
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- Pagination -->
+  {% if pagination.pages > 1 %}
+  <nav class="mt-5 d-flex justify-content-center">
+    <ul class="pagination">
+      {% if pagination.has_prev %}
+      <li class="page-item">
+        <a class="page-link" href="{{ url_for('books', page=pagination.prev_num,
+           q=query, category=active_cat.slug if active_cat else '', language=language, sort=sort) }}">← Prev</a>
+      </li>
+      {% endif %}
+
+      {% for p in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+        {% if p %}
+        <li class="page-item {{ 'active' if p == pagination.page }}">
+          <a class="page-link" href="{{ url_for('books', page=p,
+             q=query, category=active_cat.slug if active_cat else '', language=language, sort=sort) }}">{{ p }}</a>
+        </li>
+        {% else %}
+        <li class="page-item disabled"><span class="page-link">…</span></li>
+        {% endif %}
+      {% endfor %}
+
+      {% if pagination.has_next %}
+      <li class="page-item">
+        <a class="page-link" href="{{ url_for('books', page=pagination.next_num,
+           q=query, category=active_cat.slug if active_cat else '', language=language, sort=sort) }}">Next →</a>
+      </li>
+      {% endif %}
+    </ul>
+  </nav>
+  {% endif %}
+
+  {% else %}
+  <div class="empty-state">
+    <div class="empty-icon">📭</div>
+    <h4>No books found</h4>
+    <p>Try adjusting your search or filters.</p>
+    <a href="{{ url_for('books') }}" class="btn btn-saffron mt-3">Browse All Books</a>
+  </div>
+  {% endif %}
+</div>
+
+<!-- ── Filters Offcanvas ── -->
+<div class="offcanvas offcanvas-end" tabindex="-1" id="filterOffcanvas">
+  <div class="offcanvas-header">
+    <h5 class="offcanvas-title"><i class="bi bi-funnel me-2"></i>Filters</h5>
+    <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
+  </div>
+  <div class="offcanvas-body">
+    <h6 class="filter-title">📂 Categories</h6>
+    <div class="mb-4">
+      <a href="{{ url_for('books') }}"
+         class="filter-option d-flex justify-content-between {{ 'fw-bold text-saffron' if not active_cat }}">
+        <span>📚 All Books</span>
+      </a>
+      {% for cat in categories %}
+      <a href="{{ url_for('books', category=cat.slug) }}"
+         class="filter-option d-flex justify-content-between {{ 'fw-bold' if active_cat and active_cat.slug == cat.slug }}">
+        <span>{{ cat.name }}</span>
+        <span style="color:var(--saffron);font-size:0.8rem;">{{ cat.books|selectattr('active')|list|length }}</span>
+      </a>
+      {% endfor %}
     </div>
 
-    <!-- ── Book Grid ── -->
-    <div class="col-lg-9">
-      <!-- Toolbar -->
-      <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
-        <div>
-          <h4 class="section-title mb-0">
-            {% if active_cat %}{{ active_cat.name }}
-            {% elif query %}Results for "{{ query }}"
-            {% elif sort == 'newest' %}🌸 New Arrivals
-            {% elif sort == 'price_low' %}💰 Price: Low to High
-            {% elif sort == 'price_high' %}💰 Price: High to Low
-            {% else %}📚 All Books
-            {% endif %}
-          </h4>
-          <small class="text-muted">{{ pagination.total }} book{{ 's' if pagination.total != 1 }}</small>
-        </div>
-        <form action="{{ url_for('books') }}" method="get" class="d-flex gap-2 align-items-center">
-          {% if active_cat %}<input type="hidden" name="category" value="{{ active_cat.slug }}">{% endif %}
-          {% if query %}<input type="hidden" name="q" value="{{ query }}">{% endif %}
-          {% if language %}<input type="hidden" name="language" value="{{ language }}">{% endif %}
-          <label class="text-muted small">Sort:</label>
-          <select name="sort" class="form-select form-select-sm" style="width:auto;" onchange="this.form.submit()">
-            <option value="title"      {{ 'selected' if sort=='title' }}>Title A–Z</option>
-            <option value="price_low"  {{ 'selected' if sort=='price_low' }}>Price: Low→High</option>
-            <option value="price_high" {{ 'selected' if sort=='price_high' }}>Price: High→Low</option>
-            <option value="newest"     {{ 'selected' if sort=='newest' }}>Newest First</option>
-          </select>
-        </form>
-      </div>
-
-      <!-- Mobile search -->
-      <form action="{{ url_for('books') }}" method="get" class="d-lg-none mb-3">
-        <div class="input-group">
-          <input type="search" class="form-control" name="q" value="{{ query }}" placeholder="Search books…">
-          <button class="btn btn-saffron" type="submit"><i class="bi bi-search"></i></button>
-        </div>
-      </form>
-
-      {% if books %}
-      <div class="row g-3">
-        {% for book in books %}
-        <div class="col-6 col-md-4 col-xl-3">
-          {% include '_book_card.html' %}
-        </div>
+    <h6 class="filter-title">🌐 Language</h6>
+    <form action="{{ url_for('books') }}" method="get">
+      {% if active_cat %}<input type="hidden" name="category" value="{{ active_cat.slug }}">{% endif %}
+      {% if query %}<input type="hidden" name="q" value="{{ query }}">{% endif %}
+      <div class="mb-3">
+        <label class="filter-option">
+          <input type="radio" name="language" value="" {{ 'checked' if not language }}> All Languages
+        </label>
+        {% for lang in ['Gujarati', 'Hindi', 'English'] %}
+        <label class="filter-option">
+          <input type="radio" name="language" value="{{ lang }}" {{ 'checked' if language == lang }}> {{ lang }}
+        </label>
         {% endfor %}
       </div>
+      <button type="submit" class="btn btn-saffron w-100">Apply Filter</button>
+    </form>
 
-      <!-- Pagination -->
-      {% if pagination.pages > 1 %}
-      <nav class="mt-5 d-flex justify-content-center">
-        <ul class="pagination">
-          {% if pagination.has_prev %}
-          <li class="page-item">
-            <a class="page-link" href="{{ url_for('books', page=pagination.prev_num,
-               q=query, category=active_cat.slug if active_cat else '', language=language, sort=sort) }}">← Prev</a>
-          </li>
-          {% endif %}
-
-          {% for p in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
-            {% if p %}
-            <li class="page-item {{ 'active' if p == pagination.page }}">
-              <a class="page-link" href="{{ url_for('books', page=p,
-                 q=query, category=active_cat.slug if active_cat else '', language=language, sort=sort) }}">{{ p }}</a>
-            </li>
-            {% else %}
-            <li class="page-item disabled"><span class="page-link">…</span></li>
-            {% endif %}
-          {% endfor %}
-
-          {% if pagination.has_next %}
-          <li class="page-item">
-            <a class="page-link" href="{{ url_for('books', page=pagination.next_num,
-               q=query, category=active_cat.slug if active_cat else '', language=language, sort=sort) }}">Next →</a>
-          </li>
-          {% endif %}
-        </ul>
-      </nav>
-      {% endif %}
-
-      {% else %}
-      <div class="empty-state">
-        <div class="empty-icon">📭</div>
-        <h4>No books found</h4>
-        <p>Try adjusting your search or filters.</p>
-        <a href="{{ url_for('books') }}" class="btn btn-saffron mt-3">Browse All Books</a>
-      </div>
-      {% endif %}
+    {% if query or active_cat or language %}
+    <div class="mt-3">
+      <a href="{{ url_for('books') }}" class="btn btn-sm w-100" style="background:var(--cream-dark); color:var(--brown);">
+        ✕ Clear Filters
+      </a>
     </div>
+    {% endif %}
   </div>
 </div>
 {% endblock %}
