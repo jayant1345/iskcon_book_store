@@ -1609,6 +1609,7 @@ img {
     padding: 3px 8px;
   }
   .book-card-actions { flex-direction: column; }
+  .offcanvas { width: min(85vw, 360px) !important; }
   .search-input-nav { min-width: 140px; }
   .section-title { font-size: 1.45rem; }
   .book-title { font-size: 0.95rem; }
