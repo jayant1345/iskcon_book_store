@@ -3915,16 +3915,49 @@ def admin_create_manual_order():
     return render_template("admin/manual_order_form.html", books=books)
 
 
-@app.route("/admin/orders")
-@admin_required
-def admin_orders():
-    page           = request.args.get("page", 1, type=int)
-    status         = request.args.get("status", "")
-    pay_status     = request.args.get("pay_status", "")
-    pay_method     = request.args.get("pay_method", "")
-    customer_f     = request.args.get("customer", "")
+ORDER_SORT_OPTIONS = {
+    "date_desc":     ("Date: Newest First",     Order.created_at.desc()),
+    "date_asc":      ("Date: Oldest First",     Order.created_at.asc()),
+    "amount_desc":   ("Amount: High to Low",    Order.total_amount.desc()),
+    "amount_asc":    ("Amount: Low to High",    Order.total_amount.asc()),
+    "customer_asc":  ("Customer Name: A-Z",     Order.customer_name.asc()),
+    "customer_desc": ("Customer Name: Z-A",     Order.customer_name.desc()),
+    "age_asc":       ("Age: Low to High",       Order.age.asc()),
+    "age_desc":      ("Age: High to Low",       Order.age.desc()),
+    "city_asc":      ("City/Area: A-Z",         Order.city.asc()),
+    "city_desc":     ("City/Area: Z-A",         Order.city.desc()),
+    "status_asc":    ("Order Status: A-Z",      Order.order_status.asc()),
+}
 
+# Query-string keys the Order Report filter panel understands. Shared by the
+# list view and the CSV export so the downloaded report always matches
+# exactly what filters/sort are currently applied on screen.
+ORDER_REPORT_FILTER_KEYS = [
+    "status", "pay_status", "pay_method", "customer",
+    "date_from", "date_to", "book_type", "city",
+    "age_min", "age_max", "amount_min", "amount_max", "book_name",
+]
+
+
+def build_order_report_query(args):
+    """Apply every Order Report filter to a base Order query. `args` is
+    typically request.args. Returns the filtered (not yet sorted) query."""
     oq = Order.query.filter_by(is_deleted=False)
+
+    status      = args.get("status", "")
+    pay_status  = args.get("pay_status", "")
+    pay_method  = args.get("pay_method", "")
+    customer_f  = args.get("customer", "")
+    date_from   = args.get("date_from", "")
+    date_to     = args.get("date_to", "")
+    book_type   = args.get("book_type", "")
+    city_f      = args.get("city", "")
+    age_min     = args.get("age_min", "")
+    age_max     = args.get("age_max", "")
+    amount_min  = args.get("amount_min", "")
+    amount_max  = args.get("amount_max", "")
+    book_name_f = args.get("book_name", "")
+
     if status:
         oq = oq.filter_by(order_status=status)
     if pay_status:
@@ -3936,38 +3969,83 @@ def admin_orders():
             Order.customer_name.ilike(f"%{customer_f}%"),
             Order.customer_phone.ilike(f"%{customer_f}%"),
         ))
+    if date_from:
+        try:
+            oq = oq.filter(Order.created_at >= datetime.strptime(date_from, "%Y-%m-%d"))
+        except ValueError:
+            pass
+    if date_to:
+        try:
+            oq = oq.filter(Order.created_at < datetime.strptime(date_to, "%Y-%m-%d") + timedelta(days=1))
+        except ValueError:
+            pass
+    if book_type in ("ebook", "paper"):
+        want_ebook = (book_type == "ebook")
+        oq = oq.filter(Order.items.any(OrderItem.book.has(Book.is_ebook == want_ebook)))
+    if city_f:
+        oq = oq.filter(Order.city.ilike(f"%{city_f}%"))
+    if age_min:
+        try:
+            oq = oq.filter(Order.age >= int(age_min))
+        except ValueError:
+            pass
+    if age_max:
+        try:
+            oq = oq.filter(Order.age <= int(age_max))
+        except ValueError:
+            pass
+    if amount_min:
+        try:
+            oq = oq.filter(Order.total_amount >= float(amount_min))
+        except ValueError:
+            pass
+    if amount_max:
+        try:
+            oq = oq.filter(Order.total_amount <= float(amount_max))
+        except ValueError:
+            pass
+    if book_name_f:
+        oq = oq.filter(Order.items.any(OrderItem.book_title.ilike(f"%{book_name_f}%")))
 
-    orders      = oq.order_by(Order.created_at.desc()).paginate(page=page, per_page=20)
+    return oq
+
+
+@app.route("/admin/orders")
+@admin_required
+def admin_orders():
+    page = request.args.get("page", 1, type=int)
+    sort = request.args.get("sort", "date_desc")
+
+    oq = build_order_report_query(request.args)
+    _, order_clause = ORDER_SORT_OPTIONS.get(sort, ORDER_SORT_OPTIONS["date_desc"])
+    orders      = oq.order_by(order_clause).paginate(page=page, per_page=20)
     trash_count = Order.query.filter_by(is_deleted=True).count()
-    return render_template("admin/orders.html", orders=orders,
-                           status=status, pay_status=pay_status,
-                           pay_method=pay_method, customer_f=customer_f,
-                           trash_count=trash_count)
+
+    filters = {k: request.args.get(k, "") for k in ORDER_REPORT_FILTER_KEYS}
+    return render_template("admin/orders.html", orders=orders, sort=sort,
+                           sort_options=ORDER_SORT_OPTIONS,
+                           trash_count=trash_count, **filters,
+                           any_filter_active=any(filters.values()))
 
 
 @app.route("/admin/orders/export-csv")
 @admin_required
 def export_orders_csv():
-    """Download all orders as CSV — payment received/pending + order status for temple records."""
+    """Download the Order Report as CSV — respects every filter and the sort
+    order currently applied, so the file matches exactly what's on screen."""
     from flask import Response
 
-    status_filter   = request.args.get("status", "")
-    payment_filter  = request.args.get("payment_status", "")
-
-    oq = Order.query.filter_by(is_deleted=False)
-    if status_filter:
-        oq = oq.filter_by(order_status=status_filter)
-    if payment_filter:
-        oq = oq.filter_by(payment_status=payment_filter)
-
-    all_orders = oq.order_by(Order.created_at.desc()).all()
+    sort = request.args.get("sort", "date_desc")
+    oq = build_order_report_query(request.args)
+    _, order_clause = ORDER_SORT_OPTIONS.get(sort, ORDER_SORT_OPTIONS["date_desc"])
+    all_orders = oq.order_by(order_clause).all()
 
     output = io.StringIO()
     writer = csv.writer(output)
 
     # Header
     writer.writerow([
-        "Order #", "Date", "Customer Name", "Phone", "Email",
+        "Order #", "Date", "Customer Name", "Age", "Phone", "Email",
         "Address", "City", "State", "Pincode",
         "Books Ordered",
         "Subtotal (INR)", "Shipping (INR)", "Discount (INR)", "Total (INR)",
@@ -3983,6 +4061,7 @@ def export_orders_csv():
             order.order_number,
             order.created_at.strftime("%d-%m-%Y %H:%M"),
             order.customer_name,
+            order.age or "",
             order.customer_phone,
             order.customer_email or "",
             order.address,
@@ -4002,11 +4081,9 @@ def export_orders_csv():
         ])
 
     csv_bytes = output.getvalue().encode("utf-8-sig")
-    filename = f"orders_{datetime.now().strftime('%Y%m%d_%H%M')}.csv"
-    if status_filter:
-        filename = f"orders_{status_filter}_{datetime.now().strftime('%Y%m%d_%H%M')}.csv"
-    if payment_filter:
-        filename = f"orders_payment_{payment_filter}_{datetime.now().strftime('%Y%m%d_%H%M')}.csv"
+    stamp    = datetime.now().strftime("%Y%m%d_%H%M")
+    suffix   = "_filtered" if any(request.args.get(k) for k in ORDER_REPORT_FILTER_KEYS) else ""
+    filename = f"order_report{suffix}_{stamp}.csv"
 
     return Response(
         csv_bytes,

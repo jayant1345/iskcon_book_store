@@ -1,22 +1,17 @@
 {% extends "admin/admin_base.html" %}
 {% set active_page = 'orders' %}
-{% block page_title %}Manage Orders{% endblock %}
+{% block page_title %}Order Report{% endblock %}
 {% block content %}
 
 <div class="d-flex justify-content-between align-items-center mb-3">
     <div>
-        <h4 class="mb-1">Orders</h4>
-        <small class="text-muted">{{ orders.total }} total orders</small>
+        <h4 class="mb-1">Order Report</h4>
+        <small class="text-muted">{{ orders.total }} order{{ 's' if orders.total != 1 }}{% if any_filter_active %} matching current filters{% endif %}</small>
     </div>
     <div class="d-flex gap-2 flex-wrap align-items-center">
         <a href="{{ url_for('admin_create_manual_order') }}" class="btn btn-warning btn-sm fw-bold">
             <i class="fas fa-plus me-1"></i>Create Manual Order
         </a>
-        {% if status or pay_status or pay_method or customer_f %}
-        <a href="{{ url_for('admin_orders') }}" class="btn btn-outline-secondary btn-sm">
-            <i class="fas fa-times me-1"></i>Clear Filters
-        </a>
-        {% endif %}
         <form method="POST" action="{{ url_for('admin_sync_delhivery') }}" style="display:inline;">
             <button type="submit" class="btn btn-outline-primary btn-sm" title="Check Delhivery tracking and auto-mark delivered orders">
                 <i class="fas fa-sync-alt me-1"></i>Sync Deliveries
@@ -30,27 +25,117 @@
             </span>
             {% endif %}
         </a>
-        <div class="dropdown">
-            <button class="btn btn-outline-success dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                <i class="fas fa-file-csv me-1"></i> Download CSV
-            </button>
-            <ul class="dropdown-menu dropdown-menu-end">
-                <li><a class="dropdown-item" href="{{ url_for('export_orders_csv') }}">📋 All Orders</a></li>
-                <li><a class="dropdown-item text-success" href="{{ url_for('export_orders_csv', payment_status='paid') }}">✅ Payment Received</a></li>
-                <li><a class="dropdown-item text-warning" href="{{ url_for('export_orders_csv', payment_status='pending') }}">⏳ Payment Pending</a></li>
-                <li><hr class="dropdown-divider"></li>
-                <li><a class="dropdown-item" href="{{ url_for('export_orders_csv', status='delivered') }}">📦 Delivered Orders</a></li>
-            </ul>
-        </div>
+        <a href="{{ url_for('export_orders_csv', status=status, pay_status=pay_status, pay_method=pay_method, customer=customer, date_from=date_from, date_to=date_to, book_type=book_type, city=city, age_min=age_min, age_max=age_max, amount_min=amount_min, amount_max=amount_max, book_name=book_name, sort=sort) }}"
+           class="btn btn-success btn-sm fw-bold" title="Downloads exactly the filtered + sorted records shown below">
+            <i class="fas fa-file-csv me-1"></i>Download Report
+        </a>
+    </div>
+</div>
+
+<!-- ── Filter & Sort Panel ── -->
+<div class="card shadow-sm mb-3">
+    <div class="card-body">
+        <form method="get" id="filter-form" class="row g-2 align-items-end">
+            <div class="col-6 col-md-3 col-lg-2">
+                <label class="form-label small mb-1">Date From</label>
+                <input type="date" name="date_from" class="form-control form-control-sm" value="{{ date_from }}">
+            </div>
+            <div class="col-6 col-md-3 col-lg-2">
+                <label class="form-label small mb-1">Date To</label>
+                <input type="date" name="date_to" class="form-control form-control-sm" value="{{ date_to }}">
+            </div>
+            <div class="col-6 col-md-3 col-lg-2">
+                <label class="form-label small mb-1">Book Type</label>
+                <select name="book_type" class="form-select form-select-sm">
+                    <option value="">All Types</option>
+                    <option value="ebook" {% if book_type=='ebook' %}selected{% endif %}>📱 E-book</option>
+                    <option value="paper" {% if book_type=='paper' %}selected{% endif %}>📄 Paper Copy</option>
+                </select>
+            </div>
+            <div class="col-6 col-md-3 col-lg-2">
+                <label class="form-label small mb-1">Area / City</label>
+                <input type="text" name="city" class="form-control form-control-sm" placeholder="e.g. Ahmedabad" value="{{ city }}">
+            </div>
+            <div class="col-6 col-md-3 col-lg-2">
+                <label class="form-label small mb-1">Age (Min)</label>
+                <input type="number" name="age_min" class="form-control form-control-sm" min="1" max="120" value="{{ age_min }}">
+            </div>
+            <div class="col-6 col-md-3 col-lg-2">
+                <label class="form-label small mb-1">Age (Max)</label>
+                <input type="number" name="age_max" class="form-control form-control-sm" min="1" max="120" value="{{ age_max }}">
+            </div>
+            <div class="col-6 col-md-3 col-lg-2">
+                <label class="form-label small mb-1">Order Status</label>
+                <select name="status" class="form-select form-select-sm">
+                    <option value="">All Status</option>
+                    <option value="placed"    {% if status=='placed'    %}selected{% endif %}>🟡 Placed</option>
+                    <option value="confirmed" {% if status=='confirmed' %}selected{% endif %}>🔵 Confirmed</option>
+                    <option value="shipped"   {% if status=='shipped'   %}selected{% endif %}>🚚 Shipped</option>
+                    <option value="delivered" {% if status=='delivered' %}selected{% endif %}>✅ Delivered</option>
+                    <option value="cancelled" {% if status=='cancelled' %}selected{% endif %}>❌ Cancelled</option>
+                </select>
+            </div>
+            <div class="col-6 col-md-3 col-lg-2">
+                <label class="form-label small mb-1">Payment Method</label>
+                <select name="pay_method" class="form-select form-select-sm">
+                    <option value="">All Methods</option>
+                    <option value="payu"     {% if pay_method=='payu'     %}selected{% endif %}>🏦 PayU</option>
+                    <option value="razorpay" {% if pay_method=='razorpay' %}selected{% endif %}>💳 Razorpay</option>
+                    <option value="upi"      {% if pay_method=='upi'      %}selected{% endif %}>📲 UPI</option>
+                    <option value="cod"      {% if pay_method=='cod'      %}selected{% endif %}>💵 COD</option>
+                </select>
+            </div>
+            <div class="col-6 col-md-3 col-lg-2">
+                <label class="form-label small mb-1">Payment Status</label>
+                <select name="pay_status" class="form-select form-select-sm">
+                    <option value="">All Pay Status</option>
+                    <option value="paid"    {% if pay_status=='paid'    %}selected{% endif %}>✅ Paid</option>
+                    <option value="pending" {% if pay_status=='pending' %}selected{% endif %}>⏳ Pending</option>
+                    <option value="failed"  {% if pay_status=='failed'  %}selected{% endif %}>❌ Failed</option>
+                </select>
+            </div>
+            <div class="col-6 col-md-3 col-lg-2">
+                <label class="form-label small mb-1">Customer Name / Phone</label>
+                <input type="text" name="customer" class="form-control form-control-sm" placeholder="Search…" value="{{ customer }}">
+            </div>
+            <div class="col-6 col-md-3 col-lg-2">
+                <label class="form-label small mb-1">Order Amount (Min ₹)</label>
+                <input type="number" name="amount_min" class="form-control form-control-sm" min="0" value="{{ amount_min }}">
+            </div>
+            <div class="col-6 col-md-3 col-lg-2">
+                <label class="form-label small mb-1">Order Amount (Max ₹)</label>
+                <input type="number" name="amount_max" class="form-control form-control-sm" min="0" value="{{ amount_max }}">
+            </div>
+            <div class="col-12 col-md-6 col-lg-4">
+                <label class="form-label small mb-1">Book Name</label>
+                <input type="text" name="book_name" class="form-control form-control-sm" placeholder="e.g. Bhagavad Gita" value="{{ book_name }}">
+            </div>
+            <div class="col-6 col-md-3 col-lg-2">
+                <label class="form-label small mb-1">Sort By</label>
+                <select name="sort" class="form-select form-select-sm">
+                    {% for key, opt in sort_options.items() %}
+                    <option value="{{ key }}" {% if sort==key %}selected{% endif %}>{{ opt[0] }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-6 col-md-3 col-lg-2 d-flex gap-2">
+                <button type="submit" class="btn btn-warning btn-sm fw-bold flex-fill">
+                    <i class="fas fa-filter me-1"></i>Apply
+                </button>
+                {% if any_filter_active or sort != 'date_desc' %}
+                <a href="{{ url_for('admin_orders') }}" class="btn btn-outline-secondary btn-sm" title="Clear all filters">
+                    <i class="fas fa-times"></i>
+                </a>
+                {% endif %}
+            </div>
+        </form>
     </div>
 </div>
 
 <div class="card table-card shadow-sm">
     <div class="table-responsive">
-        <form method="get" id="filter-form"></form>
         <table class="table table-hover mb-0">
             <thead>
-                <!-- Column headers -->
                 <tr>
                     <th>Order #</th>
                     <th>Customer</th>
@@ -61,52 +146,6 @@
                     <th>Status</th>
                     <th>Date</th>
                     <th>Action</th>
-                </tr>
-                <!-- Filter row -->
-                <tr style="background:#b8860b;">
-                    <td></td>
-                    <td>
-                        <input type="text" name="customer" form="filter-form" class="form-control form-control-sm"
-                               placeholder="Name / Phone…" value="{{ customer_f or '' }}"
-                               style="font-size:0.78rem; min-width:120px;">
-                    </td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
-                    <td>
-                        <!-- Payment method -->
-                        <select name="pay_method" form="filter-form" class="form-select form-select-sm col-filter mb-1" style="font-size:0.78rem;">
-                            <option value="">All Methods</option>
-                            <option value="payu"     {% if pay_method=='payu'     %}selected{% endif %}>🏦 PayU</option>
-                            <option value="razorpay" {% if pay_method=='razorpay' %}selected{% endif %}>💳 Razorpay</option>
-                            <option value="upi"      {% if pay_method=='upi'      %}selected{% endif %}>📲 UPI</option>
-                            <option value="cod"      {% if pay_method=='cod'      %}selected{% endif %}>💵 COD</option>
-                        </select>
-                        <!-- Payment status -->
-                        <select name="pay_status" form="filter-form" class="form-select form-select-sm col-filter" style="font-size:0.78rem;">
-                            <option value="">All Pay Status</option>
-                            <option value="paid"    {% if pay_status=='paid'    %}selected{% endif %}>✅ Paid</option>
-                            <option value="pending" {% if pay_status=='pending' %}selected{% endif %}>⏳ Pending</option>
-                            <option value="failed"  {% if pay_status=='failed'  %}selected{% endif %}>❌ Failed</option>
-                        </select>
-                    </td>
-                    <td>
-                        <!-- Order status -->
-                        <select name="status" form="filter-form" class="form-select form-select-sm col-filter" style="font-size:0.78rem;">
-                            <option value="">All Status</option>
-                            <option value="placed"    {% if status=='placed'    %}selected{% endif %}>🟡 Placed</option>
-                            <option value="confirmed" {% if status=='confirmed' %}selected{% endif %}>🔵 Confirmed</option>
-                            <option value="shipped"   {% if status=='shipped'   %}selected{% endif %}>🚚 Shipped</option>
-                            <option value="delivered" {% if status=='delivered' %}selected{% endif %}>✅ Delivered</option>
-                            <option value="cancelled" {% if status=='cancelled' %}selected{% endif %}>❌ Cancelled</option>
-                        </select>
-                    </td>
-                    <td></td>
-                    <td>
-                        <button type="submit" form="filter-form" class="btn btn-sm btn-warning w-100" title="Apply filters">
-                            <i class="fas fa-filter"></i>
-                        </button>
-                    </td>
                 </tr>
             </thead>
             <tbody>
@@ -184,18 +223,14 @@
         {% for p in range(1, orders.pages + 1) %}
         <li class="page-item {% if p == orders.page %}active{% endif %}">
             <a class="page-link {% if p == orders.page %}bg-warning text-dark border-warning{% endif %}"
-               href="{{ url_for('admin_orders', page=p, status=status, pay_status=pay_status, pay_method=pay_method, customer=customer_f) }}">{{ p }}</a>
+               href="{{ url_for('admin_orders', page=p, status=status, pay_status=pay_status,
+                       pay_method=pay_method, customer=customer, date_from=date_from, date_to=date_to,
+                       book_type=book_type, city=city, age_min=age_min, age_max=age_max,
+                       amount_min=amount_min, amount_max=amount_max, book_name=book_name, sort=sort) }}">{{ p }}</a>
         </li>
         {% endfor %}
     </ul>
 </nav>
 {% endif %}
 
-<script>
-document.querySelectorAll('.col-filter').forEach(function(sel) {
-    sel.addEventListener('change', function() {
-        document.getElementById('filter-form').submit();
-    });
-});
-</script>
 {% endblock %}
