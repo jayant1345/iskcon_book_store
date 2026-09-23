@@ -9,3 +9,4 @@ server.log
 *.pdf
 !static/magazines/*.pdf
 ebooks/
+scratch/

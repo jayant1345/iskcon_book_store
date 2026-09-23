@@ -154,6 +154,9 @@ class Config:
     ADMIN_USERNAME = os.environ.get("ADMIN_USERNAME", "admin")
     ADMIN_PASSWORD_HASH = generate_password_hash(os.environ.get("ADMIN_PASSWORD", "Hare@Krishna108"))
     WHATSAPP_NUMBER = os.environ.get("WHATSAPP_NUMBER", "+919999999999")
+    SOCIAL_FACEBOOK_URL  = os.environ.get("SOCIAL_FACEBOOK_URL", "")
+    SOCIAL_INSTAGRAM_URL = os.environ.get("SOCIAL_INSTAGRAM_URL", "")
+    SOCIAL_YOUTUBE_URL   = os.environ.get("SOCIAL_YOUTUBE_URL", "")
     UPI_ID   = os.environ.get("UPI_ID", "")
     UPI_NAME = os.environ.get("UPI_NAME", "ISKCON Book Store")
     STORE_NAME = "ISKCON Book Store"
@@ -853,6 +856,9 @@ def inject_globals():
         "categories":       Category.query.order_by(Category.sort_order).all(),
         "store_name":       app.config["STORE_NAME"],
         "whatsapp_num":     app.config["WHATSAPP_NUMBER"],
+        "social_facebook":  app.config["SOCIAL_FACEBOOK_URL"],
+        "social_instagram": app.config["SOCIAL_INSTAGRAM_URL"],
+        "social_youtube":   app.config["SOCIAL_YOUTUBE_URL"],
         "upi_id":           app.config["UPI_ID"],
         "upi_name":         app.config["UPI_NAME"],
         "shipping_charge":      app.config["SHIPPING_CHARGE"],

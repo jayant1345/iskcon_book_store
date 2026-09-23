@@ -44,7 +44,8 @@
 
 <!-- ── Announcement Bar ── -->
 <div class="announcement-bar">
-  🙏 Hare Krishna! &nbsp;|&nbsp; Use code <strong>HARE10</strong> for 10% off &nbsp;|&nbsp; 🪷
+  🙏 Hare Krishna Hare Krishna, Krishna Krishna Hare Hare &nbsp;/&nbsp;
+  Hare Ram Hare Ram, Ram Ram Hare Hare &nbsp;—&nbsp; Chant &amp; Be Happy! 😊🪷
 </div>
 
 <!-- ── Navbar ── -->
@@ -201,10 +202,24 @@
           Hare Rama, Hare Rama,<br>Rama Rama, Hare Hare"
         </p>
         <div class="social-icons mt-16" style="margin-top:16px;">
-          <a href="#" title="Facebook">📘</a>
-          <a href="#" title="Instagram">📷</a>
-          <a href="#" title="YouTube">▶️</a>
-          <a href="https://wa.me/{{ whatsapp_num|replace('+','') }}" title="WhatsApp">💬</a>
+          {% if social_facebook %}
+          <a href="{{ social_facebook }}" title="Facebook" target="_blank" rel="noopener">
+            <i class="bi bi-facebook"></i>
+          </a>
+          {% endif %}
+          {% if social_instagram %}
+          <a href="{{ social_instagram }}" title="Instagram" target="_blank" rel="noopener">
+            <i class="bi bi-instagram"></i>
+          </a>
+          {% endif %}
+          {% if social_youtube %}
+          <a href="{{ social_youtube }}" title="YouTube" target="_blank" rel="noopener">
+            <i class="bi bi-youtube"></i>
+          </a>
+          {% endif %}
+          <a href="https://wa.me/{{ whatsapp_num|replace('+','') }}" title="WhatsApp" target="_blank" rel="noopener">
+            <i class="bi bi-whatsapp"></i>
+          </a>
         </div>
       </div>
 
