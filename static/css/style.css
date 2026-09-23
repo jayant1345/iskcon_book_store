@@ -1265,6 +1265,31 @@ img {
 .filter-option:hover { color: var(--saffron); }
 .filter-option input[type="radio"] { accent-color: var(--saffron); }
 
+/* ═══════════════ STAR RATING INPUT ═══════════════ */
+.star-rating-input {
+  display: flex;
+  flex-direction: row-reverse;
+  justify-content: flex-end;
+  gap: 4px;
+  border: none;
+  padding: 0;
+  margin: 0;
+  width: fit-content;
+}
+.star-rating-input input { position: absolute; opacity: 0; width: 0; height: 0; }
+.star-rating-input label {
+  font-size: 2rem;
+  line-height: 1;
+  color: #ddd;
+  cursor: pointer;
+  transition: color 0.15s;
+}
+.star-rating-input input:checked ~ label,
+.star-rating-input label:hover,
+.star-rating-input label:hover ~ label {
+  color: var(--gold);
+}
+
 /* ═══════════════ FLASH ALERTS ═══════════════ */
 .alert-iskcon-success {
   background: var(--status-green-bg);

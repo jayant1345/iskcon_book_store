@@ -1,0 +1,116 @@
+{% extends "admin/admin_base.html" %}
+{% set active_page = 'reviews' %}
+{% block page_title %}Reviews{% endblock %}
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <h4 class="mb-1"><i class="fas fa-star me-2" style="color:#FF9933;"></i>Customer Reviews</h4>
+    <small class="text-muted">Verified-purchase reviews awaiting approval before they show on the book page</small>
+  </div>
+</div>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% for cat, msg in messages %}
+    <div class="alert alert-{{ cat }}">{{ msg }}</div>
+  {% endfor %}
+{% endwith %}
+
+<ul class="nav nav-tabs mb-3">
+  <li class="nav-item">
+    <a class="nav-link {% if status == 'pending' %}active{% endif %}"
+       href="{{ url_for('admin_reviews', status='pending') }}">
+      Pending
+      {% if counts.pending %}<span class="badge bg-danger ms-1">{{ counts.pending }}</span>{% endif %}
+    </a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link {% if status == 'approved' %}active{% endif %}"
+       href="{{ url_for('admin_reviews', status='approved') }}">
+      Approved
+      {% if counts.approved %}<span class="badge bg-success ms-1">{{ counts.approved }}</span>{% endif %}
+    </a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link {% if status == 'all' %}active{% endif %}"
+       href="{{ url_for('admin_reviews', status='all') }}">All</a>
+  </li>
+</ul>
+
+<div class="card shadow-sm">
+  <div class="table-responsive">
+    <table class="table table-hover mb-0 align-middle">
+      <thead class="table-success">
+        <tr>
+          <th>#</th>
+          <th>Book</th>
+          <th>Customer</th>
+          <th>Rating</th>
+          <th>Comment</th>
+          <th>Date</th>
+          <th>Status</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for review in reviews %}
+        <tr>
+          <td class="text-muted small">{{ loop.index }}</td>
+          <td>
+            <a href="{{ url_for('book_detail', book_id=review.book_id) }}" target="_blank"
+               class="text-decoration-none" style="font-size:0.88rem;">
+              {{ review.book.title if review.book else '—' }}
+            </a>
+          </td>
+          <td>
+            <div class="fw-bold" style="font-size:0.88rem;">{{ review.customer.name if review.customer else '—' }}</div>
+            <div class="text-muted" style="font-size:0.78rem;">{{ review.customer.email if review.customer else '' }}</div>
+          </td>
+          <td>
+            <span class="text-warning">
+              {% for i in range(1, 6) %}{% if i <= review.rating %}★{% else %}☆{% endif %}{% endfor %}
+            </span>
+          </td>
+          <td style="max-width:280px; font-size:0.85rem;">{{ review.comment or '—' }}</td>
+          <td><small>{{ review.created_at | ist('%d %b %Y, %I:%M %p') }}</small></td>
+          <td>
+            {% if review.approved %}
+            <span class="badge bg-success">Approved</span>
+            {% else %}
+            <span class="badge bg-warning text-dark">Pending</span>
+            {% endif %}
+          </td>
+          <td>
+            <div class="d-flex gap-1 flex-wrap">
+              {% if not review.approved %}
+              <form method="POST" action="{{ url_for('admin_approve_review', review_id=review.id) }}?status={{ status }}">
+                <button type="submit" class="btn btn-sm btn-success" title="Approve — makes it visible on the site">
+                  <i class="fas fa-check"></i>
+                </button>
+              </form>
+              {% endif %}
+              <form method="POST" action="{{ url_for('admin_reject_review', review_id=review.id) }}?status={{ status }}"
+                    onsubmit="return confirm('Delete this review permanently?')">
+                <button type="submit" class="btn btn-sm btn-outline-danger" title="Reject and delete">
+                  <i class="fas fa-times"></i>
+                </button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="8" class="text-center text-muted py-5">
+            <i class="fas fa-star fa-3x mb-3 d-block" style="color:#ccc;"></i>
+            {% if status == 'pending' %}No reviews waiting for approval.
+            {% elif status == 'approved' %}No approved reviews yet.
+            {% else %}No reviews yet.{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}

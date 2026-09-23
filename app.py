@@ -490,6 +490,28 @@ class Customer(db.Model):
         return f"<Customer {self.email}>"
 
 
+class Review(db.Model):
+    """Customer-submitted book review. Only verified purchasers can create one
+    (enforced in the submit_review route), and it stays hidden from the
+    public book page until an admin approves it."""
+    __tablename__ = "reviews"
+    id          = db.Column(db.Integer, primary_key=True)
+    book_id     = db.Column(db.Integer, db.ForeignKey("books.id"), nullable=False)
+    customer_id = db.Column(db.Integer, db.ForeignKey("customers.id"), nullable=False)
+    rating      = db.Column(db.Integer, nullable=False)   # 1-5
+    comment     = db.Column(db.Text, nullable=True)
+    approved    = db.Column(db.Boolean, default=False, nullable=False)
+    created_at  = db.Column(db.DateTime, default=datetime.utcnow)
+
+    book     = db.relationship("Book", backref=db.backref("reviews", lazy="dynamic"))
+    customer = db.relationship("Customer", backref=db.backref("reviews", lazy="dynamic"))
+
+    __table_args__ = (db.UniqueConstraint("book_id", "customer_id", name="uq_review_book_customer"),)
+
+    def __repr__(self):
+        return f"<Review book={self.book_id} customer={self.customer_id} rating={self.rating}>"
+
+
 class Magazine(db.Model):
     __tablename__ = "magazines"
     id           = db.Column(db.Integer, primary_key=True)
@@ -864,6 +886,8 @@ def inject_globals():
         "shipping_charge":      app.config["SHIPPING_CHARGE"],
         "free_shipping_above":  app.config["FREE_SHIPPING_ABOVE"],
         "current_customer": get_current_customer(),
+        "pending_review_count": (Review.query.filter_by(approved=False).count()
+                                  if request.path.startswith("/admin") else 0),
         "now":              datetime.utcnow(),
         "settings_get":     Setting.get,
     }
@@ -1121,6 +1145,16 @@ def books():
                            languages=languages)
 
 
+def customer_has_purchased(customer_id, book_id):
+    """True if this customer has a paid order containing this book — the
+    'verified purchase' gate for leaving a review."""
+    return db.session.query(OrderItem.id).join(Order, OrderItem.order_id == Order.id).filter(
+        OrderItem.book_id == book_id,
+        Order.customer_id == customer_id,
+        Order.payment_status == "paid",
+    ).first() is not None
+
+
 @app.route("/book/<int:book_id>")
 def book_detail(book_id):
     import re
@@ -1139,8 +1173,56 @@ def book_detail(book_id):
         Book.language != book.language,
     ).order_by(Book.language).all() if base_title else []
 
+    # ── Customer reviews ──
+    approved_reviews = (Review.query.filter_by(book_id=book_id, approved=True)
+                         .order_by(Review.created_at.desc()).all())
+    review_count = len(approved_reviews)
+    avg_rating = round(sum(r.rating for r in approved_reviews) / review_count, 1) if review_count else 0
+
+    customer = get_current_customer()
+    my_review = None
+    can_review = False
+    if customer:
+        my_review = Review.query.filter_by(book_id=book_id, customer_id=customer.id).first()
+        can_review = (not my_review) and customer_has_purchased(customer.id, book_id)
+
     return render_template("book_detail.html", book=book, related=related,
-                           other_lang_books=other_lang_books)
+                           other_lang_books=other_lang_books,
+                           approved_reviews=approved_reviews,
+                           review_count=review_count, avg_rating=avg_rating,
+                           my_review=my_review, can_review=can_review)
+
+
+@app.route("/book/<int:book_id>/review", methods=["POST"])
+@customer_login_required
+def submit_review(book_id):
+    book = Book.query.get_or_404(book_id)
+    customer = get_current_customer()
+
+    if not customer_has_purchased(customer.id, book_id):
+        flash("Only customers who've purchased this book can leave a review.", "warning")
+        return redirect(url_for("book_detail", book_id=book_id))
+
+    if Review.query.filter_by(book_id=book_id, customer_id=customer.id).first():
+        flash("You've already reviewed this book.", "info")
+        return redirect(url_for("book_detail", book_id=book_id))
+
+    try:
+        rating = int(request.form.get("rating", 0))
+    except ValueError:
+        rating = 0
+    if rating < 1 or rating > 5:
+        flash("Please select a star rating from 1 to 5.", "danger")
+        return redirect(url_for("book_detail", book_id=book_id))
+
+    comment = request.form.get("comment", "").strip()[:2000]
+
+    review = Review(book_id=book_id, customer_id=customer.id, rating=rating,
+                     comment=comment or None, approved=False)
+    db.session.add(review)
+    db.session.commit()
+    flash("Thank you! Your review has been submitted and will appear once approved.", "success")
+    return redirect(url_for("book_detail", book_id=book_id))
 
 
 # ─────────────────────────────────────────────
@@ -2699,6 +2781,44 @@ def admin_logout():
     session.pop("admin_logged_in", None)
     flash("Logged out.", "info")
     return redirect(url_for("admin_login"))
+
+
+@app.route("/admin/reviews")
+@admin_required
+def admin_reviews():
+    status = request.args.get("status", "pending")
+    q = Review.query
+    if status == "pending":
+        q = q.filter_by(approved=False)
+    elif status == "approved":
+        q = q.filter_by(approved=True)
+    reviews = q.order_by(Review.created_at.desc()).all()
+    counts = {
+        "pending":  Review.query.filter_by(approved=False).count(),
+        "approved": Review.query.filter_by(approved=True).count(),
+    }
+    return render_template("admin/reviews.html", reviews=reviews, status=status,
+                           counts=counts, active_page="reviews")
+
+
+@app.route("/admin/reviews/<int:review_id>/approve", methods=["POST"])
+@admin_required
+def admin_approve_review(review_id):
+    review = Review.query.get_or_404(review_id)
+    review.approved = True
+    db.session.commit()
+    flash(f"Review by {review.customer.name} approved and now visible on the site.", "success")
+    return redirect(request.referrer or url_for("admin_reviews"))
+
+
+@app.route("/admin/reviews/<int:review_id>/reject", methods=["POST"])
+@admin_required
+def admin_reject_review(review_id):
+    review = Review.query.get_or_404(review_id)
+    db.session.delete(review)
+    db.session.commit()
+    flash("Review rejected and removed.", "info")
+    return redirect(request.referrer or url_for("admin_reviews"))
 
 
 @app.route("/admin/whatsapp-inquiries")

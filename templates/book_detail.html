@@ -596,6 +596,89 @@
   </div>
   {% endif %}
 
+  <!-- ── Customer Reviews ── -->
+  <div class="row mt-4">
+    <div class="col-12">
+      <div style="background:white; border-radius:var(--radius); padding:32px; box-shadow:0 2px 12px var(--shadow);">
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-4">
+          <h3 class="section-title mb-0">Customer Reviews</h3>
+          {% if review_count %}
+          <div class="d-flex align-items-center gap-2">
+            <span style="color:var(--gold); font-size:1.3rem; letter-spacing:2px;">
+              {% for i in range(1, 6) %}{% if i <= avg_rating|round(0, 'floor') %}★{% elif i - 0.5 <= avg_rating %}★{% else %}☆{% endif %}{% endfor %}
+            </span>
+            <span style="font-weight:700; color:var(--brown);">{{ avg_rating }}</span>
+            <span style="color:var(--text-muted); font-size:0.88rem;">({{ review_count }} review{{ 's' if review_count != 1 }})</span>
+          </div>
+          {% endif %}
+        </div>
+
+        <!-- Submission area -->
+        {% if can_review %}
+        <form method="post" action="{{ url_for('submit_review', book_id=book.id) }}"
+              class="mb-4 pb-4" style="border-bottom:1px solid var(--border);">
+          <label class="form-label fw-bold">Your Rating</label><br>
+          <fieldset class="star-rating-input mb-3">
+            <input type="radio" id="star5" name="rating" value="5" required><label for="star5" title="5 stars">★</label>
+            <input type="radio" id="star4" name="rating" value="4"><label for="star4" title="4 stars">★</label>
+            <input type="radio" id="star3" name="rating" value="3"><label for="star3" title="3 stars">★</label>
+            <input type="radio" id="star2" name="rating" value="2"><label for="star2" title="2 stars">★</label>
+            <input type="radio" id="star1" name="rating" value="1"><label for="star1" title="1 star">★</label>
+          </fieldset>
+          <label class="form-label fw-bold" for="review-comment">Your Review (optional)</label>
+          <textarea id="review-comment" name="comment" class="form-control mb-3" rows="3"
+                    maxlength="2000" placeholder="Share your experience with this book…"></textarea>
+          <button type="submit" class="btn btn-saffron">
+            <i class="bi bi-send-fill me-1"></i>Submit Review
+          </button>
+          <div class="form-text mt-1">Your review will appear here once approved by our team.</div>
+        </form>
+        {% elif my_review %}
+        <div class="mb-4 pb-4 d-flex align-items-center gap-2" style="border-bottom:1px solid var(--border);">
+          {% if my_review.approved %}
+          <i class="bi bi-check-circle-fill text-success"></i>
+          <span>You've reviewed this book — thank you!</span>
+          {% else %}
+          <i class="bi bi-hourglass-split text-warning"></i>
+          <span>Your review has been submitted and is awaiting approval.</span>
+          {% endif %}
+        </div>
+        {% elif current_customer %}
+        <div class="mb-4 pb-4 text-muted" style="border-bottom:1px solid var(--border); font-size:0.9rem;">
+          <i class="bi bi-info-circle me-1"></i>Only customers who've purchased this book can leave a review.
+        </div>
+        {% else %}
+        <div class="mb-4 pb-4 text-muted" style="border-bottom:1px solid var(--border); font-size:0.9rem;">
+          <i class="bi bi-info-circle me-1"></i>
+          <a href="{{ url_for('customer_login', next=request.full_path) }}">Log in</a> to leave a review if you've purchased this book.
+        </div>
+        {% endif %}
+
+        <!-- Review list -->
+        {% if approved_reviews %}
+        <div class="d-flex flex-column gap-3">
+          {% for r in approved_reviews %}
+          <div style="padding-bottom:16px; {% if not loop.last %}border-bottom:1px solid var(--border-light);{% endif %}">
+            <div class="d-flex align-items-center justify-content-between flex-wrap gap-1 mb-1">
+              <strong style="color:var(--brown);">{{ r.customer.name if r.customer else 'Customer' }}</strong>
+              <small class="text-muted">{{ r.created_at.strftime('%d %b %Y') }}</small>
+            </div>
+            <div style="color:var(--gold); letter-spacing:2px; margin-bottom:4px;">
+              {% for i in range(1, 6) %}{% if i <= r.rating %}★{% else %}☆{% endif %}{% endfor %}
+            </div>
+            {% if r.comment %}
+            <p class="mb-0" style="color:var(--text); white-space:pre-line;">{{ r.comment }}</p>
+            {% endif %}
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <p class="text-muted mb-0">No reviews yet — be the first to share your thoughts!</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
   <!-- ── Related Books ── -->
   {% if related %}
   <div class="mt-5">
