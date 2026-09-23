@@ -1,0 +1,145 @@
+{% extends "admin/admin_base.html" %}
+{% set active_page = 'combos' %}
+{% block page_title %}{{ 'Edit Combo' if combo else 'Add Combo' }}{% endblock %}
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="mb-0"><i class="fas fa-gift me-2" style="color:#FF9933;"></i>{{ 'Edit Combo' if combo else 'Add Combo' }}</h4>
+    <a href="{{ url_for('admin_combos') }}" class="btn btn-outline-secondary btn-sm">
+        <i class="fas fa-arrow-left me-1"></i>Back to Combos
+    </a>
+</div>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% for cat, msg in messages %}
+    <div class="alert alert-{{ cat }}">{{ msg }}</div>
+  {% endfor %}
+{% endwith %}
+
+<div class="card shadow-sm">
+  <div class="card-body">
+    <form method="POST" enctype="multipart/form-data">
+      <div class="row g-3 mb-3">
+        <div class="col-md-6">
+          <label class="form-label">Combo Name *</label>
+          <input type="text" name="name" class="form-control" required
+                 value="{{ combo.name if combo else '' }}" placeholder="e.g. Beginner's Spiritual Combo">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Language</label>
+          <select name="language" class="form-select">
+            {% for lang in ['English', 'Hindi', 'Gujarati'] %}
+            <option value="{{ lang }}" {% if combo and combo.language==lang %}selected{% endif %}>{{ lang }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Selling Price (₹) *</label>
+          <input type="number" name="selling_price" class="form-control" required min="0" step="1"
+                 value="{{ combo.selling_price|int if combo else '' }}">
+          {% if combo %}
+          <div class="form-text">Individual value: ₹{{ combo.individual_total|int }} · Savings: ₹{{ combo.savings|int }}</div>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label">Description</label>
+        <textarea name="description" class="form-control" rows="2"
+                  placeholder="Purpose of this combo — who it's for">{{ combo.description if combo else '' }}</textarea>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label">Combo Image</label>
+        <input type="file" name="image" class="form-control" accept="image/*">
+        {% if combo and combo.image %}
+        <div class="form-text">
+          Current image:
+          <img src="{{ url_for('static', filename='images/combos/' + combo.image) }}" style="height:40px;border-radius:4px;vertical-align:middle;" alt="">
+        </div>
+        {% endif %}
+      </div>
+
+      <div class="form-check mb-4">
+        <input type="checkbox" name="active" id="active" class="form-check-input"
+               {% if not combo or combo.active %}checked{% endif %}>
+        <label class="form-check-label" for="active">Active (visible to customers)</label>
+      </div>
+
+      <hr>
+      <h6 class="fw-bold mb-3">Books in this Combo</h6>
+      <div id="combo-book-rows">
+        {% if combo %}
+          {% for ci in combo.combo_items %}
+          <div class="row g-2 mb-2 combo-book-row align-items-center">
+            <div class="col-6">
+              <select name="book_id[]" class="form-select form-select-sm">
+                <option value="">— Select book —</option>
+                {% for b in books %}
+                <option value="{{ b.id }}" {% if b.id == ci.book_id %}selected{% endif %}>{{ b.title }} (₹{{ b.price|int }})</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-3">
+              <input type="number" name="book_qty[]" class="form-control form-control-sm" min="1" value="{{ ci.quantity }}" placeholder="Qty">
+            </div>
+            <div class="col-3">
+              <button type="button" class="btn btn-sm btn-outline-danger remove-row-btn"><i class="fas fa-trash"></i></button>
+            </div>
+          </div>
+          {% endfor %}
+        {% else %}
+          <div class="row g-2 mb-2 combo-book-row align-items-center">
+            <div class="col-6">
+              <select name="book_id[]" class="form-select form-select-sm">
+                <option value="">— Select book —</option>
+                {% for b in books %}
+                <option value="{{ b.id }}">{{ b.title }} (₹{{ b.price|int }})</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-3">
+              <input type="number" name="book_qty[]" class="form-control form-control-sm" min="1" value="1" placeholder="Qty">
+            </div>
+            <div class="col-3">
+              <button type="button" class="btn btn-sm btn-outline-danger remove-row-btn"><i class="fas fa-trash"></i></button>
+            </div>
+          </div>
+        {% endif %}
+      </div>
+      <button type="button" id="add-book-row-btn" class="btn btn-sm btn-outline-primary mb-4">
+        <i class="fas fa-plus me-1"></i>Add Another Book
+      </button>
+
+      <div>
+        <button type="submit" class="btn btn-warning fw-bold px-4">
+          <i class="fas fa-save me-1"></i>{{ 'Save Changes' if combo else 'Create Combo' }}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById('add-book-row-btn').addEventListener('click', function () {
+  const rows = document.getElementById('combo-book-rows');
+  const firstRow = rows.querySelector('.combo-book-row');
+  const clone = firstRow.cloneNode(true);
+  clone.querySelector('select').selectedIndex = 0;
+  clone.querySelector('input[type="number"]').value = 1;
+  rows.appendChild(clone);
+  bindRemove(clone);
+});
+
+function bindRemove(row) {
+  row.querySelector('.remove-row-btn').addEventListener('click', function () {
+    const rows = document.querySelectorAll('.combo-book-row');
+    if (rows.length > 1) row.remove();
+  });
+}
+document.querySelectorAll('.combo-book-row').forEach(bindRemove);
+</script>
+{% endblock %}

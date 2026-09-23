@@ -143,10 +143,18 @@
           </tr>
         </thead>
         <tbody>
-          {% for item in order.items %}
+          {% for item in order.display_items %}
           <tr>
             <td>
-              {{ item.book_title }}
+              {% if item.combo_id %}🎁 <strong>{{ item.book_title }}</strong>
+                {% if item.combo %}
+                <div class="text-muted" style="font-size:0.78rem;">
+                  {% for ci in item.combo.combo_items %}
+                  {% if ci.book %}{{ ci.book.title }} × {{ ci.quantity * item.quantity }}{% if not loop.last %}, {% endif %}{% endif %}
+                  {% endfor %}
+                </div>
+                {% endif %}
+              {% else %}{{ item.book_title }}{% endif %}
               {% if item.book and item.book.is_ebook and item.book.ebook_file and order.payment_method != 'cod' %}
                 {% if item.ebook_downloaded_at %}
                   <br><span class="badge bg-secondary" style="font-size:0.7rem;">✓ Downloaded</span>

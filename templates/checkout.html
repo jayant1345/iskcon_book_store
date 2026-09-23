@@ -161,6 +161,25 @@
           <!-- Items -->
           <div style="max-height:280px; overflow-y:auto; margin-bottom:16px;">
             {% for item in items %}
+            {% if item.is_combo %}
+            <div class="d-flex gap-3 py-2" style="border-bottom:1px solid var(--border);">
+              <img src="{{ url_for('static', filename='images/combos/' + item.combo.image) if item.combo.image else url_for('static', filename='images/books/default_book.jpg') }}"
+                   alt="{{ item.combo.name }}" style="width:50px;height:65px;object-fit:cover;border-radius:4px;"
+                   onerror="this.src='https://via.placeholder.com/50x65/FFB400/FFF?text=🎁'">
+              <div class="flex-fill">
+                <div style="font-size:0.85rem; font-weight:600; color:var(--brown); line-height:1.3;">
+                  🎁 {{ item.combo.name[:40] }}{% if item.combo.name|length > 40 %}…{% endif %}
+                </div>
+                <div style="font-size:0.75rem; color:var(--text-muted);">
+                  {% for ci in item.combo.combo_items %}{{ ci.book.title if ci.book else '' }} × {{ ci.quantity }}{% if not loop.last %}, {% endif %}{% endfor %}
+                </div>
+                <div style="font-size:0.8rem; color:var(--text-muted);">Qty: {{ item.qty }}</div>
+              </div>
+              <div style="font-size:0.9rem; font-weight:700; color:var(--saffron); white-space:nowrap;">
+                ₹{{ item.line_total|int }}
+              </div>
+            </div>
+            {% else %}
             <div class="d-flex gap-3 py-2" style="border-bottom:1px solid var(--border);">
               <img src="{{ url_for('static', filename='images/books/' + item.book.image) }}"
                    alt="{{ item.book.title }}" style="width:50px;height:65px;object-fit:cover;border-radius:4px;"
@@ -175,6 +194,7 @@
                 ₹{{ item.line_total|int }}
               </div>
             </div>
+            {% endif %}
             {% endfor %}
           </div>
 

@@ -1,0 +1,92 @@
+{% extends "admin/admin_base.html" %}
+{% set active_page = 'combos' %}
+{% block page_title %}Combos{% endblock %}
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h4 class="mb-1"><i class="fas fa-gift me-2" style="color:#FF9933;"></i>Book Combos</h4>
+        <small class="text-muted">{{ combos|length }} combo{{ 's' if combos|length != 1 }} — create, edit, price and activate/deactivate without any code change</small>
+    </div>
+    <a href="{{ url_for('admin_combo_add') }}" class="btn btn-warning btn-sm fw-bold">
+        <i class="fas fa-plus me-1"></i>Add Combo
+    </a>
+</div>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% for cat, msg in messages %}
+    <div class="alert alert-{{ cat }}">{{ msg }}</div>
+  {% endfor %}
+{% endwith %}
+
+<div class="card shadow-sm">
+  <div class="table-responsive">
+    <table class="table table-hover mb-0 align-middle">
+      <thead class="table-success">
+        <tr>
+          <th>Combo</th>
+          <th>Language</th>
+          <th>Books Included</th>
+          <th>Individual Value</th>
+          <th>Selling Price</th>
+          <th>Savings</th>
+          <th>Status</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for combo in combos %}
+        <tr>
+          <td>
+            <div class="d-flex align-items-center gap-2">
+              <img src="{{ url_for('static', filename='images/combos/' + combo.image) if combo.image else url_for('static', filename='images/books/default_book.jpg') }}"
+                   style="width:40px;height:40px;object-fit:cover;border-radius:6px;" alt="">
+              <strong>{{ combo.name }}</strong>
+            </div>
+          </td>
+          <td>{{ combo.language }}</td>
+          <td style="font-size:0.85rem; max-width:260px;">
+            {% for ci in combo.combo_items %}{{ ci.book.title if ci.book else '—' }} × {{ ci.quantity }}{% if not loop.last %}, {% endif %}{% endfor %}
+          </td>
+          <td>₹{{ combo.individual_total|int }}</td>
+          <td class="fw-bold text-success">₹{{ combo.selling_price|int }}</td>
+          <td>{% if combo.savings > 0 %}<span class="badge bg-success">₹{{ combo.savings|int }}</span>{% else %}—{% endif %}</td>
+          <td>
+            {% if combo.active %}<span class="badge bg-success">Active</span>
+            {% else %}<span class="badge bg-secondary">Inactive</span>{% endif %}
+            {% if not combo.in_stock %}<span class="badge bg-danger d-block mt-1">Out of Stock</span>{% endif %}
+          </td>
+          <td>
+            <div class="d-flex gap-1 flex-wrap">
+              <a href="{{ url_for('admin_combo_edit', combo_id=combo.id) }}" class="btn btn-sm btn-primary" title="Edit">
+                <i class="fas fa-edit"></i>
+              </a>
+              <form method="POST" action="{{ url_for('admin_combo_toggle', combo_id=combo.id) }}">
+                <button type="submit" class="btn btn-sm {{ 'btn-outline-secondary' if combo.active else 'btn-outline-success' }}"
+                        title="{{ 'Deactivate' if combo.active else 'Activate' }}">
+                  <i class="fas fa-{{ 'eye-slash' if combo.active else 'eye' }}"></i>
+                </button>
+              </form>
+              <form method="POST" action="{{ url_for('admin_combo_delete', combo_id=combo.id) }}"
+                    onsubmit="return confirm('Delete combo {{ combo.name }}? This only works if it has no past orders.')">
+                <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete">
+                  <i class="fas fa-trash"></i>
+                </button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="8" class="text-center text-muted py-5">
+            <i class="fas fa-gift fa-3x mb-3 d-block" style="color:#ccc;"></i>
+            No combos yet. Click "Add Combo" to create one.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}

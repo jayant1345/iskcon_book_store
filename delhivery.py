@@ -114,14 +114,25 @@ def create_shipment(order):
     Book a Prepaid Delhivery shipment for an Order object.
     Returns (waybill_str, error_str).  waybill is None on failure.
     """
-    total_qty = sum(item.quantity for item in order.items)
+    # Weight and physical piece-count must come from real books only. A
+    # combo "header" row (book_id is None, representing the combo itself
+    # for pricing/display) has no shipping weight of its own — its actual
+    # weight is already fully captured by its "component" rows (real
+    # book_id, quantity already multiplied by how many combos were bought).
+    # Including the header row here would double-count: the combo's real
+    # books via the component rows, PLUS a phantom default-weight entry
+    # for the header itself.
+    book_items = [item for item in order.items if item.book_id]
+    total_qty = sum(item.quantity for item in book_items)
     weight_kg = max(
         sum(item.quantity * (item.book.weight_kg if item.book and item.book.weight_kg is not None and item.book.weight_kg > 0 else _WEIGHT_KG)
-            for item in order.items),
+            for item in book_items),
         0.5
     )
     weight_grams = int(weight_kg * 1000)
-    products     = ", ".join(item.book_title for item in order.items)[:100]
+    # Product description shows what the customer actually bought — a
+    # combo appears as its combo name, not each book inside it.
+    products     = ", ".join(item.book_title for item in order.display_items)[:100]
 
     payload = {
         "shipments": [{

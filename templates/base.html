@@ -90,6 +90,10 @@
           <a class="nav-link" href="{{ url_for('books') }}">All Books</a>
         </li>
         <li class="nav-item">
+          <a class="nav-link {% if request.endpoint in ['combo_list', 'combo_detail'] %}active{% endif %}"
+             href="{{ url_for('combo_list') }}">🎁 Combos</a>
+        </li>
+        <li class="nav-item">
           <a class="nav-link {% if request.endpoint == 'magazine' %}active{% endif %}"
              href="{{ url_for('magazine') }}">📰 Magazine</a>
         </li>

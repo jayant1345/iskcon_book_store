@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+{% block title %}{{ combo.name }} — {{ store_name }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb breadcrumb-iskcon">
+      <li class="breadcrumb-item"><a href="{{ url_for('index') }}">🏠 Home</a></li>
+      <li class="breadcrumb-item"><a href="{{ url_for('combo_list') }}">🎁 Combos</a></li>
+      <li class="breadcrumb-item active">{{ combo.name }}</li>
+    </ol>
+  </nav>
+
+  <div class="row g-4">
+    <div class="col-lg-5">
+      <div class="book-card-img-wrap" style="aspect-ratio:4/3; border-radius:var(--radius); overflow:hidden;">
+        <img src="{{ url_for('static', filename='images/combos/' + combo.image) if combo.image else url_for('static', filename='images/books/default_book.jpg') }}"
+             alt="{{ combo.name }}" style="width:100%; height:100%; object-fit:cover;"
+             onerror="this.src='https://via.placeholder.com/500x375/FFB400/FFF?text=🎁'">
+      </div>
+    </div>
+
+    <div class="col-lg-7">
+      <div class="book-category">{{ combo.language }} Combo</div>
+      <h1 class="section-title" style="font-size:1.8rem;">🎁 {{ combo.name }}</h1>
+
+      {% if combo.description %}
+      <p style="color:var(--text-muted); font-style:italic; border-left:3px solid var(--saffron);
+                padding-left:14px; margin-bottom:20px;">
+        {{ combo.description }}
+      </p>
+      {% endif %}
+
+      <div class="book-price-wrap mb-3">
+        <span class="book-price" style="font-size:1.8rem;">₹{{ combo.selling_price|int }}</span>
+        {% if combo.individual_total > combo.selling_price %}
+        <span class="book-price-original">₹{{ combo.individual_total|int }}</span>
+        <span class="discount-badge" style="position:static; margin-left:8px;">You Save ₹{{ combo.savings|int }}</span>
+        {% endif %}
+      </div>
+
+      <!-- Books included -->
+      <div class="mb-4" style="background:var(--cream-dark); border-radius:10px; padding:18px;">
+        <h6 class="fw-bold mb-3" style="color:var(--brown);"><i class="bi bi-box-seam me-2"></i>Books in this combo</h6>
+        {% for ci in combo.combo_items %}
+        {% if ci.book %}
+        <div class="d-flex align-items-center gap-3 py-2" {% if not loop.last %}style="border-bottom:1px solid var(--border);"{% endif %}>
+          <img src="{{ url_for('static', filename='images/books/' + ci.book.image) }}"
+               alt="{{ ci.book.title }}" style="width:44px;height:58px;object-fit:cover;border-radius:4px;"
+               onerror="this.src='https://via.placeholder.com/44x58/FF6600/FFF?text=📖'">
+          <div class="flex-fill">
+            <a href="{{ url_for('book_detail', book_id=ci.book.id) }}" class="text-decoration-none fw-bold" style="color:var(--brown); font-size:0.92rem;">
+              {{ ci.book.title }}
+            </a>
+            <div class="text-muted small">Qty: {{ ci.quantity }} &nbsp;·&nbsp; ₹{{ ci.book.price|int }} each</div>
+          </div>
+        </div>
+        {% endif %}
+        {% endfor %}
+      </div>
+
+      {% if combo.in_stock %}
+      <form method="post" action="{{ url_for('add_combo_to_cart', combo_id=combo.id) }}" class="d-flex gap-3 flex-wrap">
+        <input type="hidden" name="qty" value="1">
+        <button type="submit" name="buy_now" value="1" class="btn btn-gold btn-lg px-4">
+          <i class="bi bi-lightning-fill me-2"></i>Buy Now
+        </button>
+        <button type="submit" class="btn btn-saffron btn-lg px-4">
+          <i class="bi bi-cart-plus me-2"></i>Add to Cart
+        </button>
+      </form>
+      {% else %}
+      <button class="btn btn-lg px-4" disabled style="background:var(--cream-dark); color:var(--text-muted);">
+        Out of Stock
+      </button>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- ── Related Combos ── -->
+  {% if related %}
+  <div class="mt-5">
+    <h3 class="section-title mb-4">Other Combos</h3>
+    <div class="row g-3">
+      {% for rel in related %}
+      <div class="col-6 col-md-3">
+        <div class="book-card">
+          <a href="{{ url_for('combo_detail', combo_id=rel.id) }}">
+            <div class="book-card-img-wrap">
+              <img src="{{ url_for('static', filename='images/combos/' + rel.image) if rel.image else url_for('static', filename='images/books/default_book.jpg') }}"
+                   alt="{{ rel.name }}"
+                   onerror="this.src='https://via.placeholder.com/300x400/FFB400/FFF?text=🎁'">
+            </div>
+          </a>
+          <div class="book-card-body">
+            <a href="{{ url_for('combo_detail', combo_id=rel.id) }}" class="text-decoration-none">
+              <h6 class="book-title">{{ rel.name }}</h6>
+            </a>
+            <div class="book-price-wrap">
+              <span class="book-price">₹{{ rel.selling_price|int }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

@@ -36,6 +36,53 @@
             </thead>
             <tbody>
               {% for item in items %}
+              {% if item.is_combo %}
+              <tr data-price="{{ item.combo.selling_price }}" style="background:var(--cream);">
+                <td>
+                  <div class="d-flex align-items-center gap-3">
+                    <img src="{{ url_for('static', filename='images/combos/' + item.combo.image) if item.combo.image else url_for('static', filename='images/books/default_book.jpg') }}"
+                         alt="{{ item.combo.name }}" class="cart-item-img"
+                         onerror="this.src='https://via.placeholder.com/70x90/FFB400/FFF?text=🎁'">
+                    <div>
+                      <a href="{{ url_for('combo_detail', combo_id=item.combo.id) }}"
+                         class="fw-bold text-decoration-none" style="color:var(--brown);">
+                        🎁 {{ item.combo.name }}
+                      </a>
+                      <span class="badge" style="background:var(--gold); color:var(--brown); font-size:0.7rem;">COMBO</span>
+                      <div class="text-muted small">
+                        {% for ci in item.combo.combo_items %}{{ ci.book.title if ci.book else '' }} × {{ ci.quantity }}{% if not loop.last %}, {% endif %}{% endfor %}
+                      </div>
+                    </div>
+                  </div>
+                </td>
+                <td class="text-center align-middle">
+                  <span style="color:var(--saffron); font-weight:700;">₹{{ item.combo.selling_price|int }}</span>
+                </td>
+                <td class="text-center align-middle">
+                  <div class="qty-control justify-content-center">
+                    <div class="qty-picker">
+                      <button type="button" data-action="minus">−</button>
+                      <input type="number" name="combo_qty_{{ item.combo.id }}"
+                             value="{{ item.qty }}" min="1" max="20">
+                      <button type="button" data-action="plus">+</button>
+                    </div>
+                  </div>
+                </td>
+                <td class="text-center align-middle">
+                  <span class="fw-bold line-total" style="color:var(--brown);">
+                    ₹{{ item.line_total|int }}
+                  </span>
+                </td>
+                <td class="text-center align-middle">
+                  <a href="{{ url_for('remove_combo_from_cart', combo_id=item.combo.id) }}"
+                     class="btn btn-sm btn-outline-danger"
+                     onclick="return confirm('Remove this combo?')"
+                     title="Remove">
+                    <i class="bi bi-trash3"></i>
+                  </a>
+                </td>
+              </tr>
+              {% else %}
               <tr data-price="{{ item.book.price }}">
                 <td>
                   <div class="d-flex align-items-center gap-3">
@@ -83,6 +130,7 @@
                   </a>
                 </td>
               </tr>
+              {% endif %}
               {% endfor %}
             </tbody>
           </table>

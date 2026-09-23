@@ -336,9 +336,11 @@
                         </tr>
                     </thead>
                     <tbody>
-                        {% for item in order.items %}
-                        <tr>
-                            <td>{{ item.book_title }}</td>
+                        {% for item in order.display_items %}
+                        <tr {% if item.combo_id %}class="table-warning"{% endif %}>
+                            <td>
+                                {% if item.combo_id %}🎁 <strong>{{ item.book_title }}</strong>{% else %}{{ item.book_title }}{% endif %}
+                            </td>
                             <td>₹{{ "%.0f"|format(item.price) }}</td>
                             <td>{{ item.quantity }}</td>
                             <td class="fw-bold">₹{{ "%.0f"|format(item.subtotal) }}</td>
@@ -350,6 +352,15 @@
                                 {% else %}—{% endif %}
                             </td>
                         </tr>
+                        {% if item.combo_id and item.combo %}
+                        <tr class="table-light">
+                            <td colspan="5" class="ps-4" style="font-size:0.85rem; color:#666;">
+                                {% for ci in item.combo.combo_items %}
+                                {% if ci.book %}↳ {{ ci.book.title }} × {{ ci.quantity * item.quantity }}{% if not loop.last %}, {% endif %}{% endif %}
+                                {% endfor %}
+                            </td>
+                        </tr>
+                        {% endif %}
                         {% endfor %}
                     </tbody>
                     <tfoot class="table-light">

@@ -25,7 +25,7 @@
             </span>
             {% endif %}
         </a>
-        <a href="{{ url_for('export_orders_csv', status=status, pay_status=pay_status, pay_method=pay_method, customer=customer, date_from=date_from, date_to=date_to, book_type=book_type, city=city, age_min=age_min, age_max=age_max, amount_min=amount_min, amount_max=amount_max, book_name=book_name, sort=sort) }}"
+        <a href="{{ url_for('export_orders_csv', status=status, pay_status=pay_status, pay_method=pay_method, customer=customer, date_from=date_from, date_to=date_to, book_type=book_type, product_type=product_type, city=city, age_min=age_min, age_max=age_max, amount_min=amount_min, amount_max=amount_max, book_name=book_name, sort=sort) }}"
            class="btn btn-success btn-sm fw-bold" title="Downloads exactly the filtered + sorted records shown below">
             <i class="fas fa-file-csv me-1"></i>Download Report
         </a>
@@ -50,6 +50,14 @@
                     <option value="">All Types</option>
                     <option value="ebook" {% if book_type=='ebook' %}selected{% endif %}>📱 E-book</option>
                     <option value="paper" {% if book_type=='paper' %}selected{% endif %}>📄 Paper Copy</option>
+                </select>
+            </div>
+            <div class="col-6 col-md-3 col-lg-2">
+                <label class="form-label small mb-1">Product Type</label>
+                <select name="product_type" class="form-select form-select-sm">
+                    <option value="">All Products</option>
+                    <option value="individual" {% if product_type=='individual' %}selected{% endif %}>📖 Individual Book</option>
+                    <option value="combo" {% if product_type=='combo' %}selected{% endif %}>🎁 Combo</option>
                 </select>
             </div>
             <div class="col-6 col-md-3 col-lg-2">
@@ -141,6 +149,7 @@
                     <th>Customer</th>
                     <th>Contact</th>
                     <th>Items</th>
+                    <th>Product Type</th>
                     <th>Total</th>
                     <th>Payment</th>
                     <th>Status</th>
@@ -164,7 +173,12 @@
                         <small>{{ order.customer_phone }}</small><br>
                         <small class="text-muted">{{ order.customer_email or '' }}</small>
                     </td>
-                    <td>{{ order.items|length }} item{{ 's' if order.items|length != 1 else '' }}</td>
+                    <td>{{ order.display_items|length }} item{{ 's' if order.display_items|length != 1 else '' }}</td>
+                    <td>
+                        {% if order.product_type == 'Combo' %}<span class="badge bg-warning text-dark">🎁 Combo</span>
+                        {% elif order.product_type == 'Mixed' %}<span class="badge bg-info">🎁📖 Mixed</span>
+                        {% else %}<span class="badge bg-light text-dark border">📖 Book</span>{% endif %}
+                    </td>
                     <td class="fw-bold text-success">₹{{ "%.0f"|format(order.total_amount) }}</td>
                     <td>
                         <span class="badge bg-secondary">{{ order.payment_method|upper }}</span>
@@ -210,7 +224,7 @@
                     </td>
                 </tr>
                 {% else %}
-                <tr><td colspan="9" class="text-center py-4 text-muted">No orders found.</td></tr>
+                <tr><td colspan="10" class="text-center py-4 text-muted">No orders found.</td></tr>
                 {% endfor %}
             </tbody>
         </table>
@@ -225,7 +239,7 @@
             <a class="page-link {% if p == orders.page %}bg-warning text-dark border-warning{% endif %}"
                href="{{ url_for('admin_orders', page=p, status=status, pay_status=pay_status,
                        pay_method=pay_method, customer=customer, date_from=date_from, date_to=date_to,
-                       book_type=book_type, city=city, age_min=age_min, age_max=age_max,
+                       book_type=book_type, product_type=product_type, city=city, age_min=age_min, age_max=age_max,
                        amount_min=amount_min, amount_max=amount_max, book_name=book_name, sort=sort) }}">{{ p }}</a>
         </li>
         {% endfor %}

@@ -295,6 +295,23 @@ class Order(db.Model):
     customer_id        = db.Column(db.Integer, db.ForeignKey("customers.id"), nullable=True)
     items              = db.relationship("OrderItem", backref="order", lazy=True)
 
+    @property
+    def display_items(self):
+        """Order lines meant to actually be shown to a human — real books
+        plus one row per combo purchased. Excludes the zero-priced combo
+        "component" rows that exist only for inventory deduction; use
+        item.combo.combo_items to show a combo row's book breakdown."""
+        return [i for i in self.items if not i.is_combo_component]
+
+    @property
+    def product_type(self):
+        """Individual Book / Combo / Mixed — for the admin Order Report."""
+        has_combo = any(i.combo_id for i in self.display_items)
+        has_book  = any(not i.combo_id for i in self.display_items)
+        if has_combo and has_book:
+            return "Mixed"
+        return "Combo" if has_combo else "Individual Book"
+
     def __repr__(self):
         return f"<Order {self.order_number}>"
 
@@ -308,6 +325,15 @@ class OrderItem(db.Model):
     quantity   = db.Column(db.Integer, nullable=False)
     price      = db.Column(db.Float, nullable=False)
     ebook_downloaded_at = db.Column(db.DateTime, nullable=True)
+    # Combo support: a "header" row (combo_id set, is_combo_component False,
+    # book_id None) represents the combo itself for display/pricing — its
+    # price is the combo's selling price. Separate "component" rows (same
+    # combo_id, is_combo_component True, real book_id, price 0) exist purely
+    # so normal per-book inventory deduction (deduct_order_stock) works
+    # without special-casing combos.
+    combo_id           = db.Column(db.Integer, db.ForeignKey("combos.id"), nullable=True)
+    is_combo_component = db.Column(db.Boolean, default=False, nullable=False)
+    combo              = db.relationship("Combo", foreign_keys=[combo_id])
 
     @property
     def subtotal(self):
@@ -334,6 +360,53 @@ def restore_order_stock(order):
         if book and not book.is_ebook:
             book.stock = book.stock + item.quantity
     order.stock_deducted = False
+
+
+class Combo(db.Model):
+    """An admin-defined bundle of books sold at one combined price.
+    Created/edited/priced/activated entirely from the admin panel —
+    no code change needed to add or change a combo."""
+    __tablename__ = "combos"
+    id             = db.Column(db.Integer, primary_key=True)
+    name           = db.Column(db.String(200), nullable=False)
+    language       = db.Column(db.String(50), default="English")   # English/Hindi/Gujarati — display/filter only
+    description    = db.Column(db.Text, nullable=True)
+    image          = db.Column(db.String(200), nullable=True)      # static/images/combos/<image>
+    selling_price  = db.Column(db.Float, nullable=False, default=0)
+    active         = db.Column(db.Boolean, default=True, nullable=False)
+    created_at     = db.Column(db.DateTime, default=datetime.utcnow)
+
+    combo_items = db.relationship("ComboItem", backref="combo", lazy=True,
+                                   cascade="all, delete-orphan")
+
+    @property
+    def individual_total(self):
+        """Sum of each contained book's normal price × quantity — what the
+        customer would pay buying the books separately."""
+        return sum((ci.book.price or 0) * ci.quantity for ci in self.combo_items if ci.book)
+
+    @property
+    def savings(self):
+        return max(0, self.individual_total - self.selling_price)
+
+    @property
+    def in_stock(self):
+        """A combo can only be sold while every physical book in it has stock."""
+        return all(ci.book and (ci.book.is_ebook or ci.book.stock >= ci.quantity)
+                   for ci in self.combo_items)
+
+    def __repr__(self):
+        return f"<Combo {self.name}>"
+
+
+class ComboItem(db.Model):
+    __tablename__ = "combo_items"
+    id       = db.Column(db.Integer, primary_key=True)
+    combo_id = db.Column(db.Integer, db.ForeignKey("combos.id"), nullable=False)
+    book_id  = db.Column(db.Integer, db.ForeignKey("books.id"), nullable=False)
+    quantity = db.Column(db.Integer, nullable=False, default=1)
+
+    book = db.relationship("Book")
 
 
 class Coupon(db.Model):
@@ -726,6 +799,43 @@ def save_cart(cart):
     session.modified = True
 
 
+# ── Combo cart helpers — deliberately a SEPARATE session key from the
+# regular book cart (not merged into the same dict). The existing cart
+# logic throughout the app assumes every cart key is a plain book id;
+# keeping combos in their own session key means none of that existing,
+# already-working book-cart code has to change or risk breaking. ──
+
+def get_combo_cart():
+    return session.get("combo_cart", {})
+
+
+def save_combo_cart(combo_cart):
+    session["combo_cart"] = combo_cart
+    session.modified = True
+
+
+def combo_weight_kg(combo):
+    """Total shipping weight of one unit of this combo (sum of its books)."""
+    default_w = app.config["DELHIVERY_DEFAULT_WEIGHT"]
+    return sum((ci.book.weight_kg or default_w) * ci.quantity
+               for ci in combo.combo_items if ci.book)
+
+
+def item_weight_kg(item):
+    """Shipping weight for one cart_totals() line item (book or combo)."""
+    if item["is_combo"]:
+        return combo_weight_kg(item["combo"])
+    return item["book"].weight_kg or app.config["DELHIVERY_DEFAULT_WEIGHT"]
+
+
+def item_is_ebook(item):
+    """True only if every book behind this line item is an ebook (a combo
+    counts as physical/shippable unless every book in it is an ebook)."""
+    if item["is_combo"]:
+        return all(ci.book.is_ebook for ci in item["combo"].combo_items if ci.book)
+    return item["book"].is_ebook
+
+
 # ── Wishlist helpers (stored in Flask session, same pattern as cart) ──
 
 def get_wishlist():
@@ -742,12 +852,14 @@ def wishlist_item_count():
 
 
 def cart_item_count():
-    return sum(item["qty"] for item in get_cart().values())
+    return (sum(item["qty"] for item in get_cart().values())
+            + sum(item["qty"] for item in get_combo_cart().values()))
 
 
 def cart_totals():
-    cart = get_cart()
-    if not cart:
+    cart       = get_cart()
+    combo_cart = get_combo_cart()
+    if not cart and not combo_cart:
         return {"subtotal": 0, "shipping": 0, "discount": 0, "total": 0, "items": []}
 
     book_ids = [int(k) for k in cart.keys()]
@@ -761,12 +873,31 @@ def cart_totals():
         line_total = book.price * item["qty"]
         subtotal += line_total
         items.append({
+            "is_combo":   False,
             "book":       book,
+            "combo":      None,
             "qty":        item["qty"],
             "line_total": line_total,
         })
 
-    all_ebooks = all(item["book"].is_ebook for item in items)
+    if combo_cart:
+        combo_ids = [int(k) for k in combo_cart.keys()]
+        combos = {c.id: c for c in Combo.query.filter(Combo.id.in_(combo_ids)).all()}
+        for combo_id_str, item in combo_cart.items():
+            combo = combos.get(int(combo_id_str))
+            if not combo or not combo.active:
+                continue
+            line_total = combo.selling_price * item["qty"]
+            subtotal += line_total
+            items.append({
+                "is_combo":   True,
+                "book":       None,
+                "combo":      combo,
+                "qty":        item["qty"],
+                "line_total": line_total,
+            })
+
+    all_ebooks = bool(items) and all(item_is_ebook(item) for item in items)
     shipping = 0 if all_ebooks else app.config["SHIPPING_CHARGE"]
 
     # Re-validate any applied coupon against the current subtotal
@@ -934,8 +1065,7 @@ def api_shipping_rate(pincode):
         return jsonify({"serviceable": False, "error": "Prepaid delivery not available at this pincode"})
     totals = cart_totals()
     weight_grams = max(
-        int(sum(item["qty"] * (item["book"].weight_kg or app.config["DELHIVERY_DEFAULT_WEIGHT"]) * 1000
-                for item in totals["items"])),
+        int(sum(item["qty"] * item_weight_kg(item) * 1000 for item in totals["items"])),
         500
     )
     rate, zone, err = get_shipping_rate(pincode, weight_grams)
@@ -1226,6 +1356,31 @@ def submit_review(book_id):
 
 
 # ─────────────────────────────────────────────
+# COMBO ROUTES (customer-facing)
+# ─────────────────────────────────────────────
+
+@app.route("/combos")
+def combo_list():
+    language = request.args.get("language", "")
+    cq = Combo.query.filter_by(active=True)
+    if language:
+        cq = cq.filter_by(language=language)
+    combos = cq.order_by(Combo.name).all()
+    languages = [r[0] for r in db.session.query(Combo.language)
+                 .filter(Combo.active == True).distinct().order_by(Combo.language).all()]
+    return render_template("combos.html", combos=combos, language=language, languages=languages)
+
+
+@app.route("/combo/<int:combo_id>")
+def combo_detail(combo_id):
+    combo = Combo.query.get_or_404(combo_id)
+    if not combo.active:
+        abort(404)
+    related = Combo.query.filter(Combo.active == True, Combo.id != combo_id).limit(4).all()
+    return render_template("combo_detail.html", combo=combo, related=related)
+
+
+# ─────────────────────────────────────────────
 # CART ROUTES
 # ─────────────────────────────────────────────
 
@@ -1298,10 +1453,53 @@ def update_cart():
             else:
                 cart[key]["qty"] = new_qty
     save_cart(cart)
+
+    combo_cart = get_combo_cart()
+    for key in list(combo_cart.keys()):
+        new_qty = request.form.get(f"combo_qty_{key}", type=int)
+        if new_qty is not None:
+            if new_qty <= 0:
+                del combo_cart[key]
+            else:
+                combo_cart[key]["qty"] = new_qty
+    save_combo_cart(combo_cart)
+
     # Reset coupon if cart changed
     session.pop("coupon_code", None)
     session.pop("coupon_discount", None)
     flash("Cart updated.", "success")
+    return redirect(url_for("cart"))
+
+
+@app.route("/combo/<int:combo_id>/add-to-cart", methods=["POST"])
+def add_combo_to_cart(combo_id):
+    combo = Combo.query.get_or_404(combo_id)
+    if not combo.active:
+        abort(404)
+    qty = max(1, request.form.get("qty", 1, type=int))
+    combo_cart = get_combo_cart()
+    key = str(combo_id)
+    if key in combo_cart:
+        combo_cart[key]["qty"] += qty
+    else:
+        combo_cart[key] = {"qty": qty}
+    save_combo_cart(combo_cart)
+    flash(f'"{combo.name}" added to cart!', "success")
+    if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+        return jsonify({"success": True, "cart_count": cart_item_count()})
+    if request.form.get("buy_now"):
+        return redirect(url_for("checkout"))
+    return redirect(request.referrer or url_for("cart"))
+
+
+@app.route("/combo/remove/<int:combo_id>")
+def remove_combo_from_cart(combo_id):
+    combo_cart = get_combo_cart()
+    combo_cart.pop(str(combo_id), None)
+    save_combo_cart(combo_cart)
+    session.pop("coupon_code", None)
+    session.pop("coupon_discount", None)
+    flash("Combo removed from cart.", "info")
     return redirect(url_for("cart"))
 
 
@@ -1319,6 +1517,7 @@ def remove_from_cart(book_id):
 @app.route("/cart/clear")
 def clear_cart():
     session.pop("cart", None)
+    session.pop("combo_cart", None)
     session.pop("coupon_code", None)
     session.pop("coupon_discount", None)
     return redirect(url_for("cart"))
@@ -1396,19 +1595,19 @@ def checkout():
         if not all([name, phone, address, city, pincode, age_raw, profession]):
             flash("Please fill all required fields.", "danger")
             return render_template("checkout.html", **totals,
-                                   all_ebooks=all(item["book"].is_ebook for item in totals["items"]))
+                                   all_ebooks=all(item_is_ebook(item) for item in totals["items"]))
 
         normalized_phone = valid_indian_phone(phone)
         if not normalized_phone:
             flash("Please enter a valid 10-digit mobile number.", "danger")
             return render_template("checkout.html", **totals,
-                                   all_ebooks=all(item["book"].is_ebook for item in totals["items"]))
+                                   all_ebooks=all(item_is_ebook(item) for item in totals["items"]))
         phone = normalized_phone
 
         if not valid_email(email):
             flash("Please enter a valid email address.", "danger")
             return render_template("checkout.html", **totals,
-                                   all_ebooks=all(item["book"].is_ebook for item in totals["items"]))
+                                   all_ebooks=all(item_is_ebook(item) for item in totals["items"]))
 
         try:
             age = int(age_raw)
@@ -1417,28 +1616,27 @@ def checkout():
         except ValueError:
             flash("Please enter a valid age.", "danger")
             return render_template("checkout.html", **totals,
-                                   all_ebooks=all(item["book"].is_ebook for item in totals["items"]))
+                                   all_ebooks=all(item_is_ebook(item) for item in totals["items"]))
 
         if payment == "cod":
             flash("Cash on Delivery is not available. Please choose an online payment method.", "danger")
             return render_template("checkout.html", **totals,
-                                   all_ebooks=all(item["book"].is_ebook for item in totals["items"]))
+                                   all_ebooks=all(item_is_ebook(item) for item in totals["items"]))
 
         if payment == "payu":
             flash("This payment option is temporarily unavailable. Please pay via UPI or Razorpay.", "danger")
             return render_template("checkout.html", **totals,
-                                   all_ebooks=all(item["book"].is_ebook for item in totals["items"]))
+                                   all_ebooks=all(item_is_ebook(item) for item in totals["items"]))
 
         # Ebook-only orders have no shipping
-        all_ebooks = all(item["book"].is_ebook for item in totals["items"])
+        all_ebooks = all(item_is_ebook(item) for item in totals["items"])
         if all_ebooks:
             shipping_charge = 0
         else:
             # Calculate Delhivery shipping rate for this pincode
             from delhivery import get_shipping_rate
             weight_grams = max(
-                int(sum(item["qty"] * (item["book"].weight_kg or app.config["DELHIVERY_DEFAULT_WEIGHT"]) * 1000
-                        for item in totals["items"])),
+                int(sum(item["qty"] * item_weight_kg(item) for item in totals["items"]) * 1000),
                 500
             )
             delhivery_rate, _, _ = get_shipping_rate(pincode, weight_grams)
@@ -1477,16 +1675,43 @@ def checkout():
         db.session.flush()  # get order.id
 
         for cart_item in totals["items"]:
-            oi = OrderItem(
-                order_id   = order.id,
-                book_id    = cart_item["book"].id,
-                book_title = cart_item["book"].title,
-                quantity   = cart_item["qty"],
-                price      = cart_item["book"].price,
-            )
+            if cart_item["is_combo"]:
+                combo = cart_item["combo"]
+                # Header row — what the customer actually bought and paid for.
+                db.session.add(OrderItem(
+                    order_id   = order.id,
+                    book_id    = None,
+                    book_title = combo.name,
+                    quantity   = cart_item["qty"],
+                    price      = combo.selling_price,
+                    combo_id   = combo.id,
+                    is_combo_component = False,
+                ))
+                # Component rows — zero-priced, exist only so the normal
+                # per-book stock deduction at ship time also covers combos.
+                for ci in combo.combo_items:
+                    if not ci.book:
+                        continue
+                    db.session.add(OrderItem(
+                        order_id   = order.id,
+                        book_id    = ci.book.id,
+                        book_title = ci.book.title,
+                        quantity   = ci.quantity * cart_item["qty"],
+                        price      = 0,
+                        combo_id   = combo.id,
+                        is_combo_component = True,
+                    ))
+            else:
+                oi = OrderItem(
+                    order_id   = order.id,
+                    book_id    = cart_item["book"].id,
+                    book_title = cart_item["book"].title,
+                    quantity   = cart_item["qty"],
+                    price      = cart_item["book"].price,
+                )
+                db.session.add(oi)
             # Stock is deducted at ship time (deduct_order_stock), not at order
             # creation — an unpaid/abandoned order must never reduce stock.
-            db.session.add(oi)
 
         # Update coupon usage
         if order.coupon_code:
@@ -1505,7 +1730,9 @@ def checkout():
                 cust.saved_pincode = pincode
 
         db.session.commit()
-        _books = ", ".join(ci["book"].title for ci in totals["items"])
+        _books = ", ".join(
+            (ci["combo"].name if ci["is_combo"] else ci["book"].title) for ci in totals["items"]
+        )
         notify_admin_whatsapp(
             f"🛒 New Order Placed!\n"
             f"Order: {order.order_number}\n"
@@ -1516,6 +1743,7 @@ def checkout():
 
         # Clear cart & coupon from session
         session.pop("cart", None)
+        session.pop("combo_cart", None)
         session.pop("coupon_code", None)
         session.pop("coupon_discount", None)
 
@@ -1570,13 +1798,17 @@ def checkout():
                 db.session.delete(order)
                 db.session.commit()
                 # Restore cart and stock
-                restored_cart = {}
+                restored_cart, restored_combo_cart = {}, {}
                 for item in totals["items"]:
-                    key = str(item["book"].id)
-                    restored_cart[key] = {"qty": item["qty"], "title": item["book"].title}
-                    item["book"].stock += item["qty"]
+                    if item["is_combo"]:
+                        restored_combo_cart[str(item["combo"].id)] = {"qty": item["qty"]}
+                    else:
+                        key = str(item["book"].id)
+                        restored_cart[key] = {"qty": item["qty"], "title": item["book"].title}
+                        item["book"].stock += item["qty"]
                 db.session.commit()
                 session["cart"] = restored_cart
+                session["combo_cart"] = restored_combo_cart
                 session.modified = True
                 flash(f"Payment gateway error: {e}. Please try again or choose Cash on Delivery.", "danger")
                 return redirect(url_for("checkout"))
@@ -1620,7 +1852,7 @@ def checkout():
     return render_template("checkout.html", **totals,
                            razorpay_key=app.config["RAZORPAY_KEY_ID"],
                            prefill=prefill,
-                           all_ebooks=all(item["book"].is_ebook for item in totals["items"]))
+                           all_ebooks=all(item_is_ebook(item) for item in totals["items"]))
 
 
 @app.route("/donate/<int:book_id>", methods=["GET", "POST"])
@@ -2783,6 +3015,112 @@ def admin_logout():
     return redirect(url_for("admin_login"))
 
 
+@app.route("/admin/combos")
+@admin_required
+def admin_combos():
+    combos = Combo.query.order_by(Combo.created_at.desc()).all()
+    return render_template("admin/combos.html", combos=combos, active_page="combos")
+
+
+def _save_combo_from_form(combo):
+    """Shared by add/edit: apply form fields (incl. book/qty rows and an
+    optional image upload) onto a Combo instance. Does not commit."""
+    combo.name          = request.form.get("name", "").strip()
+    combo.language      = request.form.get("language", "English")
+    combo.description   = request.form.get("description", "").strip()
+    try:
+        combo.selling_price = float(request.form.get("selling_price", 0) or 0)
+    except ValueError:
+        combo.selling_price = 0
+    combo.active = request.form.get("active") == "on"
+
+    image_file = request.files.get("image")
+    if image_file and image_file.filename:
+        ext = image_file.filename.rsplit(".", 1)[-1].lower()
+        if ext in ("jpg", "jpeg", "png", "webp"):
+            folder = os.path.join(BASE_DIR, "static", "images", "combos")
+            os.makedirs(folder, exist_ok=True)
+            filename = f"combo_{uuid.uuid4().hex}.{ext}"
+            image_file.save(os.path.join(folder, filename))
+            combo.image = filename
+
+    # Rebuild combo items from the submitted book_id[] / book_qty[] rows
+    combo.combo_items.clear()
+    book_ids = request.form.getlist("book_id[]")
+    book_qtys = request.form.getlist("book_qty[]")
+    for bid, qty in zip(book_ids, book_qtys):
+        if not bid:
+            continue
+        try:
+            bid_int, qty_int = int(bid), max(1, int(qty or 1))
+        except ValueError:
+            continue
+        combo.combo_items.append(ComboItem(book_id=bid_int, quantity=qty_int))
+
+
+@app.route("/admin/combos/add", methods=["GET", "POST"])
+@admin_required
+def admin_combo_add():
+    if request.method == "POST":
+        combo = Combo(selling_price=0)
+        _save_combo_from_form(combo)
+        if not combo.name or not combo.combo_items:
+            flash("A combo needs a name and at least one book.", "danger")
+            return render_template("admin/combo_form.html", combo=combo,
+                                   books=Book.query.filter_by(deleted=False, active=True).order_by(Book.title).all(),
+                                   active_page="combos")
+        db.session.add(combo)
+        db.session.commit()
+        flash(f'Combo "{combo.name}" created.', "success")
+        return redirect(url_for("admin_combos"))
+
+    return render_template("admin/combo_form.html", combo=None,
+                           books=Book.query.filter_by(deleted=False, active=True).order_by(Book.title).all(),
+                           active_page="combos")
+
+
+@app.route("/admin/combos/edit/<int:combo_id>", methods=["GET", "POST"])
+@admin_required
+def admin_combo_edit(combo_id):
+    combo = Combo.query.get_or_404(combo_id)
+    if request.method == "POST":
+        _save_combo_from_form(combo)
+        if not combo.name or not combo.combo_items:
+            flash("A combo needs a name and at least one book.", "danger")
+        else:
+            db.session.commit()
+            flash(f'Combo "{combo.name}" updated.', "success")
+            return redirect(url_for("admin_combos"))
+
+    return render_template("admin/combo_form.html", combo=combo,
+                           books=Book.query.filter_by(deleted=False, active=True).order_by(Book.title).all(),
+                           active_page="combos")
+
+
+@app.route("/admin/combos/toggle/<int:combo_id>", methods=["POST"])
+@admin_required
+def admin_combo_toggle(combo_id):
+    combo = Combo.query.get_or_404(combo_id)
+    combo.active = not combo.active
+    db.session.commit()
+    flash(f'Combo "{combo.name}" is now {"active" if combo.active else "inactive"}.', "success")
+    return redirect(url_for("admin_combos"))
+
+
+@app.route("/admin/combos/delete/<int:combo_id>", methods=["POST"])
+@admin_required
+def admin_combo_delete(combo_id):
+    combo = Combo.query.get_or_404(combo_id)
+    if OrderItem.query.filter_by(combo_id=combo.id).first():
+        flash("This combo has past orders and can't be deleted — deactivate it instead.", "warning")
+        return redirect(url_for("admin_combos"))
+    name = combo.name
+    db.session.delete(combo)
+    db.session.commit()
+    flash(f'Combo "{name}" deleted.', "info")
+    return redirect(url_for("admin_combos"))
+
+
 @app.route("/admin/reviews")
 @admin_required
 def admin_reviews():
@@ -3936,6 +4274,7 @@ ORDER_REPORT_FILTER_KEYS = [
     "status", "pay_status", "pay_method", "customer",
     "date_from", "date_to", "book_type", "city",
     "age_min", "age_max", "amount_min", "amount_max", "book_name",
+    "product_type",
 ]
 
 
@@ -3957,6 +4296,7 @@ def build_order_report_query(args):
     amount_min  = args.get("amount_min", "")
     amount_max  = args.get("amount_max", "")
     book_name_f = args.get("book_name", "")
+    product_type = args.get("product_type", "")
 
     if status:
         oq = oq.filter_by(order_status=status)
@@ -4006,6 +4346,10 @@ def build_order_report_query(args):
             pass
     if book_name_f:
         oq = oq.filter(Order.items.any(OrderItem.book_title.ilike(f"%{book_name_f}%")))
+    if product_type == "combo":
+        oq = oq.filter(Order.items.any(OrderItem.combo_id.isnot(None)))
+    elif product_type == "individual":
+        oq = oq.filter(~Order.items.any(OrderItem.combo_id.isnot(None)))
 
     return oq
 
@@ -4047,16 +4391,27 @@ def export_orders_csv():
     writer.writerow([
         "Order #", "Date", "Customer Name", "Age", "Phone", "Email",
         "Address", "City", "State", "Pincode",
-        "Books Ordered",
+        "Product Type", "Books Ordered", "Combo Details",
         "Subtotal (INR)", "Shipping (INR)", "Discount (INR)", "Total (INR)",
         "Payment Method", "Payment Status",
         "Order Status", "Coupon Code", "Notes"
     ])
 
     for order in all_orders:
+        display_items = order.display_items
         books_list = "; ".join(
-            f"{item.book_title} x{item.quantity}" for item in order.items
+            f"{item.book_title} x{item.quantity}" for item in display_items
         )
+        combo_lines = []
+        for item in display_items:
+            if item.combo_id and item.combo:
+                contents = ", ".join(
+                    f"{ci.book.title} x{ci.quantity * item.quantity}"
+                    for ci in item.combo.combo_items if ci.book
+                )
+                combo_lines.append(f"{item.book_title}: {contents}")
+        combo_details = " | ".join(combo_lines)
+
         writer.writerow([
             order.order_number,
             order.created_at.strftime("%d-%m-%Y %H:%M"),
@@ -4068,7 +4423,9 @@ def export_orders_csv():
             order.city or "",
             order.state or "",
             order.pincode or "",
+            order.product_type,
             books_list,
+            combo_details,
             int(order.subtotal),
             int(order.shipping_charge),
             int(order.discount_amount),
@@ -4665,6 +5022,8 @@ def init_db():
             ("whatsapp_inquiries", "age",                        "INTEGER"),
             ("whatsapp_inquiries", "profession",                 "VARCHAR(100)"),
             ("orders",             "stock_deducted",             "BOOLEAN DEFAULT FALSE"),
+            ("order_items",        "combo_id",                   "INTEGER"),
+            ("order_items",        "is_combo_component",         "BOOLEAN DEFAULT FALSE"),
         ]
         for table, column, col_type in migrations:
             # Use a fresh connection per column so a failed ALTER doesn't
