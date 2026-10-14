@@ -1394,6 +1394,58 @@ def combo_detail(combo_id):
     return render_template("combo_detail.html", combo=combo, related=related)
 
 
+@app.route("/static/images/combos/<path:filename>")
+def serve_combo_image(filename):
+    folder = os.path.join(BASE_DIR, "static", "images", "combos")
+    filepath = os.path.join(folder, filename)
+    if os.path.isfile(filepath):
+        return send_from_directory(folder, filename)
+
+    # Check alternate extension (.png <-> .jpg <-> .jpeg <-> .webp)
+    base, _ = os.path.splitext(filename)
+    for alt_ext in (".jpg", ".jpeg", ".png", ".webp"):
+        alt_name = base + alt_ext
+        if os.path.isfile(os.path.join(folder, alt_name)):
+            return send_from_directory(folder, alt_name)
+
+    # Check persistent volume (inside UPLOAD_FOLDER/combos)
+    persistent_folder = os.path.join(app.config.get("UPLOAD_FOLDER", ""), "combos")
+    if os.path.isfile(os.path.join(persistent_folder, filename)):
+        return send_from_directory(persistent_folder, filename)
+
+    # Fallback to default book image so it never shows a broken icon
+    return send_from_directory(os.path.join(BASE_DIR, "static", "images", "books"), "default_book.jpg")
+
+
+@app.route("/admin/receive-image", methods=["POST"])
+def receive_image():
+    token = request.form.get("token", "")
+    if token != "iskcon-img-sync-2024":
+        abort(403)
+    f = request.files.get("file")
+    filename = request.form.get("filename", "")
+    target = request.form.get("target", "books")  # "books" or "combos"
+    if not f or not filename:
+        return "bad request", 400
+    if target == "combos":
+        save_folder = os.path.join(BASE_DIR, "static", "images", "combos")
+        persistent_folder = os.path.join(app.config.get("UPLOAD_FOLDER", ""), "combos")
+    else:
+        save_folder = app.config.get("UPLOAD_FOLDER", "")
+        persistent_folder = None
+    os.makedirs(save_folder, exist_ok=True)
+    save_path = os.path.join(save_folder, filename)
+    f.save(save_path)
+    if persistent_folder:
+        os.makedirs(persistent_folder, exist_ok=True)
+        try:
+            import shutil
+            shutil.copy2(save_path, os.path.join(persistent_folder, filename))
+        except Exception:
+            pass
+    return f"saved:{filename}", 200
+
+
 # ─────────────────────────────────────────────
 # CART ROUTES
 # ─────────────────────────────────────────────
@@ -3080,8 +3132,17 @@ def _save_combo_from_form(combo):
             folder = os.path.join(BASE_DIR, "static", "images", "combos")
             os.makedirs(folder, exist_ok=True)
             filename = f"combo_{uuid.uuid4().hex}.{ext}"
-            image_file.save(os.path.join(folder, filename))
+            saved_path = os.path.join(folder, filename)
+            image_file.save(saved_path)
             combo.image = filename
+            # Mirror to persistent volume so uploads survive Railway restarts
+            persistent_folder = os.path.join(app.config.get("UPLOAD_FOLDER", ""), "combos")
+            os.makedirs(persistent_folder, exist_ok=True)
+            try:
+                import shutil
+                shutil.copy2(saved_path, os.path.join(persistent_folder, filename))
+            except Exception:
+                pass
 
     # Rebuild combo items from the submitted book_id[] / book_qty[] rows
     combo.combo_items.clear()
