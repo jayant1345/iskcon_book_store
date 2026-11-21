@@ -18,12 +18,6 @@
     {% endif %}
 
     <div class="book-card-icons" {% if book.discount_percent %}style="top:46px;"{% endif %}>
-      <button type="button"
-              class="icon-btn wishlist-toggle-btn {{ 'active' if book.id|string in wishlist_ids else '' }}"
-              data-book-id="{{ book.id }}"
-              aria-label="Save to wishlist" title="Save for later">
-        <i class="bi {{ 'bi-heart-fill' if book.id|string in wishlist_ids else 'bi-heart' }}"></i>
-      </button>
       <button type="button" class="icon-btn share-card-btn"
               data-title="{{ book.title|e }}"
               data-text="Check out {{ book.title }} by {{ book.author }} on ISKCON Books"

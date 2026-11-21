@@ -488,12 +488,30 @@
               {% endif %}
             </div>
             <div class="book-card-actions">
+              {% if book.in_stock %}
               <form class="ajax-add-to-cart" action="{{ url_for('add_to_cart', book_id=book.id) }}" method="post">
                 <input type="hidden" name="qty" value="1">
                 <button type="submit" class="btn btn-saffron w-100">
-                  <i class="bi bi-cart-plus me-1"></i>Add to Cart
+                  <i class="bi bi-cart-plus me-1"></i>Add
                 </button>
               </form>
+              <form action="{{ url_for('add_to_cart', book_id=book.id) }}" method="post">
+                <input type="hidden" name="qty" value="1">
+                <input type="hidden" name="buy_now" value="1">
+                <button type="submit" class="btn btn-gold w-100">
+                  <i class="bi bi-lightning-fill me-1"></i>Buy Now
+                </button>
+              </form>
+              {% else %}
+              <button class="btn w-100" disabled style="background:var(--cream-dark); color:var(--text-muted);">Out of Stock</button>
+              {% endif %}
+              <button type="button" class="btn btn-outline-saffron share-card-btn"
+                      data-title="{{ book.title|e }}"
+                      data-text="Check out {{ book.title }} by {{ book.author }} on ISKCON Books"
+                      data-url="https://iskconbooks.in/book/{{ book.id }}"
+                      aria-label="Share this book" title="Share">
+                <i class="bi bi-share-fill"></i><span class="ms-1">Share</span>
+              </button>
             </div>
           </div>
         </div>
@@ -634,6 +652,22 @@
             </a>
             <div class="book-price-wrap">
               <span class="book-price">₹{{ book.price|int }}</span>
+            </div>
+            <div class="book-card-actions">
+              {% if book.in_stock %}
+              <form action="{{ url_for('add_to_cart', book_id=book.id) }}" method="post">
+                <input type="hidden" name="qty" value="1">
+                <input type="hidden" name="buy_now" value="1">
+                <button type="submit" class="btn btn-gold w-100"><i class="bi bi-lightning-fill me-1"></i>Buy Now</button>
+              </form>
+              {% endif %}
+              <button type="button" class="btn btn-outline-saffron share-card-btn" style="flex:0 0 auto;"
+                      data-title="{{ book.title|e }}"
+                      data-text="Check out {{ book.title }} by {{ book.author }} on ISKCON Books"
+                      data-url="https://iskconbooks.in/book/{{ book.id }}"
+                      aria-label="Share this book" title="Share">
+                <i class="bi bi-share-fill"></i>
+              </button>
             </div>
           </div>
         </div>

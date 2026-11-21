@@ -96,12 +96,6 @@
           <a class="nav-link {% if request.endpoint in ['combo_list', 'combo_detail'] %}active{% endif %}"
              href="{{ url_for('combo_list') }}">🎁 Combos</a>
         </li>
-        {% if settings_get('yagna_enabled', '0') == '1' %}
-        <li class="nav-item">
-          <a class="nav-link {% if request.endpoint == 'gita_dan_yagna' %}active{% endif %}"
-             href="{{ url_for('gita_dan_yagna') }}">🙏 Gita Dan Yagna</a>
-        </li>
-        {% endif %}
         <li class="nav-item">
           <a class="nav-link {% if request.endpoint == 'magazine' %}active{% endif %}"
              href="{{ url_for('magazine') }}">📰 Magazine</a>
@@ -125,7 +119,7 @@
         <button class="search-btn-nav" type="submit"><i class="bi bi-search"></i></button>
       </form>
 
-      <!-- User Actions (Account, Wishlist, Cart) -->
+      <!-- User Actions (Account, Gita Dan, Cart) -->
       <div class="d-flex align-items-center gap-3 pt-2 pt-lg-0 mt-1 mt-lg-0 border-top border-lg-0 flex-wrap">
         {% if current_customer %}
         <div class="nav-item dropdown">
@@ -157,12 +151,13 @@
         </a>
         {% endif %}
 
-        <!-- Wishlist -->
-        <a class="nav-link position-relative d-flex align-items-center gap-1" href="{{ url_for('wishlist') }}" style="color:var(--text) !important; font-size:.92rem;">
-          <i class="bi bi-heart" style="font-size:1.2rem; color:var(--saffron);"></i>
-          <span class="d-inline d-lg-none">Wishlist</span>
-          <span class="wishlist-badge">{{ wishlist_count }}</span>
+        <!-- Gita Dan Yagna (only while the campaign is switched on in admin) -->
+        {% if settings_get('yagna_enabled', '0') == '1' %}
+        <a class="btn btn-saffron btn-sm fw-bold d-inline-flex align-items-center gap-1 gita-dan-btn" href="{{ url_for('gita_dan_yagna') }}"
+           style="white-space:nowrap; padding:5px 12px; border-radius:20px;">
+          🙏 <span>Gita Dan</span>
         </a>
+        {% endif %}
 
         <!-- Cart -->
         <a class="nav-link position-relative d-flex align-items-center gap-1" href="{{ url_for('cart') }}" style="color:var(--text) !important; font-size:.92rem;">
@@ -443,11 +438,12 @@ document.addEventListener('DOMContentLoaded', function () {
     <i class="bi bi-book{% if request.endpoint == 'books' %}-fill{% endif %}"></i>
     <span>Books</span>
   </a>
-  <a href="{{ url_for('wishlist') }}" class="mobile-dock-item {% if request.endpoint == 'wishlist' %}active{% endif %}">
-    <i class="bi bi-heart{% if request.endpoint == 'wishlist' %}-fill{% endif %}"></i>
-    <span class="mobile-dock-badge wishlist-badge">{{ wishlist_count }}</span>
-    <span>Wishlist</span>
+  {% if settings_get('yagna_enabled', '0') == '1' %}
+  <a href="{{ url_for('gita_dan_yagna') }}" class="mobile-dock-item {% if request.endpoint == 'gita_dan_yagna' %}active{% endif %}" style="color:var(--saffron);">
+    <i class="bi bi-gift-fill"></i>
+    <span>Gita Dan</span>
   </a>
+  {% endif %}
   <a href="{{ url_for('cart') }}" class="mobile-dock-item {% if request.endpoint == 'cart' %}active{% endif %}">
     <i class="bi bi-cart3"></i>
     <span class="mobile-dock-badge cart-badge">{{ cart_count }}</span>
