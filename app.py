@@ -388,6 +388,7 @@ class Combo(db.Model):
     image          = db.Column(db.String(200), nullable=True)      # static/images/combos/<image>
     selling_price  = db.Column(db.Float, nullable=False, default=0)
     active         = db.Column(db.Boolean, default=True, nullable=False)
+    featured       = db.Column(db.Boolean, default=False)          # shown first on the home page
     created_at     = db.Column(db.DateTime, default=datetime.utcnow)
 
     combo_items = db.relationship("ComboItem", backref="combo", lazy=True,
@@ -1217,6 +1218,10 @@ def index():
                        .order_by(Book.created_at.desc()).limit(8).all())
     new_arrivals    = (Book.query.filter_by(active=True, deleted=False)
                        .order_by(Book.created_at.desc()).limit(6).all())
+    # Featured combos first, then newest; up to 8 on the home page
+    home_combos     = (Combo.query.filter_by(active=True)
+                       .order_by(db.case((Combo.featured == True, 0), else_=1), Combo.created_at.desc())
+                       .limit(8).all())
     categories      = Category.query.order_by(Category.sort_order).all()
     # Look up carousel books from admin settings, fall back to keyword search
     def get_carousel_book(setting_key, keyword):
@@ -1237,6 +1242,7 @@ def index():
     return render_template("index.html",
                            featured_books=featured_books,
                            new_arrivals=new_arrivals,
+                           home_combos=home_combos,
                            categories=categories,
                            carousel_books=carousel_books)
 
@@ -3126,6 +3132,7 @@ def _save_combo_from_form(combo):
     except ValueError:
         combo.selling_price = 0
     combo.active = request.form.get("active") == "on"
+    combo.featured = request.form.get("featured") == "on"
 
     image_file = request.files.get("image")
     if image_file and image_file.filename:
@@ -3206,6 +3213,17 @@ def admin_combo_toggle(combo_id):
     combo.active = not combo.active
     db.session.commit()
     flash(f'Combo "{combo.name}" is now {"active" if combo.active else "inactive"}.', "success")
+    return redirect(url_for("admin_combos"))
+
+
+@app.route("/admin/combos/toggle-featured/<int:combo_id>", methods=["POST"])
+@admin_required
+def admin_combo_toggle_featured(combo_id):
+    combo = Combo.query.get_or_404(combo_id)
+    combo.featured = not combo.featured
+    db.session.commit()
+    flash(f'Combo "{combo.name}" ' + ("added to" if combo.featured else "removed from")
+          + " Featured Combos on the home page.", "success")
     return redirect(url_for("admin_combos"))
 
 
@@ -5176,6 +5194,7 @@ def init_db():
             ("orders",             "stock_deducted",             "BOOLEAN DEFAULT FALSE"),
             ("order_items",        "combo_id",                   "INTEGER"),
             ("order_items",        "is_combo_component",         "BOOLEAN DEFAULT FALSE"),
+            ("combos",             "featured",                   "BOOLEAN DEFAULT FALSE"),
         ]
         for table, column, col_type in migrations:
             # Use a fresh connection per column so a failed ALTER doesn't

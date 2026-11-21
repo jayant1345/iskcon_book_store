@@ -66,6 +66,12 @@
         <label class="form-check-label" for="active">Active (visible to customers)</label>
       </div>
 
+      <div class="form-check mb-4">
+        <input type="checkbox" name="featured" id="featured" class="form-check-input"
+               {% if combo and combo.featured %}checked{% endif %}>
+        <label class="form-check-label" for="featured">⭐ Featured Combo (shown first on the home page)</label>
+      </div>
+
       <hr>
       <h6 class="fw-bold mb-3">Books in this Combo</h6>
       <div id="combo-book-rows">

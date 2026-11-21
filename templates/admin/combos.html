@@ -54,6 +54,7 @@
           <td>
             {% if combo.active %}<span class="badge bg-success">Active</span>
             {% else %}<span class="badge bg-secondary">Inactive</span>{% endif %}
+            {% if combo.featured %}<span class="badge bg-warning text-dark d-block mt-1">⭐ Featured</span>{% endif %}
             {% if not combo.in_stock %}<span class="badge bg-danger d-block mt-1">Out of Stock</span>{% endif %}
           </td>
           <td>
@@ -61,6 +62,12 @@
               <a href="{{ url_for('admin_combo_edit', combo_id=combo.id) }}" class="btn btn-sm btn-primary" title="Edit">
                 <i class="fas fa-edit"></i>
               </a>
+              <form method="POST" action="{{ url_for('admin_combo_toggle_featured', combo_id=combo.id) }}">
+                <button type="submit" class="btn btn-sm {{ 'btn-warning' if combo.featured else 'btn-outline-secondary' }}"
+                        title="{{ 'Remove from Featured' if combo.featured else 'Mark as Featured' }}">
+                  <i class="{{ 'fas' if combo.featured else 'far' }} fa-star"></i>
+                </button>
+              </form>
               <form method="POST" action="{{ url_for('admin_combo_toggle', combo_id=combo.id) }}">
                 <button type="submit" class="btn btn-sm {{ 'btn-outline-secondary' if combo.active else 'btn-outline-success' }}"
                         title="{{ 'Deactivate' if combo.active else 'Activate' }}">
