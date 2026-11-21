@@ -105,14 +105,14 @@
       <!-- Search for Desktop -->
       <form class="search-form-nav d-none d-lg-flex me-3" action="{{ url_for('books') }}" method="get">
         <input class="form-control search-input-nav" type="search" name="q"
-               placeholder="Search books…" value="{{ request.args.get('q', '') }}">
+               placeholder="Search books…" value="{{ request.args.get('q', '') }}" autocomplete="off">
         <button class="search-btn-nav" type="submit"><i class="bi bi-search"></i></button>
       </form>
 
       <!-- Search for Mobile Dropdown -->
       <form class="search-form-nav d-flex d-lg-none my-2 w-100" action="{{ url_for('books') }}" method="get">
         <input class="form-control search-input-nav w-100" type="search" name="q"
-               placeholder="Search books…" value="{{ request.args.get('q', '') }}">
+               placeholder="Search books…" value="{{ request.args.get('q', '') }}" autocomplete="off">
         <button class="search-btn-nav" type="submit"><i class="bi bi-search"></i></button>
       </form>
 
@@ -346,6 +346,7 @@
 
 <script>
 function initSearchAutocomplete(input) {
+  input.setAttribute('autocomplete', 'off');   // hide the browser's own history dropdown; use the store's suggestions only
   var wrap = document.createElement('div');
   wrap.className = 'search-autocomplete-wrap';
   input.parentNode.insertBefore(wrap, input);
