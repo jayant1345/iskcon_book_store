@@ -398,8 +398,55 @@
                         {% endif %}
                         <tr><td colspan="4" class="text-end"><strong>Shipping:</strong></td><td>₹{{ "%.0f"|format(order.shipping_charge) }}</td></tr>
                         <tr class="table-warning"><td colspan="4" class="text-end"><strong>Total:</strong></td><td class="fw-bold text-success fs-5">₹{{ "%.0f"|format(order.total_amount) }}</td></tr>
+                        {% if order.refund > 0 %}
+                        <tr class="text-danger"><td colspan="4" class="text-end"><strong>{{ 'Discount' if order.refund_type == 'discount' else 'Refund' }} given:</strong></td><td>-₹{{ "%.0f"|format(order.refund) }}</td></tr>
+                        <tr class="table-success"><td colspan="4" class="text-end"><strong>Net amount:</strong></td><td class="fw-bold fs-5">₹{{ "%.0f"|format(order.net_amount) }}</td></tr>
+                        {% endif %}
                     </tfoot>
                 </table>
+            </div>
+        </div>
+
+        <!-- Refund / Discount record -->
+        <div class="card shadow-sm mb-4 {% if order.refund > 0 or order.refund_books %}border-danger{% endif %}">
+            <div class="card-header py-3 {% if order.refund > 0 or order.refund_books %}bg-danger text-white{% else %}bg-light{% endif %}">
+                <h5 class="mb-0"><i class="fas fa-undo me-2"></i>Refund / Discount (after order)</h5>
+            </div>
+            <div class="card-body">
+                {% if order.refund > 0 or order.refund_books %}
+                <div class="alert alert-danger py-2 small mb-3">
+                    <strong>{{ 'Discount' if order.refund_type == 'discount' else 'Refund' }}: ₹{{ "%.0f"|format(order.refund) }}</strong>
+                    {% if order.refund_books %} &middot; {{ order.refund_books }} book(s) not sent{% endif %}
+                    {% if order.refund_date %} &middot; {{ order.refund_date | ist('%d %b %Y') }}{% endif %}
+                    <br>{{ order.refund_note }}
+                </div>
+                {% endif %}
+                <p class="small text-muted mb-2">Use this when a book could not be sent or part of the payment is returned. The original order total stays as it was; reports show the refund and the <strong>Net Total</strong>, so totals are always correct. This does not message the customer or return money automatically &mdash; return the money yourself (Razorpay / UPI / bank), then record it here.</p>
+                <form method="POST" action="{{ url_for('admin_order_refund', order_id=order.id) }}" class="row g-2 align-items-end">
+                    <div class="col-6 col-md-3">
+                        <label class="form-label small mb-1">Type</label>
+                        <select name="refund_type" class="form-select form-select-sm">
+                            <option value="refund" {% if order.refund_type != 'discount' %}selected{% endif %}>Refund (money returned)</option>
+                            <option value="discount" {% if order.refund_type == 'discount' %}selected{% endif %}>Discount (price reduced)</option>
+                        </select>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <label class="form-label small mb-1">Amount (₹)</label>
+                        <input type="number" name="refund_amount" class="form-control form-control-sm" min="0" max="{{ '%.0f'|format(order.total_amount) }}" step="0.01" value="{{ '%g'|format(order.refund) if order.refund > 0 else '' }}" placeholder="0">
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <label class="form-label small mb-1">Books not sent (optional)</label>
+                        <input type="number" name="refund_books" class="form-control form-control-sm" min="0" step="1" value="{{ order.refund_books or '' }}" placeholder="0">
+                    </div>
+                    <div class="col-12 col-md-9">
+                        <label class="form-label small mb-1">Note / reason <span class="text-danger">*</span></label>
+                        <input type="text" name="refund_note" class="form-control form-control-sm" maxlength="500" placeholder="e.g. Teachings of Lord Kapila out of stock - ₹115 refunded via UPI on 21 Nov" value="{{ order.refund_note or '' }}">
+                    </div>
+                    <div class="col-12 col-md-3 d-flex gap-2">
+                        <button type="submit" class="btn btn-danger btn-sm fw-bold flex-fill"><i class="fas fa-save me-1"></i>Save</button>
+                    </div>
+                </form>
+                {% if order.refund > 0 or order.refund_books %}<div class="small text-muted mt-2">To remove it, set Amount and Books to 0 and press Save.</div>{% endif %}
             </div>
         </div>
 

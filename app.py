@@ -307,7 +307,23 @@ class Order(db.Model):
     donation_recipient_address= db.Column(db.Text, nullable=True)
     donor_message             = db.Column(db.Text, nullable=True)
     customer_id        = db.Column(db.Integer, db.ForeignKey("customers.id"), nullable=True)
+    # Refund / discount given AFTER the order (e.g. a book could not be sent). total_amount is never
+    # changed - it stays what the customer originally paid; reports subtract refund_amount from it.
+    refund_type        = db.Column(db.String(20), nullable=True)      # "refund" | "discount"
+    refund_amount      = db.Column(db.Float, default=0)
+    refund_books       = db.Column(db.Integer, default=0)             # copies not sent (reduces "No. of Books")
+    refund_note        = db.Column(db.Text, nullable=True)
+    refund_date        = db.Column(db.DateTime, nullable=True)
     items              = db.relationship("OrderItem", backref="order", lazy=True)
+
+    @property
+    def refund(self):
+        return round(self.refund_amount or 0, 2)
+
+    @property
+    def net_amount(self):
+        """What the store actually keeps: original total minus any refund / discount."""
+        return round((self.total_amount or 0) - self.refund, 2)
 
     @property
     def display_items(self):
@@ -795,7 +811,7 @@ class Customer(db.Model):
     @property
     def total_spent(self):
         from sqlalchemy import func
-        result = db.session.query(func.sum(Order.total_amount)).filter(
+        result = db.session.query(func.sum(Order.total_amount - func.coalesce(Order.refund_amount, 0))).filter(
             Order.customer_id == self.id,
             Order.order_status != "cancelled",
         ).scalar()
@@ -3911,7 +3927,7 @@ def admin_dashboard():
         return query.filter(column >= month_start, column < month_end)
 
     total_orders        = in_month(Order.query.filter_by(is_deleted=False), Order.created_at).count()
-    total_revenue       = in_month(db.session.query(db.func.sum(Order.total_amount))
+    total_revenue       = in_month(db.session.query(db.func.sum(Order.total_amount - db.func.coalesce(Order.refund_amount, 0)))
                                    .filter(Order.payment_status != "failed",
                                            Order.is_deleted == False), Order.created_at).scalar() or 0
     total_books         = Book.query.filter_by(active=True).count()
@@ -3945,7 +3961,7 @@ def admin_dashboard():
     window_start = _add_months(this_month, -11)
     buckets = {}
     for created_at, amount, pay_status in db.session.query(
-            Order.created_at, Order.total_amount, Order.payment_status)\
+            Order.created_at, Order.total_amount - db.func.coalesce(Order.refund_amount, 0), Order.payment_status)\
             .filter(Order.is_deleted == False,
                     Order.created_at >= window_start - _IST_OFFSET).all():
         key = (created_at + _IST_OFFSET).strftime("%Y-%m")
@@ -5335,7 +5351,8 @@ SALES_REPORT_INCLUDE = {
 def _report_books_count(order):
     """Real books/copies in an order. Combo header rows are excluded (their books are
     counted through the combo's component rows); Gita Dan Yagna copies are included."""
-    return sum(i.quantity or 0 for i in order.items if not (i.combo_id and not i.is_combo_component))
+    gross = sum(i.quantity or 0 for i in order.items if not (i.combo_id and not i.is_combo_component))
+    return max(0, gross - (order.refund_books or 0))     # copies marked "not sent" are not counted
 
 
 def _report_books_lines(order):
@@ -5351,6 +5368,10 @@ def _report_books_lines(order):
                 if inner:
                     line += f" ({inner})"
         lines.append(line)
+    if order.refund > 0 or (order.refund_books or 0) > 0:
+        kind = "Discount" if order.refund_type == "discount" else "Refund"
+        extra = f" | {order.refund_books} book(s) not sent" if order.refund_books else ""
+        lines.append(f"↩ {kind} ₹{order.refund:,.2f}{extra}" + (f" — {order.refund_note}" if order.refund_note else ""))
     return lines
 
 
@@ -5382,6 +5403,8 @@ def build_sales_report(year, month, include="paid"):
             "shipping": round(o.shipping_charge or 0, 2),
             "discount": round(o.discount_amount or 0, 2),
             "total": round(o.total_amount or 0, 2),
+            "refund": o.refund,
+            "net": o.net_amount,
         })
         yd = o.yagna_donation
         for i in o.items:
@@ -5405,7 +5428,7 @@ def build_sales_report(year, month, include="paid"):
             b["amount"] += (i.price or 0) * qty                    # 0 for books that sit inside a combo
         p = by_pay.setdefault((o.payment_method or "—").upper(), {"orders": 0, "total": 0.0})
         p["orders"] += 1
-        p["total"] += o.total_amount or 0
+        p["total"] += o.net_amount
         st = (o.order_status or "—").capitalize()
         by_status[st] = by_status.get(st, 0) + 1
 
@@ -5416,13 +5439,16 @@ def build_sales_report(year, month, include="paid"):
         "shipping": round(sum(r["shipping"] for r in rows), 2),
         "discount": round(sum(r["discount"] for r in rows), 2),
         "total": round(sum(r["total"] for r in rows), 2),
+        "refund": round(sum(r["refund"] for r in rows), 2),
+        "net": round(sum(r["net"] for r in rows), 2),
     }
-    totals["avg_order"] = round(totals["total"] / totals["orders"], 2) if totals["orders"] else 0
+    totals["avg_order"] = round(totals["net"] / totals["orders"], 2) if totals["orders"] else 0
     return {
         "year": year, "month": month, "include": include,
         "period_label": (start_ist.strftime("%B %Y") if month else f"Full year {year}"),
         "include_label": SALES_REPORT_INCLUDE.get(include, ""),
         "rows": rows, "totals": totals, "has_discount": totals["discount"] > 0,
+        "has_refund": any(r["refund"] > 0 or (r["order"].refund_books or 0) > 0 for r in rows),
         "formats": fmt_copies,
         "languages": sorted(lang_copies.items(), key=lambda x: -x[1]),
         "books": sorted(books.items(), key=lambda x: (-x[1]["qty"], x[0])),
@@ -5475,6 +5501,7 @@ def admin_sales_report_download():
     rep = build_sales_report(year, month, include)
     t = rep["totals"]
     disc = rep["has_discount"]
+    ref = rep["has_refund"]
 
     NAVY, LIGHT, GREY = "14284B", "E8EEF8", "BFBFBF"
     side = Side(style="thin", color=GREY)
@@ -5488,6 +5515,8 @@ def admin_sales_report_download():
     if disc:
         headers.append("Discount (₹)")
     headers.append("G. Total (₹)")
+    if ref:
+        headers += ["Refund / Discount given (₹)", "Net Total (₹)"]
     n = len(headers)
     last = get_column_letter(n)
 
@@ -5516,6 +5545,8 @@ def admin_sales_report_download():
         if disc:
             vals.append(row["discount"])
         vals.append(row["total"])
+        if ref:
+            vals += [row["refund"], row["net"]]
         for c, v in enumerate(vals, 1):
             cell = ws.cell(row=r, column=c, value=v)
             cell.border = border
@@ -5530,6 +5561,8 @@ def admin_sales_report_download():
     if disc:
         tot.append(t["discount"])
     tot.append(t["total"])
+    if ref:
+        tot += [t["refund"], t["net"]]
     for c, v in enumerate(tot, 1):
         cell = ws.cell(row=r, column=c, value=v)
         cell.font, cell.fill, cell.border = white_bold, navy_fill, border
@@ -5585,7 +5618,12 @@ def admin_sales_report_download():
     if disc:
         line("Discount (₹)", t["discount"], fmts=[money])
     line("Shipping (₹)", t["shipping"], fmts=[money])
-    line("GRAND TOTAL (₹)", t["total"], bold=True, fmts=[money])
+    if ref:
+        line("G. TOTAL (before refund) (₹)", t["total"], fmts=[money])
+        line("Refund / Discount given after order (₹)", -t["refund"], fmts=[money])
+        line("NET TOTAL (₹)", t["net"], bold=True, fmts=[money])
+    else:
+        line("GRAND TOTAL (₹)", t["total"], bold=True, fmts=[money])
     line("Average order value (₹)", t["avg_order"], fmts=[money])
     r += 1
     head("Format-wise", "Copies")
@@ -5616,10 +5654,8 @@ def admin_sales_report_download():
         line(k, v)
 
     widths = {1: 18, 2: 14, 3: 70, 4: 16, 5: 14}
-    if disc:
-        widths[6], widths[7] = 14, 16
-    else:
-        widths[6] = 16
+    for c in range(6, n + 1):
+        widths[c] = 16
     for c, w in widths.items():
         ws.column_dimensions[get_column_letter(c)].width = w
     ws.freeze_panes = ws.cell(row=hr + 1, column=1)
@@ -5659,7 +5695,8 @@ def export_orders_csv():
         "Product Type", "Books Ordered", "Combo Details",
         "Subtotal (INR)", "Shipping (INR)", "Discount (INR)", "Total (INR)",
         "Payment Method", "Payment Status",
-        "Order Status", "Coupon Code", "Notes"
+        "Order Status", "Coupon Code", "Notes",
+        "Refund / Discount Type", "Refund / Discount (INR)", "Books Not Sent", "Refund Note", "Net Total (INR)"
     ])
 
     for order in all_orders:
@@ -5700,6 +5737,11 @@ def export_orders_csv():
             order.order_status.capitalize(),
             order.coupon_code or "",
             order.notes or "",
+            (order.refund_type or "").capitalize() if order.refund else "",
+            order.refund or "",
+            order.refund_books or "",
+            order.refund_note or "",
+            round(order.net_amount, 2),
         ])
 
     csv_bytes = output.getvalue().encode("utf-8-sig")
@@ -5719,6 +5761,52 @@ def export_orders_csv():
 def admin_order_detail(order_id):
     order = Order.query.get_or_404(order_id)
     return render_template("admin/order_detail.html", order=order)
+
+
+@app.route("/admin/orders/<int:order_id>/refund", methods=["POST"])
+@admin_required
+def admin_order_refund(order_id):
+    """Record a refund / discount given after the order (e.g. one book could not be sent).
+    total_amount is left alone; reports show Refund and Net Total. Amount 0 + no books clears it."""
+    order = Order.query.get_or_404(order_id)
+    back = redirect(url_for("admin_order_detail", order_id=order_id))
+    kind = request.form.get("refund_type", "refund")
+    if kind not in ("refund", "discount"):
+        kind = "refund"
+    try:
+        amount = round(float(request.form.get("refund_amount", "0") or 0), 2)
+        books = int(request.form.get("refund_books", "0") or 0)
+    except ValueError:
+        flash("Please enter valid numbers for the amount and books.", "danger")
+        return back
+    note = request.form.get("refund_note", "").strip()
+    max_books = sum(i.quantity or 0 for i in order.items if not (i.combo_id and not i.is_combo_component))
+
+    if amount < 0 or books < 0:
+        flash("Amount and books cannot be negative.", "danger")
+        return back
+    if amount > (order.total_amount or 0):
+        flash(f"Refund / discount cannot be more than the order total (₹{order.total_amount:,.0f}).", "danger")
+        return back
+    if books > max_books:
+        flash(f"This order has only {max_books} book(s).", "danger")
+        return back
+
+    if amount == 0 and books == 0:
+        order.refund_type, order.refund_amount, order.refund_books = None, 0, 0
+        order.refund_note, order.refund_date = None, None
+        db.session.commit()
+        flash("Refund / discount removed from this order.", "success")
+        return back
+    if not note:
+        flash("Please write a note (reason) for the refund / discount.", "danger")
+        return back
+
+    order.refund_type, order.refund_amount, order.refund_books = kind, amount, books
+    order.refund_note, order.refund_date = note, datetime.utcnow()
+    db.session.commit()
+    flash(f"{kind.capitalize()} of ₹{amount:,.0f} recorded. Net amount for this order: ₹{order.net_amount:,.0f}.", "success")
+    return back
 
 
 @app.route("/admin/orders/<int:order_id>/update-contact", methods=["POST"])
@@ -6422,6 +6510,11 @@ def init_db():
             ("order_items",        "combo_id",                   "INTEGER"),
             ("order_items",        "is_combo_component",         "BOOLEAN DEFAULT FALSE"),
             ("combos",             "featured",                   "BOOLEAN DEFAULT FALSE"),
+            ("orders",             "refund_type",                "VARCHAR(20)"),
+            ("orders",             "refund_amount",              "FLOAT DEFAULT 0"),
+            ("orders",             "refund_books",               "INTEGER DEFAULT 0"),
+            ("orders",             "refund_note",                "TEXT"),
+            ("orders",             "refund_date",                "TIMESTAMP"),
             ("gita_yagna_donations", "distribution", "VARCHAR(10) DEFAULT 'local'"),
             ("gita_yagna_donations", "courier_charge", "FLOAT DEFAULT 0"),
             ("gita_yagna_donations", "parcel_kg", "FLOAT"),

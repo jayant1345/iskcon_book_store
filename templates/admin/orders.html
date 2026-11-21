@@ -220,7 +220,8 @@
                         {% elif order.product_type == 'Mixed' %}<span class="badge bg-info">🎁📖 Mixed</span>
                         {% else %}<span class="badge bg-light text-dark border">📖 Book</span>{% endif %}
                     </td>
-                    <td class="fw-bold text-success">₹{{ "%.0f"|format(order.total_amount) }}</td>
+                    <td class="fw-bold text-success">₹{{ "%.0f"|format(order.total_amount) }}
+                        {% if order.refund > 0 %}<span class="badge bg-danger d-block mt-1" style="font-size:0.65rem;" title="{{ order.refund_note or '' }}">↩ {{ 'Discount' if order.refund_type == 'discount' else 'Refund' }} ₹{{ "%.0f"|format(order.refund) }}</span>{% endif %}</td>
                     <td>
                         <span class="badge bg-secondary">{{ order.payment_method|upper }}</span>
                         {% if order.payment_method == 'upi' and order.payment_status == 'pending' %}

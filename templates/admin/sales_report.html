@@ -68,6 +68,7 @@
                     <th class="text-end" style="width:105px;">Shipping (₹)</th>
                     {% if rep.has_discount %}<th class="text-end" style="width:105px;">Discount (₹)</th>{% endif %}
                     <th class="text-end" style="width:115px;">G. Total (₹)</th>
+                    {% if rep.has_refund %}<th class="text-end" style="width:120px;">Refund / Discount (₹)</th><th class="text-end" style="width:115px;">Net Total (₹)</th>{% endif %}
                 </tr>
             </thead>
             <tbody>
@@ -80,9 +81,10 @@
                     <td class="text-end">{{ "{:,.2f}".format(r.shipping) }}</td>
                     {% if rep.has_discount %}<td class="text-end">{{ "{:,.2f}".format(r.discount) }}</td>{% endif %}
                     <td class="text-end fw-bold">{{ "{:,.2f}".format(r.total) }}</td>
+                    {% if rep.has_refund %}<td class="text-end text-danger">{{ "{:,.2f}".format(r.refund) if r.refund else '' }}</td><td class="text-end fw-bold">{{ "{:,.2f}".format(r.net) }}</td>{% endif %}
                 </tr>
                 {% else %}
-                <tr><td colspan="{{ 7 if rep.has_discount else 6 }}" class="text-center text-muted py-4">No orders in this period for the selected filter.</td></tr>
+                <tr><td colspan="20" class="text-center text-muted py-4">No orders in this period for the selected filter.</td></tr>
                 {% endfor %}
             </tbody>
             <tfoot>
@@ -94,6 +96,7 @@
                     <td class="text-end">{{ "{:,.2f}".format(rep.totals.shipping) }}</td>
                     {% if rep.has_discount %}<td class="text-end">{{ "{:,.2f}".format(rep.totals.discount) }}</td>{% endif %}
                     <td class="text-end">{{ "{:,.2f}".format(rep.totals.total) }}</td>
+                    {% if rep.has_refund %}<td class="text-end">{{ "{:,.2f}".format(rep.totals.refund) }}</td><td class="text-end">{{ "{:,.2f}".format(rep.totals.net) }}</td>{% endif %}
                 </tr>
             </tfoot>
         </table>
@@ -111,7 +114,13 @@
                 <tr><td>Subtotal (₹)</td><td class="text-end">{{ "{:,.2f}".format(rep.totals.subtotal) }}</td></tr>
                 {% if rep.has_discount %}<tr><td>Discount (₹)</td><td class="text-end">{{ "{:,.2f}".format(rep.totals.discount) }}</td></tr>{% endif %}
                 <tr><td>Shipping (₹)</td><td class="text-end">{{ "{:,.2f}".format(rep.totals.shipping) }}</td></tr>
+                {% if rep.has_refund %}
+                <tr><td>G. Total &mdash; before refund (₹)</td><td class="text-end">{{ "{:,.2f}".format(rep.totals.total) }}</td></tr>
+                <tr class="text-danger"><td>Refund / Discount given after order (₹)</td><td class="text-end">-{{ "{:,.2f}".format(rep.totals.refund) }}</td></tr>
+                <tr class="fw-bold table-warning"><td>NET TOTAL (₹)</td><td class="text-end">{{ "{:,.2f}".format(rep.totals.net) }}</td></tr>
+                {% else %}
                 <tr class="fw-bold table-warning"><td>GRAND TOTAL (₹)</td><td class="text-end">{{ "{:,.2f}".format(rep.totals.total) }}</td></tr>
+                {% endif %}
                 <tr><td>Average order value (₹)</td><td class="text-end">{{ "{:,.2f}".format(rep.totals.avg_order) }}</td></tr>
             </table>
         </div>
