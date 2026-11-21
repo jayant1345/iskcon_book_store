@@ -46,6 +46,9 @@
 <div class="announcement-bar">
   🙏 Hare Krishna Hare Krishna, Krishna Krishna Hare Hare &nbsp;&nbsp;
   Hare Ram Hare Ram, Ram Ram Hare Hare &nbsp;—&nbsp; Chant &amp; Be Happy! 😊🪷
+  {% if settings_get('yagna_enabled', '0') == '1' %}
+  <a href="{{ url_for('gita_dan_yagna') }}" style="color:#FFD98A; font-weight:700; text-decoration:underline; white-space:nowrap;">&nbsp;|&nbsp; 🙏 Gita Dan Yagna — Donate Gitas →</a>
+  {% endif %}
 </div>
 
 <!-- ── Navbar ── -->
