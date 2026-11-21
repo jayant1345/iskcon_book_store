@@ -1,0 +1,321 @@
+{% extends "base.html" %}
+{% block title %}Gita Dan Yagna — {{ store_name }}{% endblock %}
+
+{% block content %}
+<style>
+  .gy-hero { background:linear-gradient(135deg,#13294b 0%,#1d3d6e 100%); color:#fff; border-radius:18px; padding:22px; border:2px solid #e0a82e; }
+  .gy-hero h1 { font-family:'Cinzel',serif; font-size:2rem; margin:0; }
+  .gy-verse { background:#fff1d6; border-radius:14px; padding:16px; text-align:center; color:#8a1c3c; }
+  .gy-sec { background:#0f6b68; color:#fff; border-radius:10px; padding:8px 14px; font-weight:700; margin:22px 0 12px; }
+  .gy-sec span { color:#ffd98a; margin-right:8px; }
+  .gy-chip { cursor:pointer; user-select:none; border:2px solid var(--border); border-radius:12px; padding:10px 6px; text-align:center; background:#fff; font-weight:700; transition:.15s; }
+  .gy-chip small { display:block; font-weight:500; color:#777; }
+  .gy-chip.active { border-color:var(--saffron); background:#fff3e0; color:var(--saffron); }
+  .gy-lang { cursor:pointer; border:2px solid var(--border); border-radius:12px; padding:10px 12px; background:#fff; display:flex; align-items:center; gap:10px; }
+  .gy-lang.active { border-color:var(--saffron); background:#fff3e0; }
+  .gy-progress { height:22px; border-radius:12px; background:#ffffff33; overflow:hidden; }
+  .gy-progress > div { height:100%; background:linear-gradient(90deg,#f59e0b,#ea580c); transition:width .6s; }
+  .gy-total { background:#fff3e0; border:1px solid #ffcc80; border-radius:12px; }
+</style>
+
+<div class="container py-4" style="max-width:760px;">
+
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb breadcrumb-iskcon">
+      <li class="breadcrumb-item"><a href="{{ url_for('index') }}">🏠 Home</a></li>
+      <li class="breadcrumb-item active">Gita Dan Yagna</li>
+    </ol>
+  </nav>
+
+  <!-- Hero -->
+  <div class="gy-hero mb-3">
+    <div class="d-flex align-items-center gap-3">
+      <img src="{{ url_for('static', filename='images/bhagvat_gita.jpg') }}" alt="Bhagavad Gita"
+           style="width:84px; height:116px; object-fit:cover; border-radius:8px; border:2px solid #e0a82e;"
+           onerror="this.style.display='none'">
+      <div class="flex-grow-1">
+        <div style="color:#ffd98a; font-weight:700; letter-spacing:1px; font-size:.85rem;">ISKCON AHMEDABAD</div>
+        <h1>ગીતા દાન યજ્ઞ</h1>
+        <div style="color:#ffd98a;">Gītā Dāna Mahā Dāna &nbsp;·&nbsp; ગીતા દાન મહાદાન</div>
+        <div style="font-size:.95rem;">Share wisdom. Inspire lives.</div>
+      </div>
+      <img src="{{ url_for('static', filename='images/iskcon_logo.png') }}" alt="ISKCON"
+           style="width:64px; background:#fff; border-radius:8px; padding:4px;" class="d-none d-sm-block">
+    </div>
+  </div>
+
+  <div class="gy-verse mb-3">
+    <div style="font-weight:700; font-size:.8rem; letter-spacing:1px;">BHAGAVAD-GĪTĀ 18.69</div>
+    <div style="font-size:1.1rem; line-height:1.8;">न च तस्मान्मनुष्येषु कश्चिन्मे प्रियकृत्तमः ।<br>भविता न च मे तस्मादन्यः प्रियतरो भुवि ॥ ६९ ॥</div>
+    <div class="mt-2" style="color:#444; font-size:.92rem;">There is no servant in this world more dear to Me than he, nor will there ever be one more dear.</div>
+  </div>
+
+  <!-- Intro + progress -->
+  <div class="p-3 mb-3" style="background:var(--cream-dark); border-radius:14px; border:1px solid var(--border);">
+    <p class="mb-2">
+      🙏 <strong>ગીતા દાન માં સંકલ્પ લો</strong> — તમે દાન કરેલી ભગવદ્ ગીતા ISKCON Ahmedabad દ્વારા
+      <strong>વિદ્યાર્થીઓ, ગ્રામવાસીઓ અને અન્ય લોકો</strong> સુધી પહોંચાડવામાં આવશે.
+    </p>
+    <p class="mb-3 text-muted" style="font-size:.9rem;">
+      Take a saṅkalpa to donate Bhagavad-gītās. You pay; ISKCON Ahmedabad gives them to students, villagers and
+      other people. Gītā Jayantī &amp; Yajña: <strong>{{ cfg.event_date }}</strong>.
+    </p>
+    <div class="d-flex justify-content-between small fw-bold mb-1">
+      <span>{{ "{:,}".format(stats.gitas) }} Gitas donated</span>
+      <span>Goal: {{ "{:,}".format(stats.goal) }}</span>
+    </div>
+    <div class="gy-progress" style="background:#e9d9b8;"><div style="width:{{ stats.pct }}%;"></div></div>
+    <div class="small text-muted mt-1">{{ stats.pct }}% of the goal · {{ stats.donors }} donor{{ 's' if stats.donors != 1 }}</div>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for cat, msg in messages %}<div class="alert alert-{{ cat }}">{{ msg }}</div>{% endfor %}
+  {% endwith %}
+
+  {% if not cfg.enabled %}
+  <div class="text-center p-4" style="background:#fff8e7; border:1px solid #ffe082; border-radius:14px;">
+    <div style="font-size:2.5rem;">🪔</div>
+    <h4 style="font-family:'Cinzel',serif; color:var(--brown);">Donations will open soon</h4>
+    <p class="text-muted mb-0">Please check back shortly, or WhatsApp us to take part in the Gita Dan Yagna.</p>
+  </div>
+  {% else %}
+
+  <form method="POST" action="{{ url_for('gita_dan_yagna') }}" id="yagnaForm">
+
+    <!-- 01 Donor details -->
+    <div class="gy-sec"><span>01</span>DONOR DETAILS &nbsp;·&nbsp; દાતાની વિગત</div>
+    <div class="row g-3">
+      <div class="col-12">
+        <label class="form-label small fw-bold">Name / નામ *</label>
+        <input type="text" name="donor_name" class="form-control" required value="{{ form.get('donor_name','') }}">
+      </div>
+      <div class="col-md-6">
+        <label class="form-label small fw-bold">Contact / મોબાઇલ *</label>
+        <input type="tel" name="donor_phone" class="form-control" required placeholder="10-digit mobile"
+               value="{{ form.get('donor_phone','') }}">
+      </div>
+      <div class="col-md-6">
+        <label class="form-label small fw-bold">Profession / વ્યવસાય</label>
+        <input type="text" name="profession" class="form-control" value="{{ form.get('profession','') }}">
+      </div>
+      <div class="col-md-6">
+        <label class="form-label small fw-bold">Lives at / Area / રહેઠાણ વિસ્તાર</label>
+        <input type="text" name="area" class="form-control" value="{{ form.get('area','') }}">
+      </div>
+      <div class="col-md-6">
+        <label class="form-label small fw-bold">Email <span class="text-muted fw-normal">(for thank-you certificate)</span></label>
+        <input type="email" name="donor_email" class="form-control" value="{{ form.get('donor_email','') }}">
+      </div>
+    </div>
+
+    <!-- 02 Sankalpa -->
+    <div class="gy-sec"><span>02</span>MY SAṄKALPA &nbsp;·&nbsp; મારો સંકલ્પ</div>
+    <p class="small text-muted mb-2">I take saṅkalpa to donate Bhagavad-gītās for <em>(optional — leave empty and the temple will decide)</em>:</p>
+    <div class="row g-2 mb-1">
+      <div class="col-4"><label class="small">Students<br>વિદ્યાર્થીઓ</label>
+        <input type="number" min="0" name="students_qty" class="form-control form-control-sm" value="{{ form.get('students_qty','') }}"></div>
+      <div class="col-4"><label class="small">Village residents<br>ગ્રામવાસીઓ</label>
+        <input type="number" min="0" name="village_qty" class="form-control form-control-sm" value="{{ form.get('village_qty','') }}"></div>
+      <div class="col-4"><label class="small">Others<br>અન્ય</label>
+        <input type="number" min="0" name="others_qty" class="form-control form-control-sm" value="{{ form.get('others_qty','') }}"></div>
+    </div>
+
+    <!-- Language -->
+    <div class="mt-4 mb-2 fw-bold">Language of the Gitas / ગીતા ની ભાષા</div>
+    <div class="row g-2" id="langRow">
+      {% set lang_names = {'Hindi': 'हिन्दी / Hindi', 'Gujarati': 'ગુજરાતી / Gujarati', 'English': 'English'} %}
+      {% for lang in langs %}
+      <div class="col-12 col-sm-4">
+        <label class="gy-lang {% if (form.get('language') or 'Hindi') == lang %}active{% endif %}" data-lang="{{ lang }}">
+          <input type="radio" name="language" value="{{ lang }}" {% if (form.get('language') or 'Hindi') == lang %}checked{% endif %}>
+          <div><strong>{{ lang_names[lang] }}</strong><div class="small text-muted">₹{{ cfg.prices[lang]|int }} per Gita</div></div>
+        </label>
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- Quantity -->
+    <div class="mt-4 mb-2 fw-bold">How many Gitas? / કેટલી ગીતા?</div>
+    <div class="row g-2" id="qtyChips">
+      {% for q in [1, 2, 3, 5, 10, 21, 51, 100] %}
+      <div class="col-3 col-md-3"><div class="gy-chip" data-qty="{{ q }}">{{ q }}<small class="chip-amt"></small></div></div>
+      {% endfor %}
+    </div>
+    <div class="d-flex align-items-center gap-2 mt-2">
+      <label class="small fw-bold mb-0">Or any number:</label>
+      <input type="number" min="1" max="10000" name="quantity" id="qtyInput" class="form-control" style="max-width:130px;"
+             value="{{ form.get('quantity','') }}" required>
+    </div>
+    <div id="inviteNote" class="alert alert-warning mt-3 py-2 small" style="display:none;">
+      🎟 Donors of <strong>{{ invite_min }}+ Gitas</strong> receive a <strong>special invitation card</strong> to take part in the Gītā Jayantī Yajña.
+    </div>
+
+    <!-- 03 Distribution -->
+    <div class="gy-sec"><span>03</span>DISTRIBUTION &nbsp;·&nbsp; વિતરણ</div>
+    <p class="small text-muted mb-2">How should your Gitas reach people? / તમારી ગીતા કેવી રીતે પહોંચાડવી?</p>
+    {% set dist = form.get('distribution') or 'local' %}
+    <div class="row g-2">
+      <div class="col-12 col-md-6">
+        <label class="gy-lang {% if dist == 'local' %}active{% endif %}" data-dist="local" style="height:100%;">
+          <input type="radio" name="distribution" value="local" {% if dist == 'local' %}checked{% endif %}>
+          <div><strong>🏛 Local distribution</strong> <span class="badge bg-success">Save courier charge</span>
+            <div class="small text-muted">ISKCON Ahmedabad gives the Gitas personally to students, villagers and other people locally. <strong>No courier charge to pay.</strong><br>સ્થાનિક વિતરણ — મંદિર દ્વારા રૂબરૂ, કુરિયર ચાર્જ નહીં.</div></div>
+        </label>
+      </div>
+      <div class="col-12 col-md-6">
+        <label class="gy-lang {% if dist == 'courier' %}active{% endif %}" data-dist="courier" style="height:100%;">
+          <input type="radio" name="distribution" value="courier" {% if dist == 'courier' %}checked{% endif %}>
+          <div><strong>📦 Online distribution (courier)</strong> <span class="badge bg-primary">+ courier charge</span>
+            <div class="small text-muted">Gitas are sent by courier to the person / place you name. <strong>The courier charge is paid by you</strong> and added to your total.<br>ઓનલાઇન વિતરણ — કુરિયર દ્વારા તમે આપેલા સરનામે; કુરિયર ચાર્જ દાતાએ ભરવાનો.</div></div>
+        </label>
+      </div>
+    </div>
+
+    <div id="courierBox" class="mt-3 p-3" style="display:none; background:#f3f8ff; border:1px solid #b6d4fe; border-radius:12px;">
+      <div class="fw-bold mb-2">📦 Courier charge / કુરિયર ચાર્જ</div>
+      <div class="mb-3">The courier charge is paid by the donor and is added to your total:
+        <strong class="courier-amt-label">enter pincode to see charge</strong></div>
+      <div class="fw-bold mb-2">Recipient / Delivery address / મેળવનારનું સરનામું</div>
+      <div class="row g-2">
+        <div class="col-md-6"><input type="text" name="recipient_name" class="form-control" placeholder="Recipient name *" value="{{ form.get('recipient_name','') }}"></div>
+        <div class="col-md-6"><input type="tel" name="recipient_phone" class="form-control" placeholder="Recipient mobile (optional)" value="{{ form.get('recipient_phone','') }}"></div>
+        <div class="col-12"><textarea name="recipient_address" rows="2" class="form-control" placeholder="Full address *">{{ form.get('recipient_address','') }}</textarea></div>
+        <div class="col-md-4"><input type="text" name="recipient_city" class="form-control" placeholder="City" value="{{ form.get('recipient_city','') }}"></div>
+        <div class="col-md-4"><input type="text" name="recipient_state" class="form-control" placeholder="State" value="{{ form.get('recipient_state','') }}"></div>
+        <div class="col-md-4"><input type="text" name="recipient_pincode" id="recPin" inputmode="numeric" maxlength="6" class="form-control" placeholder="Pincode *" value="{{ form.get('recipient_pincode','') }}"></div>
+      </div>
+      <div class="small text-muted mt-2">The courier charge is calculated for the delivery pincode and the weight of the parcel.</div>
+    </div>
+
+    <!-- 04 Participation -->
+    <div class="gy-sec"><span>04</span>GĪTĀ JAYANTĪ PARTICIPATION &nbsp;·&nbsp; ગીતા જયંતી</div>
+    <div class="small fw-bold mb-2">{{ cfg.event_date }} — I would like to participate in:</div>
+    <div class="form-check"><input class="form-check-input" type="checkbox" name="arati" id="arati" {% if form.get('arati') %}checked{% endif %}>
+      <label class="form-check-label" for="arati">Ārati on Gītā Jayantī / ગીતા જયંતી ની આરતી</label></div>
+    <div class="form-check"><input class="form-check-input" type="checkbox" name="yajna" id="yajna" {% if form.get('yajna') %}checked{% endif %}>
+      <label class="form-check-label" for="yajna">Gītā Yajña / ગીતા યજ્ઞ</label></div>
+
+    <!-- Dedication / consent -->
+    <div class="mt-4">
+      <label class="form-label small fw-bold">In the name of / In memory of <span class="text-muted fw-normal">(optional) · કોના નામે?</span></label>
+      <input type="text" name="dedication" class="form-control" maxlength="250"
+             placeholder="e.g. સ્વ. પિતાશ્રી ની સ્મૃતિમાં" value="{{ form.get('dedication','') }}">
+    </div>
+    <div class="form-check mt-3">
+      <input class="form-check-input" type="checkbox" name="show_name" id="show_name" {% if form.get('show_name') %}checked{% endif %}>
+      <label class="form-check-label small" for="show_name">Show my name on the donor wall of this page / મારું નામ દાતા યાદીમાં બતાવો</label>
+    </div>
+
+    <!-- Payment -->
+    <div class="gy-sec"><span>05</span>PAYMENT &nbsp;·&nbsp; ચુકવણી</div>
+    <div class="payment-option">
+      <label>
+        <input type="radio" name="payment_method" value="upi" {% if form.get('payment_method','upi') == 'upi' %}checked{% endif %}>
+        <span class="payment-icon">📲</span>
+        <div><strong>UPI — Scan QR</strong><div class="text-muted small">Pay via any UPI app — GPay, PhonePe, Paytm</div></div>
+      </label>
+    </div>
+    <div class="payment-option">
+      <label>
+        <input type="radio" name="payment_method" value="razorpay" {% if form.get('payment_method') == 'razorpay' %}checked{% endif %}>
+        <span class="payment-icon">💳</span>
+        <div><strong>Pay Online (Razorpay)</strong><div class="text-muted small">Cards, Net Banking, UPI, Wallets</div></div>
+      </label>
+    </div>
+
+    <div class="gy-total p-3 my-3">
+      <div class="d-flex justify-content-between"><span>Gitas <small class="text-muted" id="sumLine"></small></span><strong id="sumGitas">₹0</strong></div>
+      <div class="d-flex justify-content-between mt-1"><span>📦 Courier charge</span><strong id="sumCourier">—</strong></div>
+      <div class="small text-muted" id="courierNote"></div>
+      <hr class="my-2">
+      <div class="d-flex justify-content-between align-items-center"><span class="fw-bold">Total payable</span>
+        <span id="sumTotal" style="font-size:1.6rem; font-weight:700; color:var(--saffron);">₹0</span></div>
+    </div>
+
+    <button type="submit" class="btn btn-saffron btn-lg w-100 fw-bold py-3">🙏 Donate Gitas &amp; Proceed to Pay</button>
+    <p class="text-center text-muted small mt-2">🔒 Secure payment. A thank-you certificate is provided after the payment is confirmed.</p>
+  </form>
+  {% endif %}
+
+  <!-- Donor wall -->
+  {% if wall %}
+  <div class="gy-sec mt-5"><span>🙏</span>OUR DONORS &nbsp;·&nbsp; દાતાઓ</div>
+  <div class="row g-2">
+    {% for r in wall %}
+    <div class="col-12 col-sm-6">
+      <div class="p-2 px-3" style="background:#fff; border:1px solid var(--border); border-radius:10px;">
+        <strong>{{ r.donor_name }}</strong>
+        <span class="float-end text-muted small">{{ r.quantity }} Gita{{ 's' if r.quantity != 1 }}</span>
+        {% if r.dedication %}<div class="small text-muted fst-italic">{{ r.dedication }}</div>{% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+</div>
+
+{% if cfg.enabled %}
+<script>
+(function () {
+  var prices = {{ cfg.prices|tojson }};
+  var inviteMin = {{ invite_min }};
+  var qtyInput = document.getElementById('qtyInput');
+  var langRadios = document.querySelectorAll('input[name="language"]');
+  var courierCharge = null, courierTimer = null;
+
+  function lang() { var c = document.querySelector('input[name="language"]:checked'); return c ? c.value : 'Hindi'; }
+  function dist() { var c = document.querySelector('input[name="distribution"]:checked'); return c ? c.value : 'local'; }
+  function fmt(n) { return '₹' + Math.round(n).toLocaleString('en-IN'); }
+
+  function fetchCourier() {
+    clearTimeout(courierTimer);
+    var pin = document.getElementById('recPin').value.trim(), q = parseInt(qtyInput.value) || 0;
+    if (dist() !== 'courier' || !/^\d{6}$/.test(pin) || q < 1) { courierCharge = null; refresh(); return; }
+    courierTimer = setTimeout(function () {
+      fetch('/api/gita-dan-yagna/courier-rate?pincode=' + pin + '&qty=' + q)
+        .then(function (r) { return r.json(); })
+        .then(function (d) { courierCharge = d.ok ? d.charge : null; refresh(); })
+        .catch(function () { courierCharge = null; refresh(); });
+    }, 350);
+  }
+
+  function refresh() {
+    var q = parseInt(qtyInput.value) || 0, price = prices[lang()] || 0, gitas = q * price;
+    var isCourier = dist() === 'courier';
+    document.getElementById('courierBox').style.display = isCourier ? 'block' : 'none';
+    document.getElementById('sumLine').textContent = q ? '(' + q + ' × ' + fmt(price) + ', ' + lang() + ')' : '';
+    document.getElementById('sumGitas').textContent = fmt(gitas);
+    var courierEl = document.getElementById('sumCourier'), note = document.getElementById('courierNote'), pay = 0;
+    document.querySelectorAll('.courier-amt-label').forEach(function (e) {
+      e.textContent = courierCharge !== null ? fmt(courierCharge) : 'enter pincode to see charge';
+    });
+    if (!isCourier) {
+      courierEl.textContent = '₹0'; note.textContent = 'Local distribution — no courier charge (you save the courier cost).';
+    } else if (courierCharge === null) {
+      courierEl.textContent = '— enter pincode'; note.textContent = 'Enter the recipient pincode to see the courier charge.';
+    } else {
+      pay = courierCharge; courierEl.textContent = fmt(courierCharge); note.textContent = 'Courier charge is paid by you and added to the total.';
+    }
+    document.getElementById('sumTotal').textContent = fmt(gitas + pay);
+    document.querySelectorAll('.gy-chip').forEach(function (c) {
+      var cq = parseInt(c.dataset.qty);
+      c.classList.toggle('active', cq === q);
+      c.querySelector('.chip-amt').textContent = fmt(cq * price);
+    });
+    document.querySelectorAll('.gy-lang[data-lang]').forEach(function (l) { l.classList.toggle('active', l.dataset.lang === lang()); });
+    document.querySelectorAll('.gy-lang[data-dist]').forEach(function (l) { l.classList.toggle('active', l.dataset.dist === dist()); });
+    document.getElementById('inviteNote').style.display = q >= inviteMin ? 'block' : 'none';
+  }
+
+  document.querySelectorAll('.gy-chip').forEach(function (c) {
+    c.addEventListener('click', function () { qtyInput.value = c.dataset.qty; refresh(); fetchCourier(); });
+  });
+  langRadios.forEach(function (r) { r.addEventListener('change', refresh); });
+  document.querySelectorAll('input[name="distribution"]').forEach(function (r) { r.addEventListener('change', function () { refresh(); fetchCourier(); }); });
+  document.getElementById('recPin').addEventListener('input', fetchCourier);
+  qtyInput.addEventListener('input', function () { refresh(); fetchCourier(); });
+  refresh(); fetchCourier();
+})();
+</script>
+{% endif %}
+{% endblock %}

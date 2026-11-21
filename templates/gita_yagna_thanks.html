@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}Thank you — Gita Dan Yagna — {{ store_name }}{% endblock %}
+
+{% block content %}
+<div class="container py-5" style="max-width:640px;">
+  <div class="text-center">
+    <div style="font-size:3.5rem;">🙏</div>
+    {% if d.counted %}
+      <h2 class="section-title" style="color:#28a745;">Thank you, {{ d.donor_name }}!</h2>
+      <p class="text-muted">Your Gītā Dāna saṅkalpa is received. Hare Krishna!</p>
+    {% else %}
+      <h2 class="section-title" style="color:#d97706;">Donation received — payment under verification</h2>
+      <p class="text-muted">We will confirm your payment shortly. Your certificate will be ready right after that.</p>
+    {% endif %}
+  </div>
+
+  <div class="p-3 my-4" style="background:var(--cream-dark); border:1px solid var(--border); border-radius:14px;">
+    <div class="row g-2">
+      <div class="col-6"><small class="text-muted d-block">Reference</small><strong>{{ order.order_number }}</strong></div>
+      <div class="col-6"><small class="text-muted d-block">Payment</small><strong>{{ order.payment_method|upper }} · {{ order.payment_status|capitalize }}</strong></div>
+      <div class="col-12"><small class="text-muted d-block">Gitas donated</small><strong>{{ d.quantity }} × {{ d.language }}</strong></div>
+      <div class="col-12"><small class="text-muted d-block">Distribution</small><strong>{{ d.distribution_label }}</strong>
+        {% if d.is_courier %}<div class="small text-muted">To: {{ d.recipient_name }}{% if d.recipient_pincode %} — {{ d.recipient_address }}{% if d.recipient_city %}, {{ d.recipient_city }}{% endif %} {{ d.recipient_pincode }}{% endif %}</div>{% endif %}</div>
+      <div class="col-12">
+        <table class="table table-sm mb-0" style="background:transparent;">
+          <tr><td>Gitas ({{ d.quantity }} × ₹{{ "%.0f"|format(d.amount / d.quantity) }})</td><td class="text-end">₹{{ "%.0f"|format(d.amount) }}</td></tr>
+          <tr><td>📦 Courier charge
+            {% if d.is_courier %}<small class="text-muted">(paid by you)</small>
+            {% else %}<small class="text-muted">(local distribution — no courier charge)</small>{% endif %}</td>
+            <td class="text-end">₹{{ "%.0f"|format(d.courier_paid_by_donor) }}</td></tr>
+          <tr class="fw-bold"><td>Total paid</td><td class="text-end">₹{{ "%.0f"|format(d.total_paid) }}</td></tr>
+        </table>
+      </div>
+      {% if d.dedication %}<div class="col-12"><small class="text-muted d-block">In the name of</small><strong>{{ d.dedication }}</strong></div>{% endif %}
+    </div>
+  </div>
+
+  {% if d.invitation %}
+  <div class="alert alert-warning">
+    🎟 <strong>Special invitation:</strong> as a donor of {{ invite_min }}+ Gitas you will receive a special invitation card
+    to take part in the Gītā Jayantī Yajña on <strong>{{ cfg.event_date }}</strong>.
+  </div>
+  {% elif d.arati or d.yajna %}
+  <div class="alert alert-info">🪔 We have noted your wish to join the Gītā Jayantī programme on <strong>{{ cfg.event_date }}</strong>.</div>
+  {% endif %}
+
+  <div class="d-grid gap-2">
+    {% if d.counted %}
+    <a href="{{ url_for('gita_yagna_certificate', order_number=order.order_number) }}" target="_blank" class="btn btn-saffron btn-lg">🏅 View / Print Thank-you Certificate</a>
+    {% endif %}
+    <a class="btn btn-success" target="_blank" rel="noopener"
+       href="https://wa.me/?text={{ ('🙏 I took part in the ISKCON Ahmedabad Gita Dan Yagna and donated ' ~ d.quantity ~ ' Bhagavad-gita(s)! You can join too: ' ~ url_for('gita_dan_yagna', _external=True))|urlencode }}">
+      💬 Share on WhatsApp — inspire others
+    </a>
+    <a href="{{ url_for('gita_dan_yagna') }}" class="btn btn-outline-secondary">Donate more Gitas</a>
+  </div>
+  <p class="text-center text-muted small mt-4">🙏 Your gift of Bhagavad-gītā will reach students, villagers and other people through ISKCON Ahmedabad.</p>
+</div>
+{% endblock %}

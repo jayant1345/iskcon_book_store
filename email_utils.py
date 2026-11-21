@@ -62,8 +62,24 @@ def _send(to_email, subject, html_body):
 
 # ─── Public helpers ──────────────────────────────────────────────────────────
 
+def send_yagna_thanks(order, donation):
+    """Gita Dan Yagna: thank-you email once the donation payment is confirmed."""
+    if not order.customer_email:
+        return
+    try:
+        html_body = render_template("emails/yagna_thanks.html", order=order, d=donation,
+                                    cert_url=_safe_url("gita_yagna_certificate",
+                                                       order_number=order.order_number))
+        _send(order.customer_email, "Thank you — Gita Dan Yagna, ISKCON Ahmedabad 🙏", html_body)
+    except Exception as exc:
+        print(f"[EMAIL] send_yagna_thanks error: {exc}")
+        current_app.logger.error(f"[EMAIL] send_yagna_thanks error: {exc}")
+
+
 def send_order_placed(order, utr=""):
     """Email customer immediately when a UPI order is submitted (payment pending verification)."""
+    if getattr(order, "yagna_donation", None):
+        return  # Yagna donors get one thank-you email, after payment is confirmed
     if not order.customer_email:
         return
     try:
@@ -78,6 +94,8 @@ def send_order_placed(order, utr=""):
 
 def send_order_confirmation(order):
     """Email customer when their order is confirmed / payment received."""
+    if getattr(order, "yagna_donation", None):
+        return send_yagna_thanks(order, order.yagna_donation)
     if not order.customer_email:
         print(f"[EMAIL] Skipping confirmation for {order.order_number} — no email on record.")
         return

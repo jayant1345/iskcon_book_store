@@ -1,0 +1,111 @@
+{% extends "admin/admin_base.html" %}
+{% set active_page = 'gita_yagna' %}
+{% block page_title %}{{ 'Add offline Gita donation' if is_new else 'Edit offline Gita donation' }}{% endblock %}
+{% block content %}
+<div class="row"><div class="col-lg-9">
+<div class="card shadow-sm">
+    <div class="card-header py-2"><strong><i class="fas fa-file-signature me-2 text-warning"></i>Paper form entry — Gita Dan Yagna</strong></div>
+    <div class="card-body">
+        <form method="POST">
+            <h6 class="text-uppercase text-muted small">01 · Donor details</h6>
+            <div class="row g-3 mb-4">
+                <div class="col-md-6"><label class="form-label small fw-bold">Name *</label>
+                    <input type="text" name="donor_name" class="form-control" required value="{{ request.form.get('donor_name', d.donor_name or '') }}"></div>
+                <div class="col-md-6"><label class="form-label small fw-bold">Contact</label>
+                    <input type="tel" name="donor_phone" class="form-control" value="{{ request.form.get('donor_phone', d.donor_phone or '') }}"></div>
+                <div class="col-md-4"><label class="form-label small fw-bold">Profession</label>
+                    <input type="text" name="profession" class="form-control" value="{{ request.form.get('profession', d.profession or '') }}"></div>
+                <div class="col-md-4"><label class="form-label small fw-bold">Lives at / Area</label>
+                    <input type="text" name="area" class="form-control" value="{{ request.form.get('area', d.area or '') }}"></div>
+                <div class="col-md-4"><label class="form-label small fw-bold">Email</label>
+                    <input type="email" name="donor_email" class="form-control" value="{{ request.form.get('donor_email', d.donor_email or '') }}"></div>
+            </div>
+
+            <h6 class="text-uppercase text-muted small">02 · Saṅkalpa (Gitas for…)</h6>
+            <div class="row g-3 mb-4">
+                <div class="col-4"><label class="form-label small">Students</label>
+                    <input type="number" min="0" name="students_qty" class="form-control" value="{{ request.form.get('students_qty', d.students_qty or '') }}"></div>
+                <div class="col-4"><label class="form-label small">Village residents</label>
+                    <input type="number" min="0" name="village_qty" class="form-control" value="{{ request.form.get('village_qty', d.village_qty or '') }}"></div>
+                <div class="col-4"><label class="form-label small">Others</label>
+                    <input type="number" min="0" name="others_qty" class="form-control" value="{{ request.form.get('others_qty', d.others_qty or '') }}"></div>
+            </div>
+
+            <h6 class="text-uppercase text-muted small">Donation</h6>
+            <div class="row g-3 mb-4">
+                <div class="col-md-3"><label class="form-label small fw-bold">Language *</label>
+                    <select name="language" id="lang" class="form-select">
+                        {% for l in langs %}<option value="{{ l }}" {% if (request.form.get('language') or d.language) == l %}selected{% endif %}>{{ l }}</option>{% endfor %}
+                    </select></div>
+                <div class="col-md-3"><label class="form-label small fw-bold">No. of Gitas *</label>
+                    <input type="number" min="1" name="quantity" id="qty" class="form-control" required value="{{ request.form.get('quantity', d.quantity or '') }}"></div>
+                <div class="col-md-3"><label class="form-label small fw-bold">Amount ₹ <span class="text-muted fw-normal">(auto if empty)</span></label>
+                    <input type="number" min="0" step="1" name="amount" id="amount" class="form-control" value="{{ request.form.get('amount', ('%.0f' % d.amount) if d.amount else '') }}"></div>
+                <div class="col-md-3"><label class="form-label small fw-bold">Date</label>
+                    <input type="date" name="donated_on" class="form-control" value="{{ request.form.get('donated_on', today) }}"></div>
+                <div class="col-12"><small class="text-muted" id="hint"></small></div>
+                <div class="col-md-4"><label class="form-label small fw-bold">Payment mode</label>
+                    <select name="payment_mode" class="form-select">
+                        {% for m, label in [('qr','QR / UPI'),('cash','Cash'),('cheque','Cheque'),('bank','Bank transfer'),('other','Other')] %}
+                        <option value="{{ m }}" {% if (request.form.get('payment_mode') or d.payment_mode) == m %}selected{% endif %}>{{ label }}</option>{% endfor %}
+                    </select></div>
+                <div class="col-md-4"><label class="form-label small fw-bold">Form / receipt no.</label>
+                    <input type="text" name="receipt_no" class="form-control" value="{{ request.form.get('receipt_no', d.receipt_no or '') }}"></div>
+                <div class="col-md-4"><label class="form-label small fw-bold">In the name of (optional)</label>
+                    <input type="text" name="dedication" class="form-control" value="{{ request.form.get('dedication', d.dedication or '') }}"></div>
+            </div>
+
+            <h6 class="text-uppercase text-muted small">Distribution</h6>
+            {% set dist = request.form.get('distribution') or d.distribution or 'local' %}
+            <div class="row g-3 mb-4">
+                <div class="col-md-4"><label class="form-label small fw-bold">How will the Gitas be distributed?</label>
+                    <select name="distribution" id="dist" class="form-select">
+                        <option value="local" {% if dist=='local' %}selected{% endif %}>🏛 Local distribution (no courier)</option>
+                        <option value="courier" {% if dist=='courier' %}selected{% endif %}>📦 Online distribution (courier)</option>
+                    </select></div>
+                <div id="courierFields" class="col-12" style="display:none;">
+                    <div class="row g-3 p-3 border rounded" style="background:#f3f8ff;">
+                        <div class="col-md-4"><label class="form-label small fw-bold">Courier charge ₹ <span class="text-muted fw-normal">(paid by donor)</span></label>
+                            <input type="number" min="0" step="1" name="courier_charge" class="form-control" value="{{ request.form.get('courier_charge', ('%.0f' % d.courier_charge) if d.courier_charge else '') }}"></div>
+                        <div class="col-md-4"><label class="form-label small fw-bold">Recipient pincode</label>
+                            <input type="text" name="recipient_pincode" class="form-control" maxlength="6" value="{{ request.form.get('recipient_pincode', d.recipient_pincode or '') }}"></div>
+                        <div class="col-md-6"><label class="form-label small fw-bold">Recipient name *</label>
+                            <input type="text" name="recipient_name" class="form-control" value="{{ request.form.get('recipient_name', d.recipient_name or '') }}"></div>
+                        <div class="col-md-6"><label class="form-label small fw-bold">Recipient mobile</label>
+                            <input type="text" name="recipient_phone" class="form-control" value="{{ request.form.get('recipient_phone', d.recipient_phone or '') }}"></div>
+                        <div class="col-12"><label class="form-label small fw-bold">Recipient address *</label>
+                            <textarea name="recipient_address" rows="2" class="form-control">{{ request.form.get('recipient_address', d.recipient_address or '') }}</textarea></div>
+                    </div>
+                </div>
+            </div>
+
+            <h6 class="text-uppercase text-muted small">03 · Gītā Jayantī participation</h6>
+            <div class="mb-3">
+                <div class="form-check form-check-inline"><input class="form-check-input" type="checkbox" name="arati" id="arati" {% if request.form.get('arati') or (request.method != 'POST' and d.arati) %}checked{% endif %}><label class="form-check-label" for="arati">Ārati on Gītā Jayantī</label></div>
+                <div class="form-check form-check-inline"><input class="form-check-input" type="checkbox" name="yajna" id="yajna" {% if request.form.get('yajna') or (request.method != 'POST' and d.yajna) %}checked{% endif %}><label class="form-check-label" for="yajna">Gītā Yajña</label></div>
+                <div class="form-check form-check-inline"><input class="form-check-input" type="checkbox" name="show_name" id="show_name" {% if request.form.get('show_name') or (request.method != 'POST' and d.show_name) %}checked{% endif %}><label class="form-check-label" for="show_name">Donor agrees to show name on website</label></div>
+            </div>
+            <div class="mb-4"><label class="form-label small fw-bold">Notes</label>
+                <textarea name="notes" rows="2" class="form-control">{{ request.form.get('notes', d.notes or '') }}</textarea></div>
+
+            <button class="btn btn-warning fw-bold" type="submit"><i class="fas fa-save me-1"></i>Save</button>
+            <a href="{{ url_for('admin_gita_yagna') }}" class="btn btn-outline-secondary">Cancel</a>
+        </form>
+    </div>
+</div>
+</div></div>
+<script>
+(function () {
+  var prices = {{ cfg.prices|tojson }};
+  var lang = document.getElementById('lang'), qty = document.getElementById('qty'), hint = document.getElementById('hint');
+  function upd() {
+    var q = parseInt(qty.value) || 0;
+    hint.textContent = q ? 'Standard rate: ' + q + ' × ₹' + Math.round(prices[lang.value]) + ' = ₹' + Math.round(q * prices[lang.value]).toLocaleString('en-IN') + ' (type a different amount if a package price was collected)' : '';
+  }
+  lang.addEventListener('change', upd); qty.addEventListener('input', upd); upd();
+  var dist = document.getElementById('dist'), cf = document.getElementById('courierFields');
+  function showCourier() { cf.style.display = dist.value === 'courier' ? 'block' : 'none'; }
+  dist.addEventListener('change', showCourier); showCourier();
+})();
+</script>
+{% endblock %}

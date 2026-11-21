@@ -129,6 +129,15 @@ def create_shipment(order):
             for item in book_items),
         0.5
     )
+    # Gita Dan Yagna courier donation: the parcel goes to the recipient the donor
+    # named (not the donor), and the Gitas have no catalogue book row.
+    consignee_name, consignee_phone = order.customer_name, order.customer_phone
+    yagna = getattr(order, "yagna_donation", None)
+    if yagna is not None and yagna.is_courier:
+        total_qty = yagna.quantity
+        weight_kg = max(yagna.parcel_kg or total_qty * _WEIGHT_KG, 0.5)
+        consignee_name = yagna.recipient_name or order.customer_name
+        consignee_phone = yagna.recipient_phone or order.customer_phone
     weight_grams = int(weight_kg * 1000)
     # Product description shows what the customer actually bought — a
     # combo appears as its combo name, not each book inside it.
@@ -136,13 +145,13 @@ def create_shipment(order):
 
     payload = {
         "shipments": [{
-            "name":          order.customer_name,
+            "name":          consignee_name,
             "add":           order.address,
             "pin":           str(order.pincode),
             "city":          order.city or "",
             "state":         order.state or "",
             "country":       "India",
-            "phone":         order.customer_phone,
+            "phone":         consignee_phone,
             "order":         order.order_number,
             "payment_mode":  "Prepaid",
             "cod_amount":    0,

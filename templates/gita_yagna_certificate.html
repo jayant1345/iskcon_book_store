@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Gita Dan Yagna — Thank-you Certificate</title>
+<style>
+  @page { size: A4 landscape; margin: 0; }
+  body { margin:0; background:#eee; font-family:Georgia,'Times New Roman',serif; color:#222; }
+  .sheet { width:297mm; max-width:100%; min-height:210mm; margin:0 auto; background:#fffaf0; box-sizing:border-box; padding:12mm; }
+  .frame { border:3px double #c8901e; min-height:calc(210mm - 24mm); padding:10mm 14mm; text-align:center; position:relative; }
+  .brand { display:flex; align-items:center; justify-content:center; gap:14px; }
+  .brand img { height:64px; }
+  h1 { font-size:34px; margin:10px 0 0; color:#13294b; letter-spacing:2px; }
+  .sub { color:#a06a00; font-size:18px; margin-bottom:6px; }
+  .verse { color:#8a1c3c; font-size:15px; margin:10px 0 14px; line-height:1.7; }
+  .name { font-size:34px; color:#0f6b68; border-bottom:1px solid #c8901e; display:inline-block; padding:0 30px 4px; margin:6px 0; }
+  .big { font-size:20px; line-height:1.7; }
+  .qty { font-size:26px; font-weight:bold; color:#ea580c; }
+  .foot { display:flex; justify-content:space-between; margin-top:26px; font-size:14px; color:#555; text-align:left; }
+  .note { font-size:11px; color:#888; margin-top:14px; }
+  .noprint { text-align:center; padding:12px; }
+  .noprint button { padding:10px 22px; font-size:16px; background:#ea580c; color:#fff; border:0; border-radius:8px; cursor:pointer; }
+  @media print { body { background:#fff; } .noprint { display:none; } .sheet { padding:8mm; } }
+</style>
+</head>
+<body>
+<div class="noprint"><button onclick="window.print()">🖨 Print / Save as PDF</button></div>
+<div class="sheet"><div class="frame">
+  <div class="brand">
+    <img src="{{ url_for('static', filename='images/iskcon_logo.png') }}" alt="ISKCON" onerror="this.style.display='none'">
+    <div>
+      <div style="font-weight:bold; letter-spacing:2px; color:#13294b;">ISKCON AHMEDABAD</div>
+      <div class="sub">Gītā Dāna Mahā Dāna &nbsp;·&nbsp; ગીતા દાન મહાદાન</div>
+    </div>
+  </div>
+  <h1>CERTIFICATE OF THANKS</h1>
+  <div class="verse">न च तस्मान्मनुष्येषु कश्चिन्मे प्रियकृत्तमः । भविता न च मे तस्मादन्यः प्रियतरो भुवि ॥<br>
+    <em style="color:#555; font-size:13px;">“There is no servant in this world more dear to Me than he.” — Bhagavad-gītā 18.69</em></div>
+
+  <div class="big">With heartfelt gratitude, we thank</div>
+  <div class="name">{{ d.donor_name }}</div>
+  <div class="big">for taking saṅkalpa in the <strong>Gita Dan Yagna</strong> and donating</div>
+  <div class="qty">{{ d.quantity }} Bhagavad-gītā{{ 's' if d.quantity != 1 }} <span style="font-size:18px; color:#444;">({{ d.language }})</span></div>
+  {% if d.dedication %}<div class="big" style="margin-top:6px;">in the name of <strong>{{ d.dedication }}</strong></div>{% endif %}
+  <div class="big" style="margin-top:8px;">to be given to students, village residents and other people.<br>
+    <span style="font-size:16px; color:#555;">May Śrī Kṛṣṇa bless you and your family. Hare Krishna 🙏</span></div>
+
+  <div class="foot">
+    <div>Date: {{ d.donated_on | ist('%d %B %Y') }}<br>Ref: {{ cert_no }}</div>
+    <div style="text-align:right;">Gītā Jayantī &amp; Yajña: {{ cfg.event_date }}<br>ISKCON Ahmedabad</div>
+  </div>
+  <div class="note">This is a thank-you certificate. It is not a tax-exemption (80G) receipt.</div>
+</div></div>
+</body>
+</html>

@@ -526,6 +526,181 @@ class Setting(db.Model):
         db.session.commit()
 
 
+class GitaYagnaDonation(db.Model):
+    """One Gita Dan Yagna donation — either paid online (linked to an Order, so it
+    goes through the normal payment gateways) or entered by admin from the paper
+    form (order_id empty). The temple distributes the Gitas; nothing is shipped."""
+    __tablename__ = "gita_yagna_donations"
+    id            = db.Column(db.Integer, primary_key=True)
+    order_id      = db.Column(db.Integer, db.ForeignKey("orders.id"), nullable=True, index=True)
+    source        = db.Column(db.String(20), default="online")      # online / offline
+    donor_name    = db.Column(db.String(200), nullable=False)
+    donor_phone   = db.Column(db.String(20))
+    donor_email   = db.Column(db.String(200))
+    profession    = db.Column(db.String(100))
+    area          = db.Column(db.String(200))
+    language      = db.Column(db.String(20), default="Hindi")       # Hindi / Gujarati / English
+    quantity      = db.Column(db.Integer, nullable=False, default=1)
+    amount        = db.Column(db.Float, nullable=False, default=0)
+    students_qty  = db.Column(db.Integer, default=0)                # sankalpa split (all optional)
+    village_qty   = db.Column(db.Integer, default=0)
+    others_qty    = db.Column(db.Integer, default=0)
+    arati         = db.Column(db.Boolean, default=False)            # joins Arati on Gita Jayanti
+    yajna         = db.Column(db.Boolean, default=False)            # joins the Gita Yajna
+    dedication    = db.Column(db.String(250))                       # "in the name of / in memory of"
+    show_name     = db.Column(db.Boolean, default=False)            # donor agreed to public donor wall
+    payment_mode  = db.Column(db.String(30))                        # razorpay / upi / qr / cash / cheque ...
+    receipt_no    = db.Column(db.String(50))                        # paper form / receipt number
+    distributed   = db.Column(db.Boolean, default=False)
+    distributed_at = db.Column(db.DateTime)
+    donated_on    = db.Column(db.DateTime, default=datetime.utcnow)
+    notes         = db.Column(db.Text)
+    created_at    = db.Column(db.DateTime, default=datetime.utcnow)
+    # How the Gitas reach people: "local" = temple hands them out locally (no courier);
+    # "courier" = online distribution, sent by courier to the recipient below.
+    distribution   = db.Column(db.String(10), default="local")
+    courier_charge = db.Column(db.Float, default=0)    # courier charge — always paid by the donor
+    parcel_kg      = db.Column(db.Float)               # parcel weight used for the courier rate / shipment
+    recipient_name    = db.Column(db.String(200))
+    recipient_phone   = db.Column(db.String(20))
+    recipient_address = db.Column(db.Text)
+    recipient_city    = db.Column(db.String(100))
+    recipient_state   = db.Column(db.String(100))
+    recipient_pincode = db.Column(db.String(10))
+
+    order = db.relationship("Order", foreign_keys=[order_id],
+                            backref=db.backref("yagna_donation", uselist=False))
+
+    @property
+    def counted(self):
+        """Counts toward totals: offline entries always, online only once paid."""
+        if self.order_id is None:
+            return True
+        return bool(self.order and not self.order.is_deleted
+                    and self.order.payment_status == "paid")
+
+    @property
+    def is_courier(self):
+        return self.distribution == "courier"
+
+    @property
+    def courier_paid_by_donor(self):
+        """The courier charge is always paid by the donor; local distribution has none."""
+        return (self.courier_charge or 0) if self.is_courier else 0.0
+
+    @property
+    def total_paid(self):
+        """What the donor pays: Gitas + courier charge (courier distribution only)."""
+        return (self.amount or 0) + self.courier_paid_by_donor
+
+    @property
+    def distribution_label(self):
+        return "Online distribution (courier)" if self.is_courier else "Local distribution"
+
+    @property
+    def status_label(self):
+        if self.distributed:
+            return "Distributed"
+        return "Received" if self.counted else "Awaiting payment"
+
+    @property
+    def invitation(self):
+        return (self.quantity or 0) >= YAGNA_INVITE_MIN
+
+    @property
+    def invite_min(self):
+        return YAGNA_INVITE_MIN
+
+    @property
+    def event_date(self):
+        return yagna_config()["event_date"]
+
+    def __repr__(self):
+        return f"<GitaYagnaDonation {self.id} {self.donor_name} x{self.quantity}>"
+
+
+# ── Gita Dan Yagna settings (editable in Admin → Gita Dan Yagna) ──
+YAGNA_LANGS = ("Hindi", "Gujarati", "English")
+YAGNA_DEFAULT_PRICES = {"Hindi": 200, "Gujarati": 210, "English": 240}
+YAGNA_DEFAULT_GOAL = 10000
+YAGNA_DEFAULT_EVENT = "Sunday, 20 December 2026"
+YAGNA_INVITE_MIN = 50          # donors of this many Gitas get a special invitation card
+YAGNA_MAX_QTY = 10000
+YAGNA_DEFAULT_WEIGHT_KG = 0.5   # parcel weight per Gita, used for the courier rate
+
+
+def yagna_config():
+    prices = {}
+    for lang in YAGNA_LANGS:
+        try:
+            prices[lang] = float(Setting.get(f"yagna_price_{lang.lower()}", YAGNA_DEFAULT_PRICES[lang]))
+        except (TypeError, ValueError):
+            prices[lang] = float(YAGNA_DEFAULT_PRICES[lang])
+    try:
+        goal = int(float(Setting.get("yagna_goal", YAGNA_DEFAULT_GOAL)))
+    except (TypeError, ValueError):
+        goal = YAGNA_DEFAULT_GOAL
+    return {
+        "enabled": Setting.get("yagna_enabled", "0") == "1",
+        "goal": max(1, goal),
+        "prices": prices,
+        "event_date": Setting.get("yagna_event_date", YAGNA_DEFAULT_EVENT) or YAGNA_DEFAULT_EVENT,
+        "weight_kg": _yagna_float(Setting.get("yagna_weight_kg"), YAGNA_DEFAULT_WEIGHT_KG),
+    }
+
+
+def _yagna_float(value, default):
+    try:
+        v = float(value)
+        return v if v > 0 else default
+    except (TypeError, ValueError):
+        return default
+
+
+def yagna_courier_charge(pincode, quantity, cfg=None):
+    """Courier charge for sending `quantity` Gitas to `pincode` — the same rule the
+    store checkout uses: Delhivery rate for the weight, else the flat store charge."""
+    cfg = cfg or yagna_config()
+    weight_grams = max(int(quantity * cfg["weight_kg"] * 1000), 500)
+    try:
+        from delhivery import get_shipping_rate
+        rate, _zone, _err = get_shipping_rate(pincode, weight_grams)
+    except Exception:
+        rate = None
+    return float(rate) if rate is not None else float(app.config["SHIPPING_CHARGE"])
+
+
+def yagna_stats(cfg=None):
+    cfg = cfg or yagna_config()
+    rows = GitaYagnaDonation.query.all()
+    counted = [r for r in rows if r.counted]
+    gitas = sum(r.quantity or 0 for r in counted)
+    by_lang = {lang: sum(r.quantity or 0 for r in counted if r.language == lang) for lang in YAGNA_LANGS}
+    courier = [r for r in counted if r.is_courier]
+    return {
+        "gitas": gitas,
+        "amount": sum(r.total_paid for r in counted),
+        "gita_amount": sum(r.amount or 0 for r in counted),
+        "local_gitas": sum(r.quantity or 0 for r in counted if not r.is_courier),
+        "local_donors": sum(1 for r in counted if not r.is_courier),
+        "courier_gitas": sum(r.quantity or 0 for r in courier),
+        "courier_donors": len(courier),
+        "courier_collected": sum(r.courier_paid_by_donor for r in counted),
+        "donors": len(counted),
+        "online": sum(1 for r in counted if r.source == "online"),
+        "offline": sum(1 for r in counted if r.source == "offline"),
+        "pending": sum(1 for r in rows if not r.counted),
+        "distributed": sum(r.quantity or 0 for r in counted if r.distributed),
+        "invitations": sum(1 for r in counted if r.invitation),
+        "students": sum(r.students_qty or 0 for r in counted),
+        "village": sum(r.village_qty or 0 for r in counted),
+        "others": sum(r.others_qty or 0 for r in counted),
+        "by_lang": by_lang,
+        "goal": cfg["goal"],
+        "pct": min(100, round(gitas * 100 / cfg["goal"], 1)) if cfg["goal"] else 0,
+    }
+
+
 class Customer(db.Model):
     __tablename__ = "customers"
     id            = db.Column(db.Integer, primary_key=True)
@@ -1239,7 +1414,10 @@ def index():
         'krishna': get_carousel_book('carousel_slide_3', 'Krishna'),
         'nod':     get_carousel_book('carousel_slide_4', 'Nectar of Devotion'),
     }
+    yagna_cfg = yagna_config()
+    yagna_banner = yagna_stats(yagna_cfg) if yagna_cfg["enabled"] else None
     return render_template("index.html",
+                           yagna_banner=yagna_banner, yagna_cfg=yagna_cfg,
                            featured_books=featured_books,
                            new_arrivals=new_arrivals,
                            home_combos=home_combos,
@@ -2082,6 +2260,217 @@ def donate_book(book_id):
         return render_template("donate.html", book=book)
 
 
+# ─────────────────────────────────────────────
+# GITA DAN YAGNA (public)
+# ─────────────────────────────────────────────
+
+def _yagna_int(name, default=0, hi=YAGNA_MAX_QTY):
+    try:
+        return max(0, min(hi, int(request.form.get(name) or default)))
+    except ValueError:
+        return default
+
+
+def _yagna_wall(limit=30):
+    rows = (GitaYagnaDonation.query.filter_by(show_name=True)
+            .order_by(GitaYagnaDonation.donated_on.desc()).limit(200).all())
+    return [r for r in rows if r.counted][:limit]
+
+
+@app.route("/gita-dan-yagna", methods=["GET", "POST"])
+def gita_dan_yagna():
+    cfg = yagna_config()
+    stats = yagna_stats(cfg)
+
+    def render(**extra):
+        return render_template("gita_yagna.html", cfg=cfg, stats=stats,
+                               wall=_yagna_wall(), langs=YAGNA_LANGS,
+                               invite_min=YAGNA_INVITE_MIN, form=extra.pop("form", {}), **extra)
+
+    if request.method == "GET" or not cfg["enabled"]:
+        return render()
+
+    f = request.form
+    donor_name = f.get("donor_name", "").strip()
+    donor_phone = f.get("donor_phone", "").strip()
+    donor_email = f.get("donor_email", "").strip()
+    profession = f.get("profession", "").strip()[:100]
+    area = f.get("area", "").strip()[:200]
+    dedication = f.get("dedication", "").strip()[:250]
+    language = f.get("language", "Hindi")
+    payment_method = f.get("payment_method", "upi")
+    distribution = f.get("distribution", "local")
+    if distribution not in ("local", "courier"):
+        distribution = "local"
+    r_name = f.get("recipient_name", "").strip()[:200]
+    r_phone = f.get("recipient_phone", "").strip()
+    r_address = f.get("recipient_address", "").strip()
+    r_city = f.get("recipient_city", "").strip()[:100]
+    r_state = f.get("recipient_state", "").strip()[:100]
+    r_pin = f.get("recipient_pincode", "").strip()
+    quantity = _yagna_int("quantity", 0)
+    students, village, others = (_yagna_int("students_qty"), _yagna_int("village_qty"),
+                                 _yagna_int("others_qty"))
+    arati = f.get("arati") == "on"
+    yajna = f.get("yajna") == "on"
+    show_name = f.get("show_name") == "on"
+
+    def fail(msg):
+        flash(msg, "danger")
+        return render(form=f)
+
+    if language not in YAGNA_LANGS:
+        return fail("Please choose the language of the Gitas.")
+    if quantity < 1:
+        return fail("Please choose how many Gitas you want to donate.")
+    if not donor_name:
+        return fail("Please enter your name.")
+    phone = valid_indian_phone(donor_phone)
+    if not phone:
+        return fail("Please enter a valid 10-digit mobile number.")
+    if not valid_email(donor_email):
+        return fail("Please enter a valid email address.")
+    if students + village + others > quantity:
+        return fail("The Gitas split for Students / Village residents / Others "
+                    "is more than the total number of Gitas.")
+    if payment_method not in ("upi", "razorpay"):
+        payment_method = "upi"
+
+    courier_charge = 0.0
+    if distribution == "courier":
+        if not r_name or not r_address:
+            return fail("For online (courier) distribution please enter the recipient's name and full address.")
+        if not _re.fullmatch(r"\d{6}", r_pin):
+            return fail("Please enter the recipient's 6-digit pincode.")
+        if r_phone:
+            r_phone = valid_indian_phone(r_phone)
+            if not r_phone:
+                return fail("Please enter a valid 10-digit mobile number for the recipient (or leave it empty).")
+        courier_charge = yagna_courier_charge(r_pin, quantity, cfg)
+
+    unit = cfg["prices"][language]
+    gitas_amount = round(unit * quantity, 2)
+    courier_pay = courier_charge          # always paid by the donor (0 for local distribution)
+    total_amount = round(gitas_amount + courier_pay, 2)
+    sankalpa = ", ".join(x for x in (
+        f"Students {students}" if students else "",
+        f"Village residents {village}" if village else "",
+        f"Others {others}" if others else "") if x) or "Temple decides"
+    participation = ", ".join(x for x in (
+        "Arati on Gita Jayanti" if arati else "", "Gita Yajna" if yajna else "") if x)
+
+    order = Order(
+        order_number              = generate_order_number(),
+        customer_name             = donor_name,
+        customer_email            = donor_email or None,
+        customer_phone            = phone,
+        address                   = (r_address if distribution == "courier"
+                                     else "Gita Dan Yagna — distributed by ISKCON Ahmedabad"),
+        city                      = (r_city or "—") if distribution == "courier" else (area or "—"),
+        state                     = r_state if distribution == "courier" else "",
+        pincode                   = r_pin if distribution == "courier" else "000000",
+        subtotal                  = gitas_amount,
+        shipping_charge           = courier_pay,
+        discount_amount           = 0,
+        total_amount              = total_amount,
+        payment_method            = payment_method,
+        payment_status            = "pending",
+        order_status              = "placed",
+        notes                     = f"Gita Dan Yagna | Sankalpa: {sankalpa}"
+                                    + (f" | Participation: {participation}" if participation else "")
+                                    + (" | Distribution: Local (temple)" if distribution == "local"
+                                       else f" | Distribution: Courier — courier charge paid by donor "
+                                            f"(₹{courier_charge:.0f})"),
+        is_donation               = True,
+        donation_type             = "yagna",
+        donation_recipient        = (r_name if distribution == "courier" else sankalpa)[:200],
+        donation_recipient_address= r_address if distribution == "courier" else None,
+        donor_message             = dedication or None,
+        profession                = profession or None,
+    )
+    db.session.add(order)
+    db.session.flush()
+    db.session.add(OrderItem(
+        order_id=order.id, book_id=None,
+        book_title=f"Gita Dan Yagna — Bhagavad Gita As It Is ({language})",
+        quantity=quantity, price=unit))
+    db.session.add(GitaYagnaDonation(
+        order_id=order.id, source="online", donor_name=donor_name, donor_phone=phone,
+        donor_email=donor_email or None, profession=profession or None, area=area or None,
+        language=language, quantity=quantity, amount=gitas_amount,
+        distribution=distribution,
+        courier_charge=courier_charge,
+        parcel_kg=round(quantity * cfg["weight_kg"], 2) if distribution == "courier" else None,
+        recipient_name=r_name or None, recipient_phone=r_phone or None,
+        recipient_address=r_address or None, recipient_city=r_city or None,
+        recipient_state=r_state or None, recipient_pincode=r_pin or None,
+        students_qty=students, village_qty=village, others_qty=others,
+        arati=arati, yajna=yajna, dedication=dedication or None, show_name=show_name,
+        payment_mode=payment_method))
+    db.session.commit()
+    notify_admin_whatsapp(
+        f"🙏 New Gita Dan Yagna Donation!\n"
+        f"Donor: {donor_name} | {phone}\n"
+        f"Gitas: {quantity} × {language} = ₹{total_amount:.0f} | {payment_method.upper()}\n"
+        f"Sankalpa: {sankalpa}\n"
+        + ("Distribution: Local (temple)" if distribution == "local" else
+           f"Distribution: COURIER to {r_name}, {r_pin} — courier ₹{courier_charge:.0f} (paid by donor)")
+        + (f"\n🎟 Special invitation card eligible" if quantity >= YAGNA_INVITE_MIN else ""))
+
+    if payment_method == "upi":
+        return redirect(url_for("payment_upi_qr", order_number=order.order_number))
+
+    try:
+        import requests as _req
+        rp_resp = _req.post(
+            "https://api.razorpay.com/v1/orders",
+            auth=(app.config["RAZORPAY_KEY_ID"], app.config["RAZORPAY_KEY_SECRET"]),
+            json={"amount": int(round(total_amount * 100)), "currency": "INR",
+                  "receipt": order.order_number},
+            timeout=10)
+        rp_resp.raise_for_status()
+        rp_order = rp_resp.json()
+        order.razorpay_order_id = rp_order["id"]
+        db.session.commit()
+        return render_template("payment_razorpay.html", order=order, rp_order=rp_order,
+                               key_id=app.config["RAZORPAY_KEY_ID"])
+    except Exception as e:
+        GitaYagnaDonation.query.filter_by(order_id=order.id).delete()
+        OrderItem.query.filter_by(order_id=order.id).delete()
+        db.session.delete(order)
+        db.session.commit()
+        return fail(f"Payment gateway error: {e}. Please try again.")
+
+
+@app.route("/api/gita-dan-yagna/courier-rate")
+def api_yagna_courier_rate():
+    pin = request.args.get("pincode", "").strip()
+    qty = max(1, min(YAGNA_MAX_QTY, request.args.get("qty", 1, type=int) or 1))
+    if not _re.fullmatch(r"\d{6}", pin):
+        return jsonify({"ok": False})
+    return jsonify({"ok": True, "charge": yagna_courier_charge(pin, qty)})
+
+
+@app.route("/gita-dan-yagna/thanks/<order_number>")
+def gita_yagna_thanks(order_number):
+    order = Order.query.filter_by(order_number=order_number).first_or_404()
+    donation = order.yagna_donation
+    if not donation:
+        abort(404)
+    return render_template("gita_yagna_thanks.html", order=order, d=donation,
+                           cfg=yagna_config(), invite_min=YAGNA_INVITE_MIN)
+
+
+@app.route("/gita-dan-yagna/certificate/<order_number>")
+def gita_yagna_certificate(order_number):
+    order = Order.query.filter_by(order_number=order_number).first_or_404()
+    donation = order.yagna_donation
+    if not donation or not donation.counted:
+        abort(404)
+    return render_template("gita_yagna_certificate.html", d=donation, cfg=yagna_config(),
+                           cert_no=order.order_number)
+
+
 @app.route("/payment/verify", methods=["POST"])
 def payment_verify():
     data = request.get_json() or request.form.to_dict()
@@ -2125,6 +2514,8 @@ def payment_verify():
 @app.route("/order/success/<order_number>")
 def order_success(order_number):
     order = Order.query.filter_by(order_number=order_number).first_or_404()
+    if order.donation_type == "yagna":
+        return redirect(url_for("gita_yagna_thanks", order_number=order.order_number))
     return render_template("payment_success.html", order=order)
 
 
@@ -4004,6 +4395,245 @@ def toggle_featured(book_id):
     return redirect(request.referrer or url_for("admin_books"))
 
 
+# ── Admin: Gita Dan Yagna ──
+
+def _yagna_form_to_donation(d):
+    """Fill a GitaYagnaDonation from the admin's offline-entry form (paper form).
+    Returns an error message string, or None when OK."""
+    f = request.form
+    d.donor_name = f.get("donor_name", "").strip()
+    if not d.donor_name:
+        return "Donor name is required."
+    phone = f.get("donor_phone", "").strip()
+    if phone:
+        norm = valid_indian_phone(phone)
+        if not norm:
+            return "Please enter a valid 10-digit mobile number (or leave it empty)."
+        phone = norm
+    d.donor_phone = phone or None
+    d.donor_email = f.get("donor_email", "").strip() or None
+    if not valid_email(d.donor_email or ""):
+        return "Please enter a valid email address."
+    d.profession = f.get("profession", "").strip()[:100] or None
+    d.area = f.get("area", "").strip()[:200] or None
+    d.language = f.get("language", "Hindi")
+    if d.language not in YAGNA_LANGS:
+        return "Please choose a language."
+    try:
+        d.quantity = max(1, min(YAGNA_MAX_QTY, int(f.get("quantity") or 0)))
+    except ValueError:
+        d.quantity = 0
+    if d.quantity < 1:
+        return "Please enter the number of Gitas."
+    try:
+        d.amount = round(float(f.get("amount") or 0), 2)
+    except ValueError:
+        return "Please enter a valid amount."
+    if d.amount <= 0:
+        d.amount = round(yagna_config()["prices"][d.language] * d.quantity, 2)
+    d.students_qty = _yagna_int("students_qty")
+    d.village_qty = _yagna_int("village_qty")
+    d.others_qty = _yagna_int("others_qty")
+    if d.students_qty + d.village_qty + d.others_qty > d.quantity:
+        return "Students + Village residents + Others is more than the total Gitas."
+    d.arati = f.get("arati") == "on"
+    d.yajna = f.get("yajna") == "on"
+    d.dedication = f.get("dedication", "").strip()[:250] or None
+    d.show_name = f.get("show_name") == "on"
+    d.payment_mode = f.get("payment_mode", "qr")[:30]
+    d.receipt_no = f.get("receipt_no", "").strip()[:50] or None
+    d.notes = f.get("notes", "").strip() or None
+    d.distribution = f.get("distribution", "local")
+    if d.distribution not in ("local", "courier"):
+        d.distribution = "local"
+    if d.distribution == "courier":
+        try:
+            d.courier_charge = max(0.0, round(float(f.get("courier_charge") or 0), 2))
+        except ValueError:
+            return "Please enter a valid courier charge."
+    else:
+        d.courier_charge = 0.0
+    d.recipient_name = f.get("recipient_name", "").strip()[:200] or None
+    d.recipient_phone = f.get("recipient_phone", "").strip()[:20] or None
+    d.recipient_address = f.get("recipient_address", "").strip() or None
+    d.recipient_pincode = f.get("recipient_pincode", "").strip()[:10] or None
+    if d.distribution == "courier" and not (d.recipient_name and d.recipient_address):
+        return "For courier distribution please enter the recipient's name and address."
+    try:
+        day = datetime.strptime(f.get("donated_on", ""), "%Y-%m-%d")
+        d.donated_on = day + timedelta(hours=12) - _IST_OFFSET      # noon IST that day
+    except ValueError:
+        d.donated_on = d.donated_on or datetime.utcnow()
+    return None
+
+
+@app.route("/admin/gita-yagna", methods=["GET", "POST"])
+@admin_required
+def admin_gita_yagna():
+    if request.method == "POST":
+        for lang in YAGNA_LANGS:
+            try:
+                price = float(request.form.get(f"price_{lang.lower()}", ""))
+                if price > 0:
+                    Setting.set(f"yagna_price_{lang.lower()}", str(price))
+            except ValueError:
+                pass
+        try:
+            goal = int(float(request.form.get("goal", "")))
+            if goal > 0:
+                Setting.set("yagna_goal", str(goal))
+        except ValueError:
+            pass
+        try:
+            wt = float(request.form.get("weight_kg", ""))
+            if wt > 0:
+                Setting.set("yagna_weight_kg", str(wt))
+        except ValueError:
+            pass
+        event = request.form.get("event_date", "").strip()
+        if event:
+            Setting.set("yagna_event_date", event[:100])
+        Setting.set("yagna_enabled", "1" if request.form.get("enabled") == "on" else "0")
+        flash("Gita Dan Yagna settings saved.", "success")
+        return redirect(url_for("admin_gita_yagna"))
+
+    cfg = yagna_config()
+    stats = yagna_stats(cfg)
+    q = request.args.get("q", "").strip()
+    status = request.args.get("status", "")
+    source = request.args.get("source", "")
+    lang_f = request.args.get("lang", "")
+    dist_f = request.args.get("dist", "")
+
+    dq = GitaYagnaDonation.query
+    if q:
+        dq = dq.filter(or_(GitaYagnaDonation.donor_name.ilike(f"%{q}%"),
+                           GitaYagnaDonation.donor_phone.ilike(f"%{q}%"),
+                           GitaYagnaDonation.area.ilike(f"%{q}%")))
+    if source in ("online", "offline"):
+        dq = dq.filter(GitaYagnaDonation.source == source)
+    if lang_f in YAGNA_LANGS:
+        dq = dq.filter(GitaYagnaDonation.language == lang_f)
+    if dist_f == "local":
+        dq = dq.filter(or_(GitaYagnaDonation.distribution == "local",
+                           GitaYagnaDonation.distribution.is_(None)))
+    elif dist_f == "courier":
+        dq = dq.filter(GitaYagnaDonation.distribution == "courier")
+    rows = dq.order_by(GitaYagnaDonation.donated_on.desc()).limit(500).all()
+    if status == "received":
+        rows = [r for r in rows if r.counted and not r.distributed]
+    elif status == "pending":
+        rows = [r for r in rows if not r.counted]
+    elif status == "distributed":
+        rows = [r for r in rows if r.distributed]
+    elif status == "invite":
+        rows = [r for r in rows if r.counted and r.invitation]
+    return render_template("admin/gita_yagna.html", cfg=cfg, stats=stats, rows=rows,
+                           langs=YAGNA_LANGS, q=q, status=status, source=source, lang_f=lang_f,
+                           dist_f=dist_f, invite_min=YAGNA_INVITE_MIN, active_page="gita_yagna")
+
+
+@app.route("/admin/gita-yagna/add", methods=["GET", "POST"])
+@admin_required
+def admin_gita_yagna_add():
+    d = GitaYagnaDonation(source="offline", payment_mode="qr")
+    if request.method == "POST":
+        err = _yagna_form_to_donation(d)
+        if err:
+            flash(err, "danger")
+        else:
+            db.session.add(d)
+            db.session.commit()
+            flash(f"Offline donation of {d.quantity} Gitas by {d.donor_name} saved.", "success")
+            return redirect(url_for("admin_gita_yagna"))
+    return render_template("admin/gita_yagna_form.html", d=d, is_new=True, cfg=yagna_config(),
+                           langs=YAGNA_LANGS, today=(datetime.utcnow() + _IST_OFFSET).strftime("%Y-%m-%d"),
+                           active_page="gita_yagna")
+
+
+@app.route("/admin/gita-yagna/edit/<int:did>", methods=["GET", "POST"])
+@admin_required
+def admin_gita_yagna_edit(did):
+    d = GitaYagnaDonation.query.get_or_404(did)
+    if d.source != "offline":
+        flash("Online donations are managed from the Orders page.", "warning")
+        return redirect(url_for("admin_gita_yagna"))
+    if request.method == "POST":
+        err = _yagna_form_to_donation(d)
+        if err:
+            db.session.rollback()
+            flash(err, "danger")
+        else:
+            db.session.commit()
+            flash("Donation updated.", "success")
+            return redirect(url_for("admin_gita_yagna"))
+    donated = ((d.donated_on or datetime.utcnow()) + _IST_OFFSET).strftime("%Y-%m-%d")
+    return render_template("admin/gita_yagna_form.html", d=d, is_new=False, cfg=yagna_config(),
+                           langs=YAGNA_LANGS, today=donated, active_page="gita_yagna")
+
+
+@app.route("/admin/gita-yagna/distribute/<int:did>", methods=["POST"])
+@admin_required
+def admin_gita_yagna_distribute(did):
+    d = GitaYagnaDonation.query.get_or_404(did)
+    d.distributed = not d.distributed
+    d.distributed_at = datetime.utcnow() if d.distributed else None
+    db.session.commit()
+    return redirect(request.referrer or url_for("admin_gita_yagna"))
+
+
+@app.route("/admin/gita-yagna/delete/<int:did>", methods=["POST"])
+@admin_required
+def admin_gita_yagna_delete(did):
+    d = GitaYagnaDonation.query.get_or_404(did)
+    if d.source != "offline":
+        flash("Only offline entries can be deleted here.", "warning")
+    else:
+        db.session.delete(d)
+        db.session.commit()
+        flash("Offline entry deleted.", "info")
+    return redirect(url_for("admin_gita_yagna"))
+
+
+@app.route("/admin/gita-yagna/certificate/<int:did>")
+@admin_required
+def admin_gita_yagna_certificate(did):
+    d = GitaYagnaDonation.query.get_or_404(did)
+    return render_template("gita_yagna_certificate.html", d=d, cfg=yagna_config(),
+                           cert_no=(d.order.order_number if d.order else f"GDY-{d.id:05d}"))
+
+
+@app.route("/admin/gita-yagna/export")
+@admin_required
+def admin_gita_yagna_export():
+    from flask import Response
+    out = io.StringIO()
+    w = csv.writer(out)
+    w.writerow(["ID", "Date", "Source", "Donor", "Phone", "Email", "Profession", "Area",
+                "Language", "Gitas", "Gitas amount", "Distribution", "Courier charge (paid by donor)",
+                "Total paid", "Recipient", "Recipient phone", "Recipient address", "Recipient pincode",
+                "Students", "Village", "Others", "Arati", "Yajna",
+                "Invitation card", "In the name of", "Show name", "Payment", "Receipt/Form No",
+                "Status", "Distributed on", "Order #", "Notes"])
+    for r in GitaYagnaDonation.query.order_by(GitaYagnaDonation.donated_on).all():
+        w.writerow([r.id, ((r.donated_on or r.created_at) + _IST_OFFSET).strftime("%d-%m-%Y"),
+                    r.source, r.donor_name, r.donor_phone or "", r.donor_email or "",
+                    r.profession or "", r.area or "", r.language, r.quantity, f"{r.amount:.0f}",
+                    "Courier" if r.is_courier else "Local",
+                    f"{(r.courier_charge or 0):.0f}" if r.is_courier else "", f"{r.total_paid:.0f}",
+                    r.recipient_name or "", r.recipient_phone or "",
+                    (r.recipient_address or "").replace("\n", " "), r.recipient_pincode or "",
+                    r.students_qty or 0, r.village_qty or 0, r.others_qty or 0,
+                    "Yes" if r.arati else "", "Yes" if r.yajna else "",
+                    "Yes" if r.invitation else "", r.dedication or "",
+                    "Yes" if r.show_name else "No", r.payment_mode or "", r.receipt_no or "",
+                    r.status_label,
+                    ((r.distributed_at + _IST_OFFSET).strftime("%d-%m-%Y") if r.distributed_at else ""),
+                    r.order.order_number if r.order else "", r.notes or ""])
+    return Response("﻿" + out.getvalue(), mimetype="text/csv",
+                    headers={"Content-Disposition": "attachment; filename=gita_dan_yagna.csv"})
+
+
 # ── Admin: Temple Stock ──
 
 @app.route("/admin/stock")
@@ -5409,6 +6039,15 @@ def init_db():
             ("order_items",        "combo_id",                   "INTEGER"),
             ("order_items",        "is_combo_component",         "BOOLEAN DEFAULT FALSE"),
             ("combos",             "featured",                   "BOOLEAN DEFAULT FALSE"),
+            ("gita_yagna_donations", "distribution", "VARCHAR(10) DEFAULT 'local'"),
+            ("gita_yagna_donations", "courier_charge", "FLOAT DEFAULT 0"),
+            ("gita_yagna_donations", "parcel_kg", "FLOAT"),
+            ("gita_yagna_donations", "recipient_name", "VARCHAR(200)"),
+            ("gita_yagna_donations", "recipient_phone", "VARCHAR(20)"),
+            ("gita_yagna_donations", "recipient_address", "TEXT"),
+            ("gita_yagna_donations", "recipient_city", "VARCHAR(100)"),
+            ("gita_yagna_donations", "recipient_state", "VARCHAR(100)"),
+            ("gita_yagna_donations", "recipient_pincode", "VARCHAR(10)"),
         ]
         for table, column, col_type in migrations:
             # Use a fresh connection per column so a failed ALTER doesn't

@@ -1,0 +1,184 @@
+{% extends "admin/admin_base.html" %}
+{% set active_page = 'gita_yagna' %}
+{% block page_title %}Gita Dan Yagna{% endblock %}
+{% block content %}
+
+<!-- Progress + stats -->
+<div class="card shadow-sm mb-4">
+    <div class="card-body">
+        <div class="d-flex justify-content-between flex-wrap gap-2 mb-2">
+            <h5 class="mb-0">🙏 {{ "{:,}".format(stats.gitas) }} of {{ "{:,}".format(stats.goal) }} Gitas donated</h5>
+            <span class="fw-bold">{{ stats.pct }}%</span>
+        </div>
+        <div class="progress mb-3" style="height:22px;">
+            <div class="progress-bar bg-warning text-dark fw-bold" style="width:{{ stats.pct }}%;">{{ stats.pct }}%</div>
+        </div>
+        <div class="row g-3 text-center">
+            <div class="col-6 col-md-3"><div class="border rounded p-2"><small class="text-muted">Amount collected</small><div class="h5 mb-0">₹{{ "{:,.0f}".format(stats.amount) }}</div></div></div>
+            <div class="col-6 col-md-3"><div class="border rounded p-2"><small class="text-muted">Donors</small><div class="h5 mb-0">{{ stats.donors }} <small class="text-muted">({{ stats.online }} online / {{ stats.offline }} offline)</small></div></div></div>
+            <div class="col-6 col-md-3"><div class="border rounded p-2"><small class="text-muted">Gitas distributed</small><div class="h5 mb-0">{{ stats.distributed }}</div></div></div>
+            <div class="col-6 col-md-3"><div class="border rounded p-2"><small class="text-muted">🎟 Invitation cards ({{ invite_min }}+ Gitas)</small><div class="h5 mb-0">{{ stats.invitations }}</div></div></div>
+            <div class="col-6 col-md-3"><div class="border rounded p-2"><small class="text-muted">Hindi / Gujarati / English</small><div class="fw-bold">{{ stats.by_lang.Hindi }} / {{ stats.by_lang.Gujarati }} / {{ stats.by_lang.English }}</div></div></div>
+            <div class="col-6 col-md-3"><div class="border rounded p-2"><small class="text-muted">Students / Village / Others</small><div class="fw-bold">{{ stats.students }} / {{ stats.village }} / {{ stats.others }}</div></div></div>
+            <div class="col-6 col-md-3"><div class="border rounded p-2"><small class="text-muted">Awaiting payment</small><div class="fw-bold {% if stats.pending %}text-danger{% endif %}">{{ stats.pending }}</div></div></div>
+            <div class="col-6 col-md-3"><div class="border rounded p-2"><small class="text-muted">Public page</small><div class="fw-bold">{% if cfg.enabled %}<span class="text-success">ON</span>{% else %}<span class="text-secondary">OFF</span>{% endif %} · <a href="{{ url_for('gita_dan_yagna') }}" target="_blank">open</a></div></div></div>
+        </div>
+        <hr>
+        <div class="row g-3">
+            <div class="col-md-6">
+                <div class="border rounded p-3 h-100" style="border-left:4px solid #198754 !important;">
+                    <div class="fw-bold mb-1">🏛 Local distribution</div>
+                    <div class="h4 mb-0">{{ stats.local_gitas }} <small class="text-muted fs-6">Gitas · {{ stats.local_donors }} donor{{ 's' if stats.local_donors != 1 }}</small></div>
+                    <small class="text-muted">Temple hands them out locally — no courier.</small>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="border rounded p-3 h-100" style="border-left:4px solid #0d6efd !important;">
+                    <div class="fw-bold mb-1">📦 Online distribution (courier)</div>
+                    <div class="h4 mb-0">{{ stats.courier_gitas }} <small class="text-muted fs-6">Gitas · {{ stats.courier_donors }} parcel{{ 's' if stats.courier_donors != 1 }}</small></div>
+                    <div class="small mt-1">Courier charges collected from donors: <strong>₹{{ "{:,.0f}".format(stats.courier_collected) }}</strong> <span class="text-muted">(always paid by the donor)</span></div>
+                </div>
+            </div>
+        </div>
+        <div class="small text-muted mt-2">Amount collected = Gitas ₹{{ "{:,.0f}".format(stats.gita_amount) }} + courier charges paid by donors ₹{{ "{:,.0f}".format(stats.courier_collected) }}.</div>
+    </div>
+</div>
+
+<!-- Settings -->
+<div class="card shadow-sm mb-4">
+    <div class="card-header py-2"><strong><i class="fas fa-cog me-2 text-warning"></i>Settings</strong></div>
+    <div class="card-body">
+        <form method="POST" class="row g-3 align-items-end">
+            <div class="col-6 col-md-2"><label class="form-label small mb-1">Hindi ₹ / Gita</label>
+                <input type="number" step="1" min="1" name="price_hindi" class="form-control form-control-sm" value="{{ cfg.prices.Hindi|int }}"></div>
+            <div class="col-6 col-md-2"><label class="form-label small mb-1">Gujarati ₹ / Gita</label>
+                <input type="number" step="1" min="1" name="price_gujarati" class="form-control form-control-sm" value="{{ cfg.prices.Gujarati|int }}"></div>
+            <div class="col-6 col-md-2"><label class="form-label small mb-1">English ₹ / Gita</label>
+                <input type="number" step="1" min="1" name="price_english" class="form-control form-control-sm" value="{{ cfg.prices.English|int }}"></div>
+            <div class="col-6 col-md-2"><label class="form-label small mb-1">Goal (Gitas)</label>
+                <input type="number" min="1" name="goal" class="form-control form-control-sm" value="{{ cfg.goal }}"></div>
+            <div class="col-6 col-md-2"><label class="form-label small mb-1">Parcel kg / Gita</label>
+                <input type="number" step="0.05" min="0.05" name="weight_kg" class="form-control form-control-sm" value="{{ cfg.weight_kg }}" title="Used for the courier rate"></div>
+            <div class="col-12 col-md-4"><label class="form-label small mb-1">Event date text</label>
+                <input type="text" name="event_date" class="form-control form-control-sm" value="{{ cfg.event_date }}"></div>
+            <div class="col-12 col-md-8">
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" name="enabled" id="enabled" {% if cfg.enabled %}checked{% endif %}>
+                    <label class="form-check-label" for="enabled"><strong>Accept donations on the website</strong> (shows the Gita Dan Yagna page form, home page banner and menu link)</label>
+                </div>
+            </div>
+            <div class="col-12 col-md-4 text-md-end"><button class="btn btn-warning btn-sm fw-bold" type="submit">Save settings</button></div>
+        </form>
+    </div>
+</div>
+
+<!-- Donor list -->
+<div class="card table-card shadow-sm">
+    <div class="card-header py-2 d-flex flex-wrap justify-content-between align-items-center gap-2">
+        <strong><i class="fas fa-users me-2 text-warning"></i>Donations</strong>
+        <div class="d-flex gap-2">
+            <a href="{{ url_for('admin_gita_yagna_add') }}" class="btn btn-warning btn-sm fw-bold"><i class="fas fa-plus me-1"></i>Add offline entry</a>
+            <a href="{{ url_for('admin_gita_yagna_export') }}" class="btn btn-outline-success btn-sm"><i class="fas fa-file-csv me-1"></i>Export CSV</a>
+        </div>
+    </div>
+    <div class="card-body border-bottom py-2">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-12 col-md-4"><input type="text" name="q" class="form-control form-control-sm" placeholder="Search name / phone / area" value="{{ q }}"></div>
+            <div class="col-6 col-md-2">
+                <select name="status" class="form-select form-select-sm">
+                    <option value="">All status</option>
+                    <option value="received" {% if status=='received' %}selected{% endif %}>Received (not distributed)</option>
+                    <option value="distributed" {% if status=='distributed' %}selected{% endif %}>Distributed</option>
+                    <option value="pending" {% if status=='pending' %}selected{% endif %}>Awaiting payment</option>
+                    <option value="invite" {% if status=='invite' %}selected{% endif %}>🎟 Invitation card</option>
+                </select></div>
+            <div class="col-6 col-md-2">
+                <select name="source" class="form-select form-select-sm">
+                    <option value="">Online + Offline</option>
+                    <option value="online" {% if source=='online' %}selected{% endif %}>Online</option>
+                    <option value="offline" {% if source=='offline' %}selected{% endif %}>Offline</option>
+                </select></div>
+            <div class="col-6 col-md-2">
+                <select name="dist" class="form-select form-select-sm">
+                    <option value="">Local + Courier</option>
+                    <option value="local" {% if dist_f=='local' %}selected{% endif %}>🏛 Local distribution</option>
+                    <option value="courier" {% if dist_f=='courier' %}selected{% endif %}>📦 Online distribution (courier)</option>
+                </select></div>
+            <div class="col-6 col-md-2">
+                <select name="lang" class="form-select form-select-sm">
+                    <option value="">All languages</option>
+                    {% for l in langs %}<option value="{{ l }}" {% if lang_f==l %}selected{% endif %}>{{ l }}</option>{% endfor %}
+                </select></div>
+            <div class="col-6 col-md-2 d-flex gap-2">
+                <button class="btn btn-warning btn-sm fw-bold flex-fill" type="submit">Filter</button>
+                {% if q or status or source or lang_f or dist_f %}<a href="{{ url_for('admin_gita_yagna') }}" class="btn btn-outline-secondary btn-sm"><i class="fas fa-times"></i></a>{% endif %}
+            </div>
+        </form>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-hover table-sm mb-0 align-middle">
+            <thead><tr>
+                <th>Date</th><th>Donor</th><th>Area</th><th>Language</th><th class="text-end">Gitas</th>
+                <th class="text-end">Gitas ₹</th><th>Distribution / Courier</th><th class="text-end">Total paid</th><th>Source</th><th>Notes</th><th>Status</th><th>Action</th>
+            </tr></thead>
+            <tbody>
+            {% for r in rows %}
+                <tr>
+                    <td class="text-nowrap">{{ (r.donated_on or r.created_at) | ist('%d %b %Y') }}</td>
+                    <td><strong>{{ r.donor_name }}</strong><br><small class="text-muted">{{ r.donor_phone or '' }}{% if r.profession %} · {{ r.profession }}{% endif %}</small></td>
+                    <td>{{ r.area or '—' }}</td>
+                    <td>{{ r.language }}</td>
+                    <td class="text-end fw-bold">{{ r.quantity }}</td>
+                    <td class="text-end">₹{{ "%.0f"|format(r.amount) }}</td>
+                    <td style="font-size:.82rem; min-width:170px;">
+                        {% if not r.is_courier %}<span class="badge bg-success">🏛 Local</span> <span class="text-muted">no courier charge</span>
+                        {% else %}
+                            <span class="badge bg-primary">📦 Courier</span>
+                            <div>Courier charge: <strong>₹{{ "%.0f"|format(r.courier_charge or 0) }}</strong> <span class="text-success">✔ paid by donor</span></div>
+                            <div class="text-muted">To: {{ r.recipient_name or '—' }}{% if r.recipient_pincode %} · {{ r.recipient_pincode }}{% endif %}</div>
+                            {% if r.order %}<div class="text-muted">Order: {{ r.order.order_status|capitalize }}</div>{% endif %}
+                        {% endif %}
+                    </td>
+                    <td class="text-end fw-bold">₹{{ "%.0f"|format(r.total_paid) }}</td>
+                    <td>
+                        {% if r.source == 'online' %}<span class="badge bg-primary">online</span>
+                            {% if r.order %}<a href="{{ url_for('admin_order_detail', order_id=r.order.id) }}" class="small d-block">{{ r.order.order_number }}</a>{% endif %}
+                        {% else %}<span class="badge bg-secondary">offline</span>{% if r.receipt_no %}<small class="d-block text-muted">#{{ r.receipt_no }}</small>{% endif %}{% endif %}
+                        <small class="text-muted">{{ (r.payment_mode or '')|upper }}</small>
+                    </td>
+                    <td style="font-size:.8rem; max-width:200px;">
+                        {% if r.invitation %}<span class="badge bg-warning text-dark">🎟 Invitation</span>{% endif %}
+                        {% if r.arati %}<span class="badge bg-light text-dark border">Arati</span>{% endif %}
+                        {% if r.yajna %}<span class="badge bg-light text-dark border">Yajna</span>{% endif %}
+                        {% if r.students_qty or r.village_qty or r.others_qty %}<div class="text-muted">S{{ r.students_qty or 0 }} · V{{ r.village_qty or 0 }} · O{{ r.others_qty or 0 }}</div>{% endif %}
+                        {% if r.dedication %}<div class="fst-italic">{{ r.dedication }}</div>{% endif %}
+                    </td>
+                    <td>
+                        {% if r.distributed %}<span class="badge bg-success">Distributed</span>
+                        {% elif r.counted %}<span class="badge bg-info text-dark">Received</span>
+                        {% else %}<span class="badge bg-danger">Awaiting payment</span>{% endif %}
+                    </td>
+                    <td class="text-nowrap">
+                        {% if r.counted %}
+                        <form method="POST" action="{{ url_for('admin_gita_yagna_distribute', did=r.id) }}" class="d-inline">
+                            <button class="btn btn-sm {{ 'btn-outline-secondary' if r.distributed else 'btn-outline-success' }}" title="{{ 'Undo distributed' if r.distributed else 'Mark distributed' }}"><i class="fas fa-hand-holding-heart"></i></button>
+                        </form>
+                        <a href="{{ url_for('admin_gita_yagna_certificate', did=r.id) }}" target="_blank" class="btn btn-sm btn-outline-primary" title="Thank-you certificate"><i class="fas fa-award"></i></a>
+                        {% endif %}
+                        {% if r.source == 'offline' %}
+                        <a href="{{ url_for('admin_gita_yagna_edit', did=r.id) }}" class="btn btn-sm btn-primary" title="Edit"><i class="fas fa-edit"></i></a>
+                        <form method="POST" action="{{ url_for('admin_gita_yagna_delete', did=r.id) }}" class="d-inline"
+                              onsubmit="return confirm('Delete this offline entry?');">
+                            <button class="btn btn-sm btn-outline-danger" title="Delete"><i class="fas fa-trash"></i></button>
+                        </form>
+                        {% endif %}
+                    </td>
+                </tr>
+            {% else %}
+                <tr><td colspan="12" class="text-center text-muted py-4">No donations yet.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

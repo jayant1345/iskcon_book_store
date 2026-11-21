@@ -319,6 +319,28 @@
             </div>
         </div>
 
+        {% if order.yagna_donation %}
+        {% set yd = order.yagna_donation %}
+        <!-- Gita Dan Yagna details -->
+        <div class="card shadow-sm mb-4" style="border-left:4px solid #0f6b68;">
+            <div class="card-header py-2"><strong>🙏 Gita Dan Yagna donation</strong>
+                <a href="{{ url_for('admin_gita_yagna') }}" class="small ms-2">open Yagna page</a></div>
+            <div class="card-body small">
+                <div><strong>Gitas:</strong> {{ yd.quantity }} × {{ yd.language }} = ₹{{ "%.0f"|format(yd.amount) }}</div>
+                <div><strong>Distribution:</strong> {{ yd.distribution_label }}</div>
+                {% if yd.is_courier %}
+                <div><strong>📦 Courier charge:</strong> ₹{{ "%.0f"|format(yd.courier_charge or 0) }} <span class="text-success">(paid by donor)</span></div>
+                <div class="mt-1"><strong>Ship to (recipient):</strong> {{ yd.recipient_name }}{% if yd.recipient_phone %} · {{ yd.recipient_phone }}{% endif %}<br>
+                    {{ yd.recipient_address }}{% if yd.recipient_city %}, {{ yd.recipient_city }}{% endif %}{% if yd.recipient_state %}, {{ yd.recipient_state }}{% endif %} — {{ yd.recipient_pincode }}</div>
+                {% else %}
+                <div class="text-muted">Local distribution by the temple — nothing to ship; no courier charge.</div>
+                {% endif %}
+                <div><strong>Total paid by donor:</strong> ₹{{ "%.0f"|format(yd.total_paid) }}</div>
+                {% if yd.dedication %}<div><strong>In the name of:</strong> {{ yd.dedication }}</div>{% endif %}
+            </div>
+        </div>
+        {% endif %}
+
         <!-- Order Items -->
         <div class="card shadow-sm mb-4">
             <div class="card-header bg-dark text-white py-3">
