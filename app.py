@@ -3422,23 +3422,89 @@ def admin_test_email():
     return render_template("admin/test_email.html", cfg=cfg, result=result, to_email=to_email)
 
 
+_IST_OFFSET = timedelta(hours=5, minutes=30)
+
+
+def _add_months(first_of_month, delta):
+    """first_of_month is a datetime on day 1; returns day 1 of the month `delta` away."""
+    idx = first_of_month.year * 12 + (first_of_month.month - 1) + delta
+    return first_of_month.replace(year=idx // 12, month=idx % 12 + 1, day=1)
+
+
 @app.route("/admin/")
 @app.route("/admin/dashboard")
 @admin_required
 def admin_dashboard():
-    total_orders        = Order.query.filter_by(is_deleted=False).count()
-    total_revenue       = db.session.query(db.func.sum(Order.total_amount))\
-                                    .filter(Order.payment_status != "failed",
-                                            Order.is_deleted == False).scalar() or 0
+    # ── Month filter (IST months; DB stores UTC). Default = all time. ──
+    now_ist = datetime.utcnow() + _IST_OFFSET
+    this_month = now_ist.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    selected_month = None
+    month_start = month_end = None          # UTC bounds of the selected month
+    try:
+        selected_month = datetime.strptime(request.args.get("month", ""), "%Y-%m")
+    except ValueError:
+        selected_month = None
+    if selected_month:
+        month_start = selected_month - _IST_OFFSET
+        month_end = _add_months(selected_month, 1) - _IST_OFFSET
+
+    def in_month(query, column):
+        if month_start is None:
+            return query
+        return query.filter(column >= month_start, column < month_end)
+
+    total_orders        = in_month(Order.query.filter_by(is_deleted=False), Order.created_at).count()
+    total_revenue       = in_month(db.session.query(db.func.sum(Order.total_amount))
+                                   .filter(Order.payment_status != "failed",
+                                           Order.is_deleted == False), Order.created_at).scalar() or 0
     total_books         = Book.query.filter_by(active=True).count()
-    pending_orders      = Order.query.filter_by(order_status="placed", is_deleted=False).count()
-    recent_orders       = Order.query.filter_by(is_deleted=False)\
+    pending_orders      = in_month(Order.query.filter_by(order_status="placed", is_deleted=False),
+                                   Order.created_at).count()
+    recent_orders       = in_month(Order.query.filter_by(is_deleted=False), Order.created_at)\
                                      .order_by(Order.created_at.desc()).limit(10).all()
     low_stock           = Book.query.filter(Book.stock < 5, Book.active == True).all()
-    temple_books_total  = db.session.query(db.func.sum(StockReceipt.quantity)).scalar() or 0
+    temple_books_total  = in_month(db.session.query(db.func.sum(StockReceipt.quantity)),
+                                   StockReceipt.received_date).scalar() or 0
     temple_pending_payment = db.session.query(db.func.sum(StockReceipt.total_payment))\
                                .filter(StockReceipt.payment_status == "pending").scalar() or 0
     recent_receipts     = StockReceipt.query.order_by(StockReceipt.received_date.desc()).limit(5).all()
+
+    # ── Month picker options + prev/next ──
+    first_order = db.session.query(db.func.min(Order.created_at)).scalar()
+    first_month = ((first_order + _IST_OFFSET).replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+                   if first_order else this_month)
+    month_options = []
+    m = this_month
+    while m >= first_month and len(month_options) < 60:
+        month_options.append({"key": m.strftime("%Y-%m"), "label": m.strftime("%B %Y")})
+        m = _add_months(m, -1)
+    prev_month = next_month = None
+    if selected_month:
+        prev_month = _add_months(selected_month, -1).strftime("%Y-%m")
+        if selected_month < this_month:
+            next_month = _add_months(selected_month, 1).strftime("%Y-%m")
+
+    # ── Month-wise breakdown for the last 12 months ──
+    window_start = _add_months(this_month, -11)
+    buckets = {}
+    for created_at, amount, pay_status in db.session.query(
+            Order.created_at, Order.total_amount, Order.payment_status)\
+            .filter(Order.is_deleted == False,
+                    Order.created_at >= window_start - _IST_OFFSET).all():
+        key = (created_at + _IST_OFFSET).strftime("%Y-%m")
+        row = buckets.setdefault(key, {"orders": 0, "revenue": 0.0})
+        row["orders"] += 1
+        if pay_status != "failed":
+            row["revenue"] += amount or 0
+    monthly_breakdown = []
+    m = this_month
+    for _ in range(12):
+        key = m.strftime("%Y-%m")
+        row = buckets.get(key, {"orders": 0, "revenue": 0.0})
+        monthly_breakdown.append({"key": key, "label": m.strftime("%b %Y"),
+                                  "orders": row["orders"], "revenue": row["revenue"]})
+        m = _add_months(m, -1)
+
     cutoff = datetime.utcnow() - timedelta(minutes=30)
     AdminSession.query.filter(AdminSession.last_seen < cutoff).delete()
     db.session.commit()
@@ -3453,7 +3519,13 @@ def admin_dashboard():
                            temple_books_total=temple_books_total,
                            temple_pending_payment=temple_pending_payment,
                            recent_receipts=recent_receipts,
-                           active_sessions=active_sessions)
+                           active_sessions=active_sessions,
+                           selected_month=selected_month.strftime("%Y-%m") if selected_month else "",
+                           selected_month_label=selected_month.strftime("%B %Y") if selected_month else "",
+                           this_month_key=this_month.strftime("%Y-%m"),
+                           month_options=month_options,
+                           prev_month=prev_month, next_month=next_month,
+                           monthly_breakdown=monthly_breakdown)
 
 
 # ── Admin: Books ──

@@ -3,6 +3,38 @@
 {% block page_title %}Dashboard{% endblock %}
 {% block content %}
 
+<!-- Month filter -->
+<div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+    <div class="fw-bold me-2">
+        <i class="fas fa-calendar-alt me-1 text-warning"></i>
+        Showing: <span class="text-primary">{{ selected_month_label or 'All time' }}</span>
+    </div>
+    <form method="get" class="d-flex flex-wrap align-items-center gap-2" id="monthForm">
+        {% if prev_month %}
+        <a href="{{ url_for('admin_dashboard', month=prev_month) }}" class="btn btn-outline-secondary btn-sm" title="Previous month">
+            <i class="fas fa-chevron-left"></i>
+        </a>
+        {% endif %}
+        <select name="month" class="form-select form-select-sm" style="width:auto;" onchange="this.form.submit()">
+            <option value="" {% if not selected_month %}selected{% endif %}>All time</option>
+            {% for mo in month_options %}
+            <option value="{{ mo.key }}" {% if selected_month == mo.key %}selected{% endif %}>{{ mo.label }}</option>
+            {% endfor %}
+        </select>
+        {% if next_month %}
+        <a href="{{ url_for('admin_dashboard', month=next_month) }}" class="btn btn-outline-secondary btn-sm" title="Next month">
+            <i class="fas fa-chevron-right"></i>
+        </a>
+        {% endif %}
+        {% if selected_month != this_month_key %}
+        <a href="{{ url_for('admin_dashboard', month=this_month_key) }}" class="btn btn-warning btn-sm">This month</a>
+        {% endif %}
+        {% if selected_month %}
+        <a href="{{ url_for('admin_dashboard') }}" class="btn btn-outline-secondary btn-sm">All time</a>
+        {% endif %}
+    </form>
+</div>
+
 <!-- Stats Row -->
 <div class="row g-4 mb-4">
     <div class="col-md-3">
@@ -128,7 +160,7 @@
                 <div>
                     <small class="text-muted">Books from Temple</small>
                     <h3 class="mb-0">{{ temple_books_total }}</h3>
-                    <small class="text-muted">Total copies received</small>
+                    <small class="text-muted">Total copies received{% if selected_month %} in {{ selected_month_label }}{% endif %}</small>
                 </div>
             </div>
         </div>
@@ -142,7 +174,7 @@
                 <div>
                     <small class="text-muted">Pending Temple Payment</small>
                     <h3 class="mb-0 text-danger">₹{{ "%.0f"|format(temple_pending_payment) }}</h3>
-                    <small class="text-muted">Amount yet to be paid</small>
+                    <small class="text-muted">Amount yet to be paid{% if selected_month %} (all time){% endif %}</small>
                 </div>
             </div>
         </div>
@@ -163,12 +195,35 @@
     </div>
 </div>
 
+<!-- Month-wise breakdown -->
+<div class="card table-card shadow-sm mb-4">
+    <div class="card-header py-2">
+        <strong><i class="fas fa-chart-bar me-2 text-warning"></i>Month-wise Summary (last 12 months)</strong>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-hover table-sm mb-0 align-middle">
+            <thead>
+                <tr><th>Month</th><th class="text-end">Orders</th><th class="text-end">Revenue</th></tr>
+            </thead>
+            <tbody>
+                {% for m in monthly_breakdown %}
+                <tr {% if selected_month == m.key %}class="table-warning"{% endif %}>
+                    <td><a href="{{ url_for('admin_dashboard', month=m.key) }}" class="text-decoration-none fw-semibold">{{ m.label }}</a></td>
+                    <td class="text-end">{{ m.orders }}</td>
+                    <td class="text-end">₹{{ "%.0f"|format(m.revenue) }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
 <div class="row g-4">
     <!-- Recent Orders -->
     <div class="col-lg-8">
         <div class="card table-card shadow-sm">
             <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center py-3">
-                <h5 class="mb-0"><i class="fas fa-list me-2"></i>Recent Orders</h5>
+                <h5 class="mb-0"><i class="fas fa-list me-2"></i>{{ 'Orders – ' ~ selected_month_label if selected_month else 'Recent Orders' }}</h5>
                 <a href="{{ url_for('admin_orders') }}" class="btn btn-dark btn-sm">View All</a>
             </div>
             <div class="table-responsive">
