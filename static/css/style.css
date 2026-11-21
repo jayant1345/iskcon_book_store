@@ -1666,3 +1666,44 @@ img {
                                margin: 0 !important; border-top: 1px solid rgba(217, 119, 6, 0.18); }
   .navbar-iskcon .navbar-nav .nav-link { white-space: nowrap; padding: 11px 14px !important; }
 }
+
+
+/* ═══════════════ HOME PAGE — LESS SCROLLING ON PHONES ═══════════════
+   Book rows become a sideways swipe strip (grid is unchanged on tablets/PC);
+   section spacing is tightened. Layout only. */
+@media (max-width: 991.98px) {
+  .home-page .swipe-row {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scroll-snap-type: x proximity;
+    -webkit-overflow-scrolling: touch;
+    margin-left: -12px;
+    margin-right: -12px;
+    padding: 0 12px 10px;
+    scrollbar-width: none;
+  }
+  .home-page .swipe-row::-webkit-scrollbar { display: none; }
+  .home-page .swipe-row > [class*="col-"] {
+    flex: 0 0 58%;
+    max-width: 58%;
+    scroll-snap-align: start;
+  }
+  .home-page .swipe-row.swipe-row-sm > [class*="col-"] { flex: 0 0 38%; max-width: 38%; }
+}
+@media (max-width: 1399.98px) {
+  /* narrow cards: stack Add / Buy Now / Share so labels never wrap or clip */
+  .home-page .swipe-row .book-card-actions { flex-direction: column; }
+  .home-page .swipe-row .book-card-actions .btn { white-space: nowrap; }
+}
+@media (min-width: 768px) and (max-width: 991.98px) {
+  .home-page .swipe-row > [class*="col-"] { flex: 0 0 31%; max-width: 31%; }
+  .home-page .swipe-row.swipe-row-sm > [class*="col-"] { flex: 0 0 22%; max-width: 22%; }
+}
+@media (max-width: 767.98px) {
+  .home-page section.py-5 { padding-top: 1.6rem !important; padding-bottom: 1.6rem !important; }
+  .home-page section .mb-4 { margin-bottom: 1rem !important; }
+  .home-page .hero-btn-strip { display: none !important; }   /* same two buttons already sit inside the banner */
+  .home-page .why-ico { font-size: 1.8rem !important; }
+  .home-page .why-h { font-size: 1rem !important; margin: 4px 0 3px !important; }
+  .home-page .why-p { font-size: .74rem !important; line-height: 1.35 !important; margin: 0 !important; }
+}
