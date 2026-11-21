@@ -1213,8 +1213,10 @@ Sitemap: https://iskconbooks.in/sitemap.xml
 
 @app.route("/")
 def index():
-    featured_books  = Book.query.filter_by(featured=True, active=True).limit(8).all()
-    new_arrivals    = Book.query.filter_by(active=True).order_by(Book.created_at.desc()).limit(6).all()
+    featured_books  = (Book.query.filter_by(featured=True, active=True, deleted=False)
+                       .order_by(Book.created_at.desc()).limit(8).all())
+    new_arrivals    = (Book.query.filter_by(active=True, deleted=False)
+                       .order_by(Book.created_at.desc()).limit(6).all())
     categories      = Category.query.order_by(Category.sort_order).all()
     # Look up carousel books from admin settings, fall back to keyword search
     def get_carousel_book(setting_key, keyword):
@@ -3467,6 +3469,8 @@ def admin_books():
         bq = bq.filter(Book.active == True)
     elif status_filter == 'inactive':
         bq = bq.filter(Book.active == False)
+    elif status_filter == 'featured':
+        bq = bq.filter(Book.featured == True)
 
     bq = bq.order_by(Book.created_at.desc())
 
@@ -3526,6 +3530,8 @@ def export_stock_csv():
         bq = bq.filter(Book.active == True)
     elif status_filter == 'inactive':
         bq = bq.filter(Book.active == False)
+    elif status_filter == 'featured':
+        bq = bq.filter(Book.featured == True)
 
     all_books = bq.order_by(Book.category_id, Book.title).all()
 
@@ -3889,7 +3895,13 @@ def toggle_featured(book_id):
     book = Book.query.get_or_404(book_id)
     book.featured = not book.featured
     db.session.commit()
-    return jsonify({"featured": book.featured})
+    if request.headers.get("X-Requested-With") == "XMLHttpRequest" or request.is_json:
+        return jsonify({"featured": book.featured})
+    # Plain form post from the Books list: go back to the same filtered page
+    # instead of leaving the admin on a raw JSON response.
+    flash(f'"{book.title}" ' + ("added to" if book.featured else "removed from")
+          + " Featured Books on the home page.", "success")
+    return redirect(request.referrer or url_for("admin_books"))
 
 
 # ── Admin: Temple Stock ──
