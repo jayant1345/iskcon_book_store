@@ -371,8 +371,14 @@ function initSearchAutocomplete(input) {
           data.forEach(function (item, i) {
             var div = document.createElement('div');
             div.className = 'suggestion-item';
-            div.innerHTML = '<div class="suggestion-title">' + item.title + '</div>' +
-                            '<div class="suggestion-author">' + item.author + '</div>';
+            var t = document.createElement('div');
+            t.className = 'suggestion-title';
+            t.textContent = item.title;
+            var m = document.createElement('div');
+            m.className = 'suggestion-author';
+            m.textContent = item.meta || '';
+            div.appendChild(t);
+            div.appendChild(m);
             div.addEventListener('mousedown', function (e) {
               e.preventDefault();
               input.value = item.title;

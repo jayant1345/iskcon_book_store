@@ -1259,15 +1259,25 @@ def books():
 
     if query:
         import re
+        # Spelling-tolerant match (title/author/language/format) OR the
+        # original keyword match (which also looks inside descriptions).
+        smart_ids = [b["id"] for b in smart_search(query)]
+        keyword_conds = []
         for word in query.split():
             word = re.sub(r"[^\w]", "", word)
             if not word:
                 continue
-            bq = bq.filter(or_(
+            keyword_conds.append(or_(
                 Book.title.ilike(f"%{word}%"),
                 Book.author.ilike(f"%{word}%"),
                 Book.description.ilike(f"%{word}%"),
             ))
+        conds = []
+        if smart_ids:
+            conds.append(Book.id.in_(smart_ids))
+        if keyword_conds:
+            conds.append(db.and_(*keyword_conds))
+        bq = bq.filter(or_(*conds)) if conds else bq.filter(db.false())
     if cat:
         category = Category.query.filter_by(slug=cat).first()
         if category:
@@ -5076,18 +5086,115 @@ def api_cart_count():
     return jsonify({"count": cart_item_count()})
 
 
+# ─────────────────────────────────────────────
+# SMART (SPELLING-TOLERANT) BOOK SEARCH
+# Sanskrit/Hindi names are spelled many ways (Bhagavad / Bhagavat / Bhagvad /
+# Bhagwad, Gita / Geeta, Gujarati / Gujrati ...), so we compare a phonetic
+# "skeleton" of each word instead of the raw text, plus a light typo check.
+# Works on SQLite and PostgreSQL alike (matching is done in Python).
+# ─────────────────────────────────────────────
+import re as _re
+import time as _time
+import unicodedata as _unicodedata
+from difflib import SequenceMatcher as _SequenceMatcher
+
+_SEARCH_INDEX = {"built": 0.0, "rows": []}
+_SEARCH_INDEX_TTL = 30  # seconds — new/edited books appear in search within 30s
+
+
+def _search_tokens(text):
+    text = _unicodedata.normalize("NFKD", text or "")
+    text = "".join(ch for ch in text if not _unicodedata.combining(ch)).lower()
+    return _re.findall(r"\w+", text)
+
+
+def _skeleton(word):
+    """Rough phonetic key: bhagavad/bhagavat/bhagvad/bhagwat -> 'bgvd'."""
+    if not word.isascii():
+        return word
+    w = word.replace("w", "v").replace("ph", "f").replace("h", "")
+    for a, b in (("q", "k"), ("c", "k"), ("z", "s"), ("t", "d"), ("x", "ks")):
+        w = w.replace(a, b)
+    w = _re.sub(r"[aeiouy]", "", w)
+    w = _re.sub(r"(.)\1+", r"\1", w)
+    return w or word
+
+
+def _token_score(qt, qs, tt, ts):
+    """How well query word qt (skeleton qs) matches one stored word tt (skeleton ts)."""
+    if qt == tt:
+        return 3.0
+    if len(qt) >= 2 and qt in tt:
+        return 2.5 if tt.startswith(qt) else 2.0
+    if len(qt) <= 2:
+        return 0.0
+    if qs == ts:
+        return 2.0
+    if len(qs) >= 2 and ts.startswith(qs):
+        return 1.5
+    if len(qt) >= 4 and _SequenceMatcher(None, qt, tt).ratio() >= 0.8:
+        return 1.2
+    if len(qs) >= 3 and len(ts) >= 3 and _SequenceMatcher(None, qs, ts).ratio() >= 0.8:
+        return 1.0
+    return 0.0
+
+
+def _search_index():
+    now = _time.time()
+    if now - _SEARCH_INDEX["built"] > _SEARCH_INDEX_TTL or not _SEARCH_INDEX["rows"]:
+        rows = []
+        for b in Book.query.filter_by(active=True, deleted=False).all():
+            fmt = "eBook" if b.is_ebook else "Paperback"
+            words = []
+            for text, weight in ((b.title, 1.0), (b.author, 0.5),
+                                 (b.language, 0.8), (fmt, 0.8)):
+                for tok in _search_tokens(text):
+                    words.append((tok, _skeleton(tok), weight))
+            rows.append({"id": b.id, "title": b.title or "", "author": b.author or "",
+                         "language": b.language or "", "fmt": fmt,
+                         "norm_title": " ".join(_search_tokens(b.title)), "words": words})
+        _SEARCH_INDEX["rows"] = rows
+        _SEARCH_INDEX["built"] = now
+    return _SEARCH_INDEX["rows"]
+
+
+def smart_search(query, limit=None):
+    """Return matching index rows, best first. Every query word must match."""
+    qtokens = _search_tokens(query)
+    if not qtokens:
+        return []
+    qwords = [(t, _skeleton(t)) for t in qtokens]
+    phrase = " ".join(qtokens)
+    scored = []
+    for row in _search_index():
+        total = 0.0
+        for qt, qs in qwords:
+            best = 0.0
+            for tt, ts, weight in row["words"]:
+                sc = _token_score(qt, qs, tt, ts) * weight
+                if sc > best:
+                    best = sc
+            if best <= 0:
+                total = 0.0
+                break
+            total += best
+        if total > 0:
+            if phrase in row["norm_title"]:
+                total += 3
+            scored.append((total, row["title"].lower(), row))
+    scored.sort(key=lambda x: (-x[0], x[1]))
+    rows = [x[2] for x in scored]
+    return rows[:limit] if limit else rows
+
+
 @app.route("/api/search-suggestions")
 def search_suggestions():
     q = request.args.get("q", "").strip()
     if len(q) < 2:
         return jsonify([])
-    pattern = f"%{q}%"
-    books = Book.query.filter(
-        Book.active == True,
-        Book.deleted == False,
-        db.or_(Book.title.ilike(pattern), Book.author.ilike(pattern))
-    ).order_by(Book.title).limit(8).all()
-    results = [{"title": b.title, "author": b.author, "id": b.id} for b in books]
+    results = [{"title": b["title"], "author": b["author"], "id": b["id"],
+                "meta": f'{b["language"]} · {b["fmt"]}' if b["language"] else b["fmt"]}
+               for b in smart_search(q, limit=8)]
     return jsonify(results)
 
 
