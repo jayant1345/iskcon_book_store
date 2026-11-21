@@ -5158,32 +5158,66 @@ def _search_index():
     return _SEARCH_INDEX["rows"]
 
 
+# Filler words people type that books rarely contain — never reject a book because of them.
+_SEARCH_FILLER = {"book", "books", "pustak", "granth", "the", "of", "by", "and", "in",
+                  "for", "a", "an", "shri", "shree", "sri", "sree", "srila", "swami", "sripad"}
+
+
+def _query_forms(qt):
+    """The word as typed, plus a singular form (books -> book)."""
+    forms = [(qt, _skeleton(qt))]
+    if len(qt) > 3 and qt.endswith("s") and not qt.endswith("ss"):
+        forms.append((qt[:-1], _skeleton(qt[:-1])))
+    return forms
+
+
 def smart_search(query, limit=None):
-    """Return matching index rows, best first. Every query word must match."""
+    """Return matching index rows, best first.
+
+    1. Rows where every meaningful query word matches (filler words like
+       'book' / 'shri' are optional).
+    2. If none, rows matching at least one meaningful word (best first), so a
+       search with one odd word still shows relevant books.
+    """
     qtokens = _search_tokens(query)
     if not qtokens:
         return []
-    qwords = [(t, _skeleton(t)) for t in qtokens]
+    qwords = [(t, _query_forms(t), t in _SEARCH_FILLER) for t in qtokens]
+    core = [w for w in qwords if not w[2]] or qwords      # all-filler query: treat words as required
     phrase = " ".join(qtokens)
-    scored = []
+    full, partial = [], []
     for row in _search_index():
-        total = 0.0
-        for qt, qs in qwords:
+        total, matched, missed = 0.0, 0, 0
+        for qt, forms, is_filler in qwords:
             best = 0.0
             for tt, ts, weight in row["words"]:
-                sc = _token_score(qt, qs, tt, ts) * weight
-                if sc > best:
-                    best = sc
-            if best <= 0:
-                total = 0.0
-                break
-            total += best
-        if total > 0:
-            if phrase in row["norm_title"]:
-                total += 3
-            scored.append((total, row["title"].lower(), row))
-    scored.sort(key=lambda x: (-x[0], x[1]))
-    rows = [x[2] for x in scored]
+                for f, fs in forms:
+                    sc = _token_score(f, fs, tt, ts) * weight
+                    if sc > best:
+                        best = sc
+            if best > 0:
+                total += best
+                if (qt, forms, is_filler) in core:
+                    matched += 1
+            elif (qt, forms, is_filler) in core:
+                missed += 1
+        if matched == 0:
+            continue
+        if phrase in row["norm_title"]:
+            total += 3
+        if row["norm_title"].startswith(phrase):
+            total += 3
+        entry = (-total, row["title"].lower(), row)
+        if missed == 0:
+            full.append(entry)
+        else:
+            partial.append((missed, ) + entry)
+    if full:
+        full.sort(key=lambda x: (x[0], x[1]))
+        rows = [x[2] for x in full]
+    else:
+        partial.sort(key=lambda x: (x[0], x[1], x[2]))
+        rows = [x[3] for x in partial]
     return rows[:limit] if limit else rows
 
 
