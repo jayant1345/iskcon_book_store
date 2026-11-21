@@ -7,6 +7,10 @@
     <div>
         <h4 class="mb-1">Order Report</h4>
         <small class="text-muted">{{ orders.total }} order{{ 's' if orders.total != 1 }}{% if any_filter_active %} matching current filters{% endif %}</small>
+        <small class="text-muted ms-2">&middot; Show
+            <select name="per_page" form="filter-form" class="form-select form-select-sm d-inline-block w-auto py-0" style="height:24px;font-size:.78rem;" onchange="document.getElementById('filter-form').submit()" aria-label="Orders per page">
+                {% for n in per_page_options %}<option value="{{ n }}" {% if per_page==n %}selected{% endif %}>{{ n }}</option>{% endfor %}
+            </select> per page</small>
     </div>
     <div class="d-flex gap-2 flex-wrap align-items-center">
         <a href="{{ url_for('admin_create_manual_order') }}" class="btn btn-warning btn-sm fw-bold">
@@ -32,20 +36,51 @@
     </div>
 </div>
 
-<!-- ── Filter & Sort Panel ── -->
-<div class="card shadow-sm mb-3">
+<!-- ── Compact Filter Toolbar (advanced filters collapse) ── -->
+<style>
+    .of-card .card-body { padding: .6rem .75rem; }
+    .of-card .form-label { font-size: .68rem; font-weight: 600; color: #6c757d; margin-bottom: 1px; text-transform: uppercase; letter-spacing: .3px; }
+    .of-card .form-control, .of-card .form-select { height: 31px; padding-top: 2px; padding-bottom: 2px; font-size: .82rem; }
+    .of-card .btn { height: 31px; padding-top: 0; padding-bottom: 0; font-size: .82rem; display: inline-flex; align-items: center; justify-content: center; white-space: nowrap; }
+    .of-adv { border-top: 1px dashed #dee2e6; margin-top: .5rem; padding-top: .5rem; }
+    .of-chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: .45rem; }
+    .of-chips:empty { display: none; }
+    .of-chip { background: #fff3cd; border: 1px solid #ffe69c; color: #664d03; border-radius: 12px; font-size: .72rem; padding: 1px 4px 1px 9px; display: inline-flex; align-items: center; gap: 4px; max-width: 100%; }
+    .of-chip button { border: 0; background: transparent; color: inherit; line-height: 1; padding: 0 4px; font-size: .95rem; cursor: pointer; }
+    #ofAdvBtn .of-chev { transition: transform .2s; }
+    #ofAdvBtn[aria-expanded="true"] .of-chev { transform: rotate(180deg); }
+    .of-date-fallback { display: none; gap: 4px; }
+    .flatpickr-calendar { z-index: 2000 !important; }
+</style>
+{% set adv_count = [age_min, age_max, city, pay_method, amount_min, amount_max, product_type]|select|list|length + (1 if sort != 'date_desc' else 0) %}
+<div class="card shadow-sm mb-3 of-card">
     <div class="card-body">
         <form method="get" id="filter-form" class="row g-2 align-items-end">
-            <div class="col-6 col-md-3 col-lg-2">
-                <label class="form-label small mb-1">Date From</label>
-                <input type="date" name="date_from" class="form-control form-control-sm" value="{{ date_from }}">
+            <!-- Frequently used -->
+            <div class="col-12 col-md-6 col-lg-3">
+                <label class="form-label">Date Range</label>
+                <div class="input-group input-group-sm">
+                    <input type="text" id="ofDateRange" class="form-control" placeholder="Select date range" autocomplete="off" readonly style="background:#fff;cursor:pointer;">
+                    <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Quick ranges">Quick</button>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><a class="dropdown-item small" href="#" data-preset="today">Today</a></li>
+                        <li><a class="dropdown-item small" href="#" data-preset="7d">Last 7 days</a></li>
+                        <li><a class="dropdown-item small" href="#" data-preset="30d">Last 30 days</a></li>
+                        <li><a class="dropdown-item small" href="#" data-preset="month">This month</a></li>
+                        <li><a class="dropdown-item small" href="#" data-preset="lastmonth">Last month</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item small" href="#" data-preset="clear">Clear dates</a></li>
+                    </ul>
+                </div>
+                <div class="of-date-fallback" id="ofDateFallback">
+                    <input type="date" class="form-control form-control-sm" id="ofFrom" aria-label="Date from">
+                    <input type="date" class="form-control form-control-sm" id="ofTo" aria-label="Date to">
+                </div>
+                <input type="hidden" name="date_from" id="ofDateFrom" value="{{ date_from }}">
+                <input type="hidden" name="date_to" id="ofDateTo" value="{{ date_to }}">
             </div>
             <div class="col-6 col-md-3 col-lg-2">
-                <label class="form-label small mb-1">Date To</label>
-                <input type="date" name="date_to" class="form-control form-control-sm" value="{{ date_to }}">
-            </div>
-            <div class="col-6 col-md-3 col-lg-2">
-                <label class="form-label small mb-1">Book Type</label>
+                <label class="form-label">Book Type</label>
                 <select name="book_type" class="form-select form-select-sm">
                     <option value="">All Types</option>
                     <option value="ebook" {% if book_type=='ebook' %}selected{% endif %}>📱 E-book</option>
@@ -53,27 +88,7 @@
                 </select>
             </div>
             <div class="col-6 col-md-3 col-lg-2">
-                <label class="form-label small mb-1">Product Type</label>
-                <select name="product_type" class="form-select form-select-sm">
-                    <option value="">All Products</option>
-                    <option value="individual" {% if product_type=='individual' %}selected{% endif %}>📖 Individual Book</option>
-                    <option value="combo" {% if product_type=='combo' %}selected{% endif %}>🎁 Combo</option>
-                </select>
-            </div>
-            <div class="col-6 col-md-3 col-lg-2">
-                <label class="form-label small mb-1">Area / City</label>
-                <input type="text" name="city" class="form-control form-control-sm" placeholder="e.g. Ahmedabad" value="{{ city }}">
-            </div>
-            <div class="col-6 col-md-3 col-lg-2">
-                <label class="form-label small mb-1">Age (Min)</label>
-                <input type="number" name="age_min" class="form-control form-control-sm" min="1" max="120" value="{{ age_min }}">
-            </div>
-            <div class="col-6 col-md-3 col-lg-2">
-                <label class="form-label small mb-1">Age (Max)</label>
-                <input type="number" name="age_max" class="form-control form-control-sm" min="1" max="120" value="{{ age_max }}">
-            </div>
-            <div class="col-6 col-md-3 col-lg-2">
-                <label class="form-label small mb-1">Order Status</label>
+                <label class="form-label">Order Status</label>
                 <select name="status" class="form-select form-select-sm">
                     <option value="">All Status</option>
                     <option value="placed"    {% if status=='placed'    %}selected{% endif %}>🟡 Placed</option>
@@ -84,17 +99,7 @@
                 </select>
             </div>
             <div class="col-6 col-md-3 col-lg-2">
-                <label class="form-label small mb-1">Payment Method</label>
-                <select name="pay_method" class="form-select form-select-sm">
-                    <option value="">All Methods</option>
-                    <option value="payu"     {% if pay_method=='payu'     %}selected{% endif %}>🏦 PayU</option>
-                    <option value="razorpay" {% if pay_method=='razorpay' %}selected{% endif %}>💳 Razorpay</option>
-                    <option value="upi"      {% if pay_method=='upi'      %}selected{% endif %}>📲 UPI</option>
-                    <option value="cod"      {% if pay_method=='cod'      %}selected{% endif %}>💵 COD</option>
-                </select>
-            </div>
-            <div class="col-6 col-md-3 col-lg-2">
-                <label class="form-label small mb-1">Payment Status</label>
+                <label class="form-label">Payment Status</label>
                 <select name="pay_status" class="form-select form-select-sm">
                     <option value="">All Pay Status</option>
                     <option value="paid"    {% if pay_status=='paid'    %}selected{% endif %}>✅ Paid</option>
@@ -102,49 +107,77 @@
                     <option value="failed"  {% if pay_status=='failed'  %}selected{% endif %}>❌ Failed</option>
                 </select>
             </div>
-            <div class="col-6 col-md-3 col-lg-2">
-                <label class="form-label small mb-1">Customer Name / Phone</label>
+            <div class="col-6 col-md-3 col-lg-3">
+                <label class="form-label">Customer Name / Phone</label>
                 <input type="text" name="customer" class="form-control form-control-sm" placeholder="Search…" value="{{ customer }}">
             </div>
-            <div class="col-6 col-md-3 col-lg-2">
-                <label class="form-label small mb-1">Order Amount (Min ₹)</label>
-                <input type="number" name="amount_min" class="form-control form-control-sm" min="0" value="{{ amount_min }}">
-            </div>
-            <div class="col-6 col-md-3 col-lg-2">
-                <label class="form-label small mb-1">Order Amount (Max ₹)</label>
-                <input type="number" name="amount_max" class="form-control form-control-sm" min="0" value="{{ amount_max }}">
-            </div>
-            <div class="col-12 col-md-6 col-lg-4">
-                <label class="form-label small mb-1">Book Name</label>
+            <div class="col-12 col-md-6 col-lg-3">
+                <label class="form-label">Book Name</label>
                 <input type="text" name="book_name" class="form-control form-control-sm" placeholder="e.g. Bhagavad Gita" value="{{ book_name }}">
             </div>
-            <div class="col-6 col-md-3 col-lg-2">
-                <label class="form-label small mb-1">Sort By</label>
-                <select name="sort" class="form-select form-select-sm">
-                    {% for key, opt in sort_options.items() %}
-                    <option value="{{ key }}" {% if sort==key %}selected{% endif %}>{{ opt[0] }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="col-6 col-md-3 col-lg-2">
-                <label class="form-label small mb-1">Orders per page</label>
-                <select name="per_page" class="form-select form-select-sm" onchange="this.form.submit()">
-                    {% for n in per_page_options %}
-                    <option value="{{ n }}" {% if per_page==n %}selected{% endif %}>{{ n }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="col-6 col-md-3 col-lg-2 d-flex gap-2">
-                <button type="submit" class="btn btn-warning btn-sm fw-bold flex-fill">
-                    <i class="fas fa-filter me-1"></i>Apply
+            <div class="col-12 col-md-6 col-lg-9 d-flex gap-2 justify-content-lg-end flex-wrap">
+                <button type="button" id="ofAdvBtn" class="btn btn-outline-secondary btn-sm" data-bs-toggle="collapse" data-bs-target="#ofAdv" aria-expanded="{{ 'true' if adv_count else 'false' }}" aria-controls="ofAdv">
+                    <i class="fas fa-sliders-h me-1"></i>Advanced{% if adv_count %} <span class="badge bg-warning text-dark ms-1" id="ofAdvCount">{{ adv_count }}</span>{% endif %}<i class="fas fa-chevron-down ms-2 of-chev" style="font-size:.65rem;"></i>
                 </button>
-                {% if any_filter_active or sort != 'date_desc' or per_page != 20 %}
-                <a href="{{ url_for('admin_orders') }}" class="btn btn-outline-secondary btn-sm" title="Clear all filters">
-                    <i class="fas fa-times"></i>
-                </a>
-                {% endif %}
+                <button type="submit" class="btn btn-warning btn-sm fw-bold px-3"><i class="fas fa-filter me-1"></i>Apply</button>
+                <a href="{{ url_for('admin_orders') }}" class="btn btn-outline-secondary btn-sm px-3" title="Clear all filters"><i class="fas fa-undo me-1"></i>Reset</a>
+            </div>
+
+            <!-- Advanced (collapsed unless one is in use) -->
+            <div class="col-12 p-0">
+                <div class="collapse {{ 'show' if adv_count else '' }}" id="ofAdv">
+                    <div class="row g-2 of-adv mx-0">
+                        <div class="col-6 col-md-3 col-lg-2">
+                            <label class="form-label">Age (Min)</label>
+                            <input type="number" name="age_min" class="form-control form-control-sm" min="1" max="120" value="{{ age_min }}">
+                        </div>
+                        <div class="col-6 col-md-3 col-lg-2">
+                            <label class="form-label">Age (Max)</label>
+                            <input type="number" name="age_max" class="form-control form-control-sm" min="1" max="120" value="{{ age_max }}">
+                        </div>
+                        <div class="col-6 col-md-3 col-lg-2">
+                            <label class="form-label">Area / City</label>
+                            <input type="text" name="city" class="form-control form-control-sm" placeholder="e.g. Ahmedabad" value="{{ city }}">
+                        </div>
+                        <div class="col-6 col-md-3 col-lg-2">
+                            <label class="form-label">Payment Method</label>
+                            <select name="pay_method" class="form-select form-select-sm">
+                                <option value="">All Methods</option>
+                                <option value="payu"     {% if pay_method=='payu'     %}selected{% endif %}>🏦 PayU</option>
+                                <option value="razorpay" {% if pay_method=='razorpay' %}selected{% endif %}>💳 Razorpay</option>
+                                <option value="upi"      {% if pay_method=='upi'      %}selected{% endif %}>📲 UPI</option>
+                                <option value="cod"      {% if pay_method=='cod'      %}selected{% endif %}>💵 COD</option>
+                            </select>
+                        </div>
+                        <div class="col-6 col-md-3 col-lg-2">
+                            <label class="form-label">Amount Min (₹)</label>
+                            <input type="number" name="amount_min" class="form-control form-control-sm" min="0" value="{{ amount_min }}">
+                        </div>
+                        <div class="col-6 col-md-3 col-lg-2">
+                            <label class="form-label">Amount Max (₹)</label>
+                            <input type="number" name="amount_max" class="form-control form-control-sm" min="0" value="{{ amount_max }}">
+                        </div>
+                        <div class="col-6 col-md-3 col-lg-2">
+                            <label class="form-label">Product Type</label>
+                            <select name="product_type" class="form-select form-select-sm">
+                                <option value="">All Products</option>
+                                <option value="individual" {% if product_type=='individual' %}selected{% endif %}>📖 Individual Book</option>
+                                <option value="combo" {% if product_type=='combo' %}selected{% endif %}>🎁 Combo</option>
+                            </select>
+                        </div>
+                        <div class="col-6 col-md-3 col-lg-3">
+                            <label class="form-label">Sort By</label>
+                            <select name="sort" class="form-select form-select-sm">
+                                {% for key, opt in sort_options.items() %}
+                                <option value="{{ key }}" {% if sort==key %}selected{% endif %}>{{ opt[0] }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                </div>
             </div>
         </form>
+        <div class="of-chips" id="ofChips" aria-label="Active filters"></div>
     </div>
 </div>
 
@@ -267,4 +300,97 @@
 </nav>
 {% endif %}
 
+{% endblock %}
+
+{% block extra_js %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/flatpickr/4.6.13/flatpickr.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/flatpickr/4.6.13/flatpickr.min.js"></script>
+<script>
+(function () {
+    var form = document.getElementById('filter-form');
+    var hFrom = document.getElementById('ofDateFrom');
+    var hTo = document.getElementById('ofDateTo');
+    var rangeInput = document.getElementById('ofDateRange');
+    var fb = document.getElementById('ofDateFallback');
+    var fbFrom = document.getElementById('ofFrom');
+    var fbTo = document.getElementById('ofTo');
+    var fp = null;
+
+    function iso(d) { var m = d.getMonth() + 1, day = d.getDate(); return d.getFullYear() + '-' + (m < 10 ? '0' : '') + m + '-' + (day < 10 ? '0' : '') + day; }
+    function parse(s) { var p = (s || '').split('-'); return p.length === 3 ? new Date(+p[0], +p[1] - 1, +p[2]) : null; }
+    function pretty(s) { var d = parse(s); return d ? d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : ''; }
+    function label() {
+        if (hFrom.value && hTo.value) return pretty(hFrom.value) + (hFrom.value === hTo.value ? '' : ' → ' + pretty(hTo.value));
+        if (hFrom.value) return 'From ' + pretty(hFrom.value);
+        if (hTo.value) return 'Until ' + pretty(hTo.value);
+        return '';
+    }
+    function setRange(a, b) {
+        hFrom.value = a ? iso(a) : ''; hTo.value = b ? iso(b) : '';
+        if (fp) { if (a) fp.setDate(b ? [a, b] : [a], false); else fp.clear(false); }
+        rangeInput.value = label(); fbFrom.value = hFrom.value; fbTo.value = hTo.value;
+    }
+
+    if (window.flatpickr) {
+        fp = flatpickr(rangeInput, {
+            mode: 'range', dateFormat: 'Y-m-d', allowInput: false,
+            defaultDate: [hFrom.value, hTo.value].filter(Boolean),
+            onChange: function (sel) {
+                hFrom.value = sel[0] ? iso(sel[0]) : '';
+                hTo.value = sel.length > 1 ? iso(sel[1]) : '';
+            },
+            onClose: function () { rangeInput.value = label(); }
+        });
+        rangeInput.value = label();
+    } else {
+        // Library blocked/offline: plain From / To date inputs keep the filter working.
+        rangeInput.style.display = 'none';
+        rangeInput.parentElement.style.display = 'none';
+        fb.style.display = 'flex'; fbFrom.value = hFrom.value; fbTo.value = hTo.value;
+        fbFrom.addEventListener('change', function () { hFrom.value = fbFrom.value; });
+        fbTo.addEventListener('change', function () { hTo.value = fbTo.value; });
+    }
+
+    // Quick presets
+    document.querySelectorAll('[data-preset]').forEach(function (a) {
+        a.addEventListener('click', function (e) {
+            e.preventDefault();
+            var t = new Date(); t = new Date(t.getFullYear(), t.getMonth(), t.getDate());
+            var k = a.getAttribute('data-preset'), s = null, en = null;
+            if (k === 'today') { s = en = t; }
+            else if (k === '7d') { s = new Date(t); s.setDate(s.getDate() - 6); en = t; }
+            else if (k === '30d') { s = new Date(t); s.setDate(s.getDate() - 29); en = t; }
+            else if (k === 'month') { s = new Date(t.getFullYear(), t.getMonth(), 1); en = t; }
+            else if (k === 'lastmonth') { s = new Date(t.getFullYear(), t.getMonth() - 1, 1); en = new Date(t.getFullYear(), t.getMonth(), 0); }
+            setRange(s, en);
+            form.submit();
+        });
+    });
+
+    // Removable chips for every active filter (so nothing is hidden inside the collapsed panel)
+    var chipBox = document.getElementById('ofChips');
+    var NAMES = {
+        book_type: 'Type', status: 'Status', pay_status: 'Payment', customer: 'Customer', book_name: 'Book',
+        age_min: 'Age ≥', age_max: 'Age ≤', city: 'City', pay_method: 'Method', amount_min: '₹ ≥', amount_max: '₹ ≤',
+        product_type: 'Product'
+    };
+    function addChip(text, clear) {
+        var c = document.createElement('span'); c.className = 'of-chip';
+        c.appendChild(document.createTextNode(text));
+        var b = document.createElement('button'); b.type = 'button'; b.setAttribute('aria-label', 'Remove filter'); b.innerHTML = '&times;';
+        b.addEventListener('click', function () { clear(); form.submit(); });
+        c.appendChild(b); chipBox.appendChild(c);
+    }
+    if (hFrom.value || hTo.value) addChip('Date: ' + label(), function () { setRange(null, null); });
+    Object.keys(NAMES).forEach(function (n) {
+        var el = form.elements[n]; if (!el || !el.value) return;
+        var shown = el.tagName === 'SELECT' ? el.options[el.selectedIndex].text.replace(/^[^\w₹]+/, '') : el.value;
+        addChip(NAMES[n] + ': ' + shown, function () { el.value = ''; });
+    });
+    var sortEl = form.elements['sort'];
+    if (sortEl && sortEl.value !== 'date_desc') {
+        addChip('Sort: ' + sortEl.options[sortEl.selectedIndex].text, function () { sortEl.value = 'date_desc'; });
+    }
+})();
+</script>
 {% endblock %}
