@@ -126,11 +126,19 @@
                     {% endfor %}
                 </select>
             </div>
+            <div class="col-6 col-md-3 col-lg-2">
+                <label class="form-label small mb-1">Orders per page</label>
+                <select name="per_page" class="form-select form-select-sm" onchange="this.form.submit()">
+                    {% for n in per_page_options %}
+                    <option value="{{ n }}" {% if per_page==n %}selected{% endif %}>{{ n }}</option>
+                    {% endfor %}
+                </select>
+            </div>
             <div class="col-6 col-md-3 col-lg-2 d-flex gap-2">
                 <button type="submit" class="btn btn-warning btn-sm fw-bold flex-fill">
                     <i class="fas fa-filter me-1"></i>Apply
                 </button>
-                {% if any_filter_active or sort != 'date_desc' %}
+                {% if any_filter_active or sort != 'date_desc' or per_page != 20 %}
                 <a href="{{ url_for('admin_orders') }}" class="btn btn-outline-secondary btn-sm" title="Clear all filters">
                     <i class="fas fa-times"></i>
                 </a>
@@ -240,7 +248,7 @@
                href="{{ url_for('admin_orders', page=p, status=status, pay_status=pay_status,
                        pay_method=pay_method, customer=customer, date_from=date_from, date_to=date_to,
                        book_type=book_type, product_type=product_type, city=city, age_min=age_min, age_max=age_max,
-                       amount_min=amount_min, amount_max=amount_max, book_name=book_name, sort=sort) }}">{{ p }}</a>
+                       amount_min=amount_min, amount_max=amount_max, book_name=book_name, sort=sort, per_page=per_page) }}">{{ p }}</a>
         </li>
         {% endfor %}
     </ul>

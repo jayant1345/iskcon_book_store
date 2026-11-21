@@ -4486,20 +4486,28 @@ def build_order_report_query(args):
     return oq
 
 
+ORDERS_PER_PAGE_OPTIONS = (3, 5, 10, 20, 50, 100)
+ORDERS_PER_PAGE_DEFAULT = 20
+
+
 @app.route("/admin/orders")
 @admin_required
 def admin_orders():
     page = request.args.get("page", 1, type=int)
     sort = request.args.get("sort", "date_desc")
+    per_page = request.args.get("per_page", ORDERS_PER_PAGE_DEFAULT, type=int)
+    if per_page not in ORDERS_PER_PAGE_OPTIONS:
+        per_page = ORDERS_PER_PAGE_DEFAULT
 
     oq = build_order_report_query(request.args)
     _, order_clause = ORDER_SORT_OPTIONS.get(sort, ORDER_SORT_OPTIONS["date_desc"])
-    orders      = oq.order_by(order_clause).paginate(page=page, per_page=20)
+    orders      = oq.order_by(order_clause).paginate(page=page, per_page=per_page)
     trash_count = Order.query.filter_by(is_deleted=True).count()
 
     filters = {k: request.args.get(k, "") for k in ORDER_REPORT_FILTER_KEYS}
     return render_template("admin/orders.html", orders=orders, sort=sort,
                            sort_options=ORDER_SORT_OPTIONS,
+                           per_page=per_page, per_page_options=ORDERS_PER_PAGE_OPTIONS,
                            trash_count=trash_count, **filters,
                            any_filter_active=any(filters.values()))
 
