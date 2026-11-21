@@ -673,6 +673,23 @@ def yagna_attach_donor_totals(rows):
     return rows
 
 
+def yagna_cover_path():
+    """Static path of the English 'Bhagavad Gita As It Is' cover (paper edition, from the
+    catalogue) for the Yagna popup and page. Falls back to the generic Gita picture."""
+    try:
+        books = Book.query.filter(
+            Book.active == True, Book.deleted == False, Book.is_ebook == False,
+            Book.language == "English", Book.title.ilike("Bhagavad Gita As It Is%")).all()
+        books = [b for b in books if b.image and b.image != "default_book.jpg"]
+        books.sort(key=lambda b: (b.title.strip().lower() != "bhagavad gita as it is",
+                                  "large" not in b.title.lower(), b.id))
+        if books:
+            return "images/books/" + books[0].image
+    except Exception:
+        pass
+    return "images/bhagvat_gita.jpg"
+
+
 def yagna_config():
     prices = {}
     for lang in YAGNA_LANGS:
@@ -1462,6 +1479,7 @@ def index():
     yagna_banner = yagna_stats(yagna_cfg) if yagna_cfg["enabled"] else None
     return render_template("index.html",
                            yagna_banner=yagna_banner, yagna_cfg=yagna_cfg,
+                           yagna_cover=yagna_cover_path() if yagna_banner else None,
                            featured_books=featured_books,
                            new_arrivals=new_arrivals,
                            home_combos=home_combos,
@@ -2328,7 +2346,7 @@ def gita_dan_yagna():
 
     def render(**extra):
         return render_template("gita_yagna.html", cfg=cfg, stats=stats,
-                               wall=_yagna_wall(), langs=YAGNA_LANGS,
+                               wall=_yagna_wall(), langs=YAGNA_LANGS, cover=yagna_cover_path(),
                                invite_min=YAGNA_INVITE_MIN, form=extra.pop("form", {}), **extra)
 
     if request.method == "GET" or not cfg["enabled"]:

@@ -855,7 +855,8 @@
       <div class="modal-body p-4 pt-2">
         <div class="row align-items-center g-4">
           <div class="d-none d-sm-block col-sm-4 col-md-3 text-center">
-            <img src="{{ url_for('static', filename='images/bhagvat_gita.jpg') }}" alt="Bhagavad Gita"
+            <img id="gyCover" data-src="{{ url_for('static', filename=yagna_cover) }}" alt="Bhagavad Gita As It Is"
+                 onerror="this.onerror=null; this.src='{{ url_for('static', filename='images/bhagvat_gita.jpg') }}';"
                  style="width:100%; max-width:150px; border-radius:10px; border:2px solid #e0a82e; box-shadow:0 12px 40px rgba(0,0,0,0.5);">
           </div>
           <div class="col-12 col-sm-8 col-md-9">
@@ -911,7 +912,12 @@
   var el = document.getElementById('gitaYagnaPopup');
   if (!el) return;
   try { if (sessionStorage.getItem('gitaYagnaPopupShown')) return; sessionStorage.setItem('gitaYagnaPopupShown', '1'); } catch (e) {}
-  setTimeout(function () { if (window.bootstrap) new bootstrap.Modal(el).show(); }, 900);
+  setTimeout(function () {
+    // load the (large) cover only when the popup opens, and not on phones where it is hidden
+    var im = document.getElementById('gyCover');
+    if (im && window.innerWidth >= 576 && !im.getAttribute('src')) im.src = im.getAttribute('data-src');
+    if (window.bootstrap) new bootstrap.Modal(el).show();
+  }, 900);
 })();
 </script>
 {% endif %}

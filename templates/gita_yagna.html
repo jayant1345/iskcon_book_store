@@ -30,9 +30,9 @@
   <!-- Hero -->
   <div class="gy-hero mb-3">
     <div class="d-flex align-items-center gap-3">
-      <img src="{{ url_for('static', filename='images/bhagvat_gita.jpg') }}" alt="Bhagavad Gita"
+      <img src="{{ url_for('static', filename=cover) }}" alt="Bhagavad Gita As It Is"
            style="width:84px; height:116px; object-fit:cover; border-radius:8px; border:2px solid #e0a82e;"
-           onerror="this.style.display='none'">
+           onerror="this.onerror=null; this.src='{{ url_for('static', filename='images/bhagvat_gita.jpg') }}';">
       <div class="flex-grow-1">
         <div style="color:#ffd98a; font-weight:700; letter-spacing:1px; font-size:.85rem;">ISKCON AHMEDABAD</div>
         <h1>ગીતા દાન યજ્ઞ <span style="color:#ffd98a;">·</span> गीता दान यज्ञ</h1>
