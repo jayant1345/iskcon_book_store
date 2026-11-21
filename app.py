@@ -604,8 +604,30 @@ class GitaYagnaDonation(db.Model):
         return "Received" if self.counted else "Awaiting payment"
 
     @property
+    def donor_key(self):
+        return yagna_donor_key(self.donor_phone, self.donor_name)
+
+    @property
+    def donor_total(self):
+        """This donor's total Gitas (paper copies, ANY language, across all their donations).
+        Counts every paid / offline donation plus this one. Lists pre-compute it
+        (see yagna_attach_donor_totals) to avoid one query per row."""
+        cached = getattr(self, "_donor_total", None)
+        if cached is not None:
+            return cached
+        q = GitaYagnaDonation.query
+        if self.donor_phone:
+            q = q.filter(GitaYagnaDonation.donor_phone == self.donor_phone)
+        else:
+            q = q.filter(db.func.lower(GitaYagnaDonation.donor_name) == (self.donor_name or "").strip().lower(),
+                         db.or_(GitaYagnaDonation.donor_phone.is_(None), GitaYagnaDonation.donor_phone == ""))
+        others = sum(r.quantity or 0 for r in q.all() if r.counted and r.id != self.id)
+        return others + (self.quantity or 0)
+
+    @property
     def invitation(self):
-        return (self.quantity or 0) >= YAGNA_INVITE_MIN
+        """50 or more Gitas in total (50 included) -> special Gita Jayanti invitation card."""
+        return self.donor_total >= YAGNA_INVITE_MIN
 
     @property
     def invite_min(self):
@@ -624,9 +646,31 @@ YAGNA_LANGS = ("Hindi", "Gujarati", "English")
 YAGNA_DEFAULT_PRICES = {"Hindi": 200, "Gujarati": 210, "English": 240}
 YAGNA_DEFAULT_GOAL = 10000
 YAGNA_DEFAULT_EVENT = "Sunday, 20 December 2026"
-YAGNA_INVITE_MIN = 50          # donors of this many Gitas get a special invitation card
+YAGNA_INVITE_MIN = 50          # donors of 50 or more Gitas in total (any language) get a special invitation card
 YAGNA_MAX_QTY = 10000
 YAGNA_DEFAULT_WEIGHT_KG = 0.5   # parcel weight per Gita, used for the courier rate
+
+
+def yagna_donor_key(phone, name):
+    phone = (phone or "").strip()
+    return ("p:" + phone) if phone else ("n:" + (name or "").strip().lower())
+
+
+def yagna_donor_totals():
+    """{donor_key: total counted Gitas} — one donor = same mobile number (or same name when no number)."""
+    totals = {}
+    for r in GitaYagnaDonation.query.all():
+        if r.counted:
+            totals[r.donor_key] = totals.get(r.donor_key, 0) + (r.quantity or 0)
+    return totals
+
+
+def yagna_attach_donor_totals(rows):
+    """Pre-compute .donor_total on a list of donations (one query instead of one per row)."""
+    totals = yagna_donor_totals()
+    for r in rows:
+        r._donor_total = totals.get(r.donor_key, 0) + (0 if r.counted else (r.quantity or 0))
+    return rows
 
 
 def yagna_config():
@@ -691,7 +735,7 @@ def yagna_stats(cfg=None):
         "offline": sum(1 for r in counted if r.source == "offline"),
         "pending": sum(1 for r in rows if not r.counted),
         "distributed": sum(r.quantity or 0 for r in counted if r.distributed),
-        "invitations": sum(1 for r in counted if r.invitation),
+        "invitations": sum(1 for v in yagna_donor_totals().values() if v >= YAGNA_INVITE_MIN),
         "students": sum(r.students_qty or 0 for r in counted),
         "village": sum(r.village_qty or 0 for r in counted),
         "others": sum(r.others_qty or 0 for r in counted),
@@ -2408,6 +2452,9 @@ def gita_dan_yagna():
         arati=arati, yajna=yajna, dedication=dedication or None, show_name=show_name,
         payment_mode=payment_method))
     db.session.commit()
+    donation_total = quantity + sum(
+        r.quantity or 0 for r in GitaYagnaDonation.query.filter(
+            GitaYagnaDonation.donor_phone == phone, GitaYagnaDonation.order_id != order.id).all() if r.counted)
     notify_admin_whatsapp(
         f"🙏 New Gita Dan Yagna Donation!\n"
         f"Donor: {donor_name} | {phone}\n"
@@ -2415,7 +2462,8 @@ def gita_dan_yagna():
         f"Sankalpa: {sankalpa}\n"
         + ("Distribution: Local (temple)" if distribution == "local" else
            f"Distribution: COURIER to {r_name}, {r_pin} — courier ₹{courier_charge:.0f} (paid by donor)")
-        + (f"\n🎟 Special invitation card eligible" if quantity >= YAGNA_INVITE_MIN else ""))
+        + (f"\n🎟 Special invitation card eligible (donor total {donation_total} Gitas)"
+           if donation_total >= YAGNA_INVITE_MIN else ""))
 
     if payment_method == "upi":
         return redirect(url_for("payment_upi_qr", order_number=order.order_number))
@@ -4519,7 +4567,7 @@ def admin_gita_yagna():
                            GitaYagnaDonation.distribution.is_(None)))
     elif dist_f == "courier":
         dq = dq.filter(GitaYagnaDonation.distribution == "courier")
-    rows = dq.order_by(GitaYagnaDonation.donated_on.desc()).limit(500).all()
+    rows = yagna_attach_donor_totals(dq.order_by(GitaYagnaDonation.donated_on.desc()).limit(500).all())
     if status == "received":
         rows = [r for r in rows if r.counted and not r.distributed]
     elif status == "pending":
@@ -4613,9 +4661,9 @@ def admin_gita_yagna_export():
                 "Language", "Gitas", "Gitas amount", "Distribution", "Courier charge (paid by donor)",
                 "Total paid", "Recipient", "Recipient phone", "Recipient address", "Recipient pincode",
                 "Students", "Village", "Others", "Arati", "Yajna",
-                "Invitation card", "In the name of", "Show name", "Payment", "Receipt/Form No",
+                "Invitation card (50+ total)", "Donor total Gitas", "In the name of", "Show name", "Payment", "Receipt/Form No",
                 "Status", "Distributed on", "Order #", "Notes"])
-    for r in GitaYagnaDonation.query.order_by(GitaYagnaDonation.donated_on).all():
+    for r in yagna_attach_donor_totals(GitaYagnaDonation.query.order_by(GitaYagnaDonation.donated_on).all()):
         w.writerow([r.id, ((r.donated_on or r.created_at) + _IST_OFFSET).strftime("%d-%m-%Y"),
                     r.source, r.donor_name, r.donor_phone or "", r.donor_email or "",
                     r.profession or "", r.area or "", r.language, r.quantity, f"{r.amount:.0f}",
@@ -4625,7 +4673,7 @@ def admin_gita_yagna_export():
                     (r.recipient_address or "").replace("\n", " "), r.recipient_pincode or "",
                     r.students_qty or 0, r.village_qty or 0, r.others_qty or 0,
                     "Yes" if r.arati else "", "Yes" if r.yajna else "",
-                    "Yes" if r.invitation else "", r.dedication or "",
+                    "Yes" if r.invitation else "", r.donor_total, r.dedication or "",
                     "Yes" if r.show_name else "No", r.payment_mode or "", r.receipt_no or "",
                     r.status_label,
                     ((r.distributed_at + _IST_OFFSET).strftime("%d-%m-%Y") if r.distributed_at else ""),

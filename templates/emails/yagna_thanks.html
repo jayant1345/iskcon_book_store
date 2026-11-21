@@ -26,7 +26,7 @@
       {% if d.dedication %}<p style="font-size:15px;">In the name of: <strong>{{ d.dedication }}</strong></p>{% endif %}
       {% if d.invitation %}
       <p style="background:#fff8e1;border:1px solid #ffe082;border-radius:8px;padding:12px;font-size:14px;">🎟 <strong>Special invitation:</strong>
-        as a donor of {{ d.invite_min }}+ Gitas you will receive a special invitation card for the Gītā Jayantī Yajña on {{ d.event_date }}.</p>
+        as a donor of {{ d.invite_min }} or more Gitas in total (your total: {{ d.donor_total }}) you will receive a special invitation card for the Gītā Jayantī Yajña on {{ d.event_date }}.</p>
       {% endif %}
       {% if cert_url %}
       <p style="text-align:center;margin:24px 0;"><a href="{{ cert_url }}" style="background:#ea580c;color:#fff;text-decoration:none;padding:12px 26px;border-radius:8px;font-weight:bold;">View your Thank-you Certificate</a></p>

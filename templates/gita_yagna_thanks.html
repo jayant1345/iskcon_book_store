@@ -37,7 +37,7 @@
 
   {% if d.invitation %}
   <div class="alert alert-warning">
-    🎟 <strong>Special invitation:</strong> as a donor of {{ invite_min }}+ Gitas you will receive a special invitation card
+    🎟 <strong>Special invitation:</strong> as a donor of {{ invite_min }} or more Gitas in total (your total: <strong>{{ d.donor_total }}</strong>) you will receive a special invitation card
     to take part in the Gītā Jayantī Yajña on <strong>{{ cfg.event_date }}</strong>.
   </div>
   {% elif d.arati or d.yajna %}

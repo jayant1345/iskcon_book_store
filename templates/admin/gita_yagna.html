@@ -17,7 +17,7 @@
             <div class="col-6 col-md-3"><div class="border rounded p-2"><small class="text-muted">Amount collected</small><div class="h5 mb-0">₹{{ "{:,.0f}".format(stats.amount) }}</div></div></div>
             <div class="col-6 col-md-3"><div class="border rounded p-2"><small class="text-muted">Donors</small><div class="h5 mb-0">{{ stats.donors }} <small class="text-muted">({{ stats.online }} online / {{ stats.offline }} offline)</small></div></div></div>
             <div class="col-6 col-md-3"><div class="border rounded p-2"><small class="text-muted">Gitas distributed</small><div class="h5 mb-0">{{ stats.distributed }}</div></div></div>
-            <div class="col-6 col-md-3"><div class="border rounded p-2"><small class="text-muted">🎟 Invitation cards ({{ invite_min }}+ Gitas)</small><div class="h5 mb-0">{{ stats.invitations }}</div></div></div>
+            <div class="col-6 col-md-3"><div class="border rounded p-2"><small class="text-muted">🎟 Invitation cards (donors with {{ invite_min }}+ Gitas in total)</small><div class="h5 mb-0">{{ stats.invitations }}</div></div></div>
             <div class="col-6 col-md-3"><div class="border rounded p-2"><small class="text-muted">Hindi / Gujarati / English</small><div class="fw-bold">{{ stats.by_lang.Hindi }} / {{ stats.by_lang.Gujarati }} / {{ stats.by_lang.English }}</div></div></div>
             <div class="col-6 col-md-3"><div class="border rounded p-2"><small class="text-muted">Students / Village / Others</small><div class="fw-bold">{{ stats.students }} / {{ stats.village }} / {{ stats.others }}</div></div></div>
             <div class="col-6 col-md-3"><div class="border rounded p-2"><small class="text-muted">Awaiting payment</small><div class="fw-bold {% if stats.pending %}text-danger{% endif %}">{{ stats.pending }}</div></div></div>
@@ -147,7 +147,7 @@
                         <small class="text-muted">{{ (r.payment_mode or '')|upper }}</small>
                     </td>
                     <td style="font-size:.8rem; max-width:200px;">
-                        {% if r.invitation %}<span class="badge bg-warning text-dark">🎟 Invitation</span>{% endif %}
+                        {% if r.invitation %}<span class="badge bg-warning text-dark" title="Donor's total Gitas, all languages">🎟 Invitation · total {{ r.donor_total }}</span>{% endif %}
                         {% if r.arati %}<span class="badge bg-light text-dark border">Arati</span>{% endif %}
                         {% if r.yajna %}<span class="badge bg-light text-dark border">Yajna</span>{% endif %}
                         {% if r.students_qty or r.village_qty or r.others_qty %}<div class="text-muted">S{{ r.students_qty or 0 }} · V{{ r.village_qty or 0 }} · O{{ r.others_qty or 0 }}</div>{% endif %}
