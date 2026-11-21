@@ -1,0 +1,166 @@
+{% extends "admin/admin_base.html" %}
+{% set active_page = 'sales_report' %}
+{% block page_title %}Sales Report{% endblock %}
+{% block content %}
+<style>
+    .rep-table thead th { background:#14284B; color:#fff; text-align:center; vertical-align:middle; border-color:#14284B; }
+    .rep-table td { vertical-align:top; }
+    .rep-table tfoot td { background:#14284B; color:#fff; font-weight:700; }
+    .rep-books { white-space:normal; font-size:.9rem; }
+    .rep-sum h6 { background:#14284B; color:#fff; margin:0; padding:7px 12px; font-size:.85rem; letter-spacing:.5px; }
+    .rep-sum table { margin-bottom:0; }
+    @media print {
+        .sidebar, .topbar, .no-print { display:none !important; }
+        div.flex-grow-1 { margin-left:0 !important; }
+        body { background:#fff !important; }
+        .card { border:0 !important; box-shadow:none !important; }
+        .rep-table thead th, .rep-table tfoot td, .rep-sum h6 { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+        @page { size: A4 landscape; margin: 10mm; }
+    }
+</style>
+
+<!-- Selector -->
+<div class="card shadow-sm mb-4 no-print">
+    <div class="card-body">
+        <form method="get" class="row g-3 align-items-end" id="repForm">
+            <div class="col-6 col-md-3">
+                <label class="form-label small fw-bold mb-1">Month</label>
+                <select name="month" class="form-select">
+                    {% for num, name in months %}<option value="{{ num }}" {% if month == num %}selected{% endif %}>{{ name }}</option>{% endfor %}
+                </select>
+            </div>
+            <div class="col-6 col-md-2">
+                <label class="form-label small fw-bold mb-1">Year</label>
+                <select name="year" class="form-select">
+                    {% for y in years %}<option value="{{ y }}" {% if year == y %}selected{% endif %}>{{ y }}</option>{% endfor %}
+                </select>
+            </div>
+            <div class="col-12 col-md-4">
+                <label class="form-label small fw-bold mb-1">Orders to include</label>
+                <select name="include" class="form-select">
+                    {% for key, label in include_options.items() %}<option value="{{ key }}" {% if include == key %}selected{% endif %}>{{ label }}</option>{% endfor %}
+                </select>
+            </div>
+            <div class="col-12 col-md-3 d-flex gap-2 flex-wrap">
+                <button type="submit" class="btn btn-warning fw-bold"><i class="fas fa-search me-1"></i>Show report</button>
+                <a href="{{ url_for('admin_sales_report_download', year=year, month=month, include=include) }}" class="btn btn-success fw-bold" id="dlBtn"><i class="fas fa-file-excel me-1"></i>Download Excel</a>
+                <button type="button" class="btn btn-outline-secondary" onclick="window.print()"><i class="fas fa-print me-1"></i>Print</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Report -->
+<div class="mb-2">
+    <h5 class="mb-0">ISKCON Book Store — Sales Report: <span class="text-primary">{{ rep.period_label }}</span></h5>
+    <small class="text-muted">Orders included: {{ rep.include_label }}</small>
+</div>
+
+<div class="card shadow-sm mb-4">
+    <div class="table-responsive">
+        <table class="table table-bordered table-sm mb-0 rep-table align-middle">
+            <thead>
+                <tr>
+                    <th style="width:140px;">Date</th>
+                    <th style="width:90px;">No. of Books</th>
+                    <th>Books Ordered</th>
+                    <th class="text-end" style="width:110px;">Subtotal (₹)</th>
+                    <th class="text-end" style="width:105px;">Shipping (₹)</th>
+                    {% if rep.has_discount %}<th class="text-end" style="width:105px;">Discount (₹)</th>{% endif %}
+                    <th class="text-end" style="width:115px;">G. Total (₹)</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in rep.rows %}
+                <tr>
+                    <td class="text-nowrap text-center"><a href="{{ url_for('admin_order_detail', order_id=r.order.id) }}" class="text-decoration-none" title="Open order {{ r.order.order_number }}">{{ r.date }}</a></td>
+                    <td class="text-center">{{ r.count }}</td>
+                    <td class="rep-books">{% for l in r.lines %}{{ l }}{% if not loop.last %}<br>{% endif %}{% endfor %}</td>
+                    <td class="text-end">{{ "{:,.2f}".format(r.subtotal) }}</td>
+                    <td class="text-end">{{ "{:,.2f}".format(r.shipping) }}</td>
+                    {% if rep.has_discount %}<td class="text-end">{{ "{:,.2f}".format(r.discount) }}</td>{% endif %}
+                    <td class="text-end fw-bold">{{ "{:,.2f}".format(r.total) }}</td>
+                </tr>
+                {% else %}
+                <tr><td colspan="{{ 7 if rep.has_discount else 6 }}" class="text-center text-muted py-4">No orders in this period for the selected filter.</td></tr>
+                {% endfor %}
+            </tbody>
+            <tfoot>
+                <tr>
+                    <td class="text-center">TOTAL</td>
+                    <td class="text-center">{{ rep.totals.books }}</td>
+                    <td>{{ rep.totals.orders }} order{{ 's' if rep.totals.orders != 1 }}</td>
+                    <td class="text-end">{{ "{:,.2f}".format(rep.totals.subtotal) }}</td>
+                    <td class="text-end">{{ "{:,.2f}".format(rep.totals.shipping) }}</td>
+                    {% if rep.has_discount %}<td class="text-end">{{ "{:,.2f}".format(rep.totals.discount) }}</td>{% endif %}
+                    <td class="text-end">{{ "{:,.2f}".format(rep.totals.total) }}</td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+</div>
+
+<!-- Summary (bottom of the report) -->
+<h5 class="mb-2">Summary — {{ rep.period_label }}</h5>
+<div class="row g-3 rep-sum">
+    <div class="col-md-6 col-xl-4">
+        <div class="card shadow-sm"><h6>OVERALL</h6>
+            <table class="table table-sm table-bordered">
+                <tr><td>Total orders</td><td class="text-end">{{ rep.totals.orders }}</td></tr>
+                <tr><td>Total books / copies</td><td class="text-end">{{ rep.totals.books }}</td></tr>
+                <tr><td>Subtotal (₹)</td><td class="text-end">{{ "{:,.2f}".format(rep.totals.subtotal) }}</td></tr>
+                {% if rep.has_discount %}<tr><td>Discount (₹)</td><td class="text-end">{{ "{:,.2f}".format(rep.totals.discount) }}</td></tr>{% endif %}
+                <tr><td>Shipping (₹)</td><td class="text-end">{{ "{:,.2f}".format(rep.totals.shipping) }}</td></tr>
+                <tr class="fw-bold table-warning"><td>GRAND TOTAL (₹)</td><td class="text-end">{{ "{:,.2f}".format(rep.totals.total) }}</td></tr>
+                <tr><td>Average order value (₹)</td><td class="text-end">{{ "{:,.2f}".format(rep.totals.avg_order) }}</td></tr>
+            </table>
+        </div>
+    </div>
+    <div class="col-md-6 col-xl-4">
+        <div class="card shadow-sm mb-3"><h6>FORMAT-WISE (copies)</h6>
+            <table class="table table-sm table-bordered">
+                {% for k, v in rep.formats.items() %}{% if v %}<tr><td>{{ k }}</td><td class="text-end">{{ v }}</td></tr>{% endif %}{% endfor %}
+                {% if not rep.totals.books %}<tr><td colspan="2" class="text-muted text-center">—</td></tr>{% endif %}
+            </table>
+        </div>
+        <div class="card shadow-sm"><h6>LANGUAGE-WISE (copies)</h6>
+            <table class="table table-sm table-bordered">
+                {% for k, v in rep.languages %}<tr><td>{{ k }}</td><td class="text-end">{{ v }}</td></tr>{% else %}<tr><td colspan="2" class="text-muted text-center">—</td></tr>{% endfor %}
+            </table>
+        </div>
+    </div>
+    <div class="col-md-6 col-xl-4">
+        <div class="card shadow-sm mb-3"><h6>PAYMENT METHOD-WISE</h6>
+            <table class="table table-sm table-bordered">
+                <tr class="table-light"><th>Method</th><th class="text-end">Orders</th><th class="text-end">Total (₹)</th></tr>
+                {% for k, d in rep.payments %}<tr><td>{{ k }}</td><td class="text-end">{{ d.orders }}</td><td class="text-end">{{ "{:,.2f}".format(d.total) }}</td></tr>{% else %}<tr><td colspan="3" class="text-muted text-center">—</td></tr>{% endfor %}
+            </table>
+        </div>
+        <div class="card shadow-sm"><h6>ORDER STATUS-WISE</h6>
+            <table class="table table-sm table-bordered">
+                {% for k, v in rep.statuses %}<tr><td>{{ k }}</td><td class="text-end">{{ v }}</td></tr>{% else %}<tr><td colspan="2" class="text-muted text-center">—</td></tr>{% endfor %}
+            </table>
+        </div>
+    </div>
+    <div class="col-12">
+        <div class="card shadow-sm"><h6>BOOK-WISE</h6>
+            <div class="table-responsive">
+            <table class="table table-sm table-bordered">
+                <tr class="table-light"><th>Book</th><th class="text-end" style="width:110px;">Copies</th><th class="text-end" style="width:140px;">Sales (₹)</th></tr>
+                {% for title, d in rep.books %}<tr><td>{{ title }}</td><td class="text-end">{{ d.qty }}</td><td class="text-end">{{ "{:,.2f}".format(d.amount) }}</td></tr>{% else %}<tr><td colspan="3" class="text-muted text-center">—</td></tr>{% endfor %}
+            </table>
+            </div>
+            {% if rep.combos %}
+            <h6 class="mt-2" style="background:#4a2c14;">COMBOS SOLD</h6>
+            <div class="table-responsive">
+            <table class="table table-sm table-bordered">
+                <tr class="table-light"><th>Combo</th><th class="text-end" style="width:110px;">Qty</th><th class="text-end" style="width:140px;">Sales (₹)</th></tr>
+                {% for title, d in rep.combos %}<tr><td>{{ title }}</td><td class="text-end">{{ d.qty }}</td><td class="text-end">{{ "{:,.2f}".format(d.amount) }}</td></tr>{% endfor %}
+            </table>
+            </div>
+            <div class="small text-muted p-2">Books inside combos are counted in the book-wise copies above; their sales amount is shown against the combo.</div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

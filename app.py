@@ -5320,6 +5320,323 @@ def admin_orders():
                            any_filter_active=any(filters.values()))
 
 
+# ─────────────────────────────────────────────
+# ADMIN — MONTHLY / YEARLY SALES REPORT (office format)
+# One row per order: Date, No. of Books, Books Ordered, Subtotal, Shipping, [Discount], Grand Total,
+# a TOTAL row, and an all-round SUMMARY underneath. Same data feeds the on-screen page and the Excel file.
+# ─────────────────────────────────────────────
+
+SALES_REPORT_INCLUDE = {
+    "paid": "Paid orders only",
+    "all":  "All orders except failed / cancelled payments",
+}
+
+
+def _report_books_count(order):
+    """Real books/copies in an order. Combo header rows are excluded (their books are
+    counted through the combo's component rows); Gita Dan Yagna copies are included."""
+    return sum(i.quantity or 0 for i in order.items if not (i.combo_id and not i.is_combo_component))
+
+
+def _report_books_lines(order):
+    """['Book title x1', '🎁 Combo name x1 (Book A x1, Book B x2)', ...] for the 'Books Ordered' column."""
+    lines = []
+    for item in order.display_items:
+        line = f"{item.book_title} x{item.quantity}"
+        if item.combo_id:
+            line = f"🎁 {line}"
+            if item.combo:
+                inner = ", ".join(f"{ci.book.title} x{ci.quantity * item.quantity}"
+                                  for ci in item.combo.combo_items if ci.book)
+                if inner:
+                    line += f" ({inner})"
+        lines.append(line)
+    return lines
+
+
+def build_sales_report(year, month, include="paid"):
+    """month = 1..12, or 0 for the whole year. Months follow IST (the DB stores UTC)."""
+    start_ist = datetime(year, month or 1, 1)
+    end_ist = _add_months(start_ist, 1 if month else 12)
+    q = Order.query.filter(Order.is_deleted == False,
+                           Order.created_at >= start_ist - _IST_OFFSET,
+                           Order.created_at < end_ist - _IST_OFFSET,
+                           Order.order_status != "cancelled")
+    if include == "paid":
+        q = q.filter(Order.payment_status == "paid")
+    else:
+        q = q.filter(Order.payment_status != "failed")
+    orders = q.order_by(Order.created_at).all()
+
+    rows = []
+    fmt_copies = {"Paper copies": 0, "eBooks": 0, "Gita Dan Yagna (donated copies)": 0}
+    lang_copies, books, combos, by_pay, by_status = {}, {}, {}, {}, {}
+    for o in orders:
+        count = _report_books_count(o)
+        rows.append({
+            "order": o,
+            "date": (o.created_at + _IST_OFFSET).strftime("%d-%m-%Y %H:%M"),
+            "count": count,
+            "lines": _report_books_lines(o),
+            "subtotal": round(o.subtotal or 0, 2),
+            "shipping": round(o.shipping_charge or 0, 2),
+            "discount": round(o.discount_amount or 0, 2),
+            "total": round(o.total_amount or 0, 2),
+        })
+        yd = o.yagna_donation
+        for i in o.items:
+            if i.combo_id and not i.is_combo_component:           # combo header row
+                c = combos.setdefault(i.book_title, {"qty": 0, "amount": 0.0})
+                c["qty"] += i.quantity or 0
+                c["amount"] += (i.price or 0) * (i.quantity or 0)
+                continue
+            qty = i.quantity or 0
+            book = i.book if i.book_id else None
+            if book is None and yd is not None:                    # Gita Dan Yagna donation line
+                fmt, lang = "Gita Dan Yagna (donated copies)", yd.language
+            elif book is not None:
+                fmt, lang = ("eBooks" if book.is_ebook else "Paper copies"), (book.language or "—")
+            else:
+                fmt, lang = "Paper copies", "—"
+            fmt_copies[fmt] += qty
+            lang_copies[lang] = lang_copies.get(lang, 0) + qty
+            b = books.setdefault(i.book_title, {"qty": 0, "amount": 0.0})
+            b["qty"] += qty
+            b["amount"] += (i.price or 0) * qty                    # 0 for books that sit inside a combo
+        p = by_pay.setdefault((o.payment_method or "—").upper(), {"orders": 0, "total": 0.0})
+        p["orders"] += 1
+        p["total"] += o.total_amount or 0
+        st = (o.order_status or "—").capitalize()
+        by_status[st] = by_status.get(st, 0) + 1
+
+    totals = {
+        "orders": len(rows),
+        "books": sum(r["count"] for r in rows),
+        "subtotal": round(sum(r["subtotal"] for r in rows), 2),
+        "shipping": round(sum(r["shipping"] for r in rows), 2),
+        "discount": round(sum(r["discount"] for r in rows), 2),
+        "total": round(sum(r["total"] for r in rows), 2),
+    }
+    totals["avg_order"] = round(totals["total"] / totals["orders"], 2) if totals["orders"] else 0
+    return {
+        "year": year, "month": month, "include": include,
+        "period_label": (start_ist.strftime("%B %Y") if month else f"Full year {year}"),
+        "include_label": SALES_REPORT_INCLUDE.get(include, ""),
+        "rows": rows, "totals": totals, "has_discount": totals["discount"] > 0,
+        "formats": fmt_copies,
+        "languages": sorted(lang_copies.items(), key=lambda x: -x[1]),
+        "books": sorted(books.items(), key=lambda x: (-x[1]["qty"], x[0])),
+        "combos": sorted(combos.items(), key=lambda x: (-x[1]["qty"], x[0])),
+        "payments": sorted(by_pay.items(), key=lambda x: -x[1]["orders"]),
+        "statuses": sorted(by_status.items(), key=lambda x: -x[1]),
+    }
+
+
+def _sales_report_params():
+    now_ist = datetime.utcnow() + _IST_OFFSET
+    year = request.args.get("year", now_ist.year, type=int)
+    month = request.args.get("month", now_ist.month, type=int)
+    include = request.args.get("include", "paid")
+    if not (2000 <= year <= 2100):
+        year = now_ist.year
+    if month is None or not (0 <= month <= 12):
+        month = now_ist.month
+    if include not in SALES_REPORT_INCLUDE:
+        include = "paid"
+    return year, month, include
+
+
+@app.route("/admin/reports/sales")
+@admin_required
+def admin_sales_report():
+    year, month, include = _sales_report_params()
+    first = db.session.query(db.func.min(Order.created_at)).scalar()
+    now_year = (datetime.utcnow() + _IST_OFFSET).year
+    first_year = min(((first + _IST_OFFSET).year if first else now_year), year)
+    years = list(range(now_year, first_year - 1, -1)) or [now_year]
+    if year not in years:
+        years.append(year)
+        years.sort(reverse=True)
+    months = [(0, "Whole year")] + [(m, datetime(2000, m, 1).strftime("%B")) for m in range(1, 13)]
+    return render_template("admin/sales_report.html", rep=build_sales_report(year, month, include),
+                           year=year, month=month, include=include, years=years, months=months,
+                           include_options=SALES_REPORT_INCLUDE, active_page="sales_report")
+
+
+@app.route("/admin/reports/sales/download")
+@admin_required
+def admin_sales_report_download():
+    from flask import Response
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    from openpyxl.utils import get_column_letter
+
+    year, month, include = _sales_report_params()
+    rep = build_sales_report(year, month, include)
+    t = rep["totals"]
+    disc = rep["has_discount"]
+
+    NAVY, LIGHT, GREY = "14284B", "E8EEF8", "BFBFBF"
+    side = Side(style="thin", color=GREY)
+    border = Border(left=side, right=side, top=side, bottom=side)
+    white_bold = Font(bold=True, color="FFFFFF")
+    navy_fill = PatternFill("solid", fgColor=NAVY)
+    light_fill = PatternFill("solid", fgColor=LIGHT)
+    money = '#,##0.00'
+
+    headers = ["Date", "No. of Books", "Books Ordered", "Subtotal (₹)", "Shipping (₹)"]
+    if disc:
+        headers.append("Discount (₹)")
+    headers.append("G. Total (₹)")
+    n = len(headers)
+    last = get_column_letter(n)
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Sales Report"
+
+    ws.merge_cells(f"A1:{last}1")
+    ws["A1"] = f"ISKCON Book Store — Sales Report: {rep['period_label']}"
+    ws["A1"].font = Font(bold=True, size=14, color=NAVY)
+    ws.merge_cells(f"A2:{last}2")
+    ws["A2"] = (f"Orders included: {rep['include_label']}   |   "
+                f"Generated: {(datetime.utcnow() + _IST_OFFSET).strftime('%d-%m-%Y %H:%M')} IST")
+    ws["A2"].font = Font(italic=True, color="595959")
+
+    hr = 4
+    for c, h in enumerate(headers, 1):
+        cell = ws.cell(row=hr, column=c, value=h)
+        cell.font, cell.fill, cell.border = white_bold, navy_fill, border
+        cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+    ws.row_dimensions[hr].height = 24
+
+    r = hr + 1
+    for row in rep["rows"]:
+        vals = [row["date"], row["count"], "\n".join(row["lines"]), row["subtotal"], row["shipping"]]
+        if disc:
+            vals.append(row["discount"])
+        vals.append(row["total"])
+        for c, v in enumerate(vals, 1):
+            cell = ws.cell(row=r, column=c, value=v)
+            cell.border = border
+            cell.alignment = Alignment(vertical="top", wrap_text=(c == 3),
+                                       horizontal="center" if c in (1, 2) else ("left" if c == 3 else "right"))
+            if c >= 4:
+                cell.number_format = money
+        r += 1
+
+    # TOTAL row (navy, like the office sheet)
+    tot = ["TOTAL", t["books"], f"{t['orders']} order{'s' if t['orders'] != 1 else ''}", t["subtotal"], t["shipping"]]
+    if disc:
+        tot.append(t["discount"])
+    tot.append(t["total"])
+    for c, v in enumerate(tot, 1):
+        cell = ws.cell(row=r, column=c, value=v)
+        cell.font, cell.fill, cell.border = white_bold, navy_fill, border
+        cell.alignment = Alignment(horizontal="center" if c <= 2 else ("left" if c == 3 else "right"), vertical="center")
+        if c >= 4:
+            cell.number_format = money
+    ws.row_dimensions[r].height = 22
+    r += 2
+
+    def section(title):
+        nonlocal r
+        ws.merge_cells(f"A{r}:{last}{r}")
+        c = ws.cell(row=r, column=1, value=title)
+        c.font, c.fill = Font(bold=True, color=NAVY, size=12), light_fill
+        r += 1
+
+    def line(label, *vals, bold=False, fmts=None):
+        """label spans A:C, values go to D, E, F ..."""
+        nonlocal r
+        ws.merge_cells(f"A{r}:C{r}")
+        lc = ws.cell(row=r, column=1, value=label)
+        lc.border = border
+        lc.font = Font(bold=bold)
+        for k in range(2, 4):
+            ws.cell(row=r, column=k).border = border
+        for k, v in enumerate(vals):
+            cell = ws.cell(row=r, column=4 + k, value=v)
+            cell.border = border
+            cell.font = Font(bold=bold)
+            cell.alignment = Alignment(horizontal="right")
+            if fmts and fmts[k]:
+                cell.number_format = fmts[k]
+        r += 1
+
+    def head(label, *cols):
+        nonlocal r
+        ws.merge_cells(f"A{r}:C{r}")
+        for k in range(1, 4):
+            ws.cell(row=r, column=k).border = border
+            ws.cell(row=r, column=k).fill = navy_fill
+        ws.cell(row=r, column=1, value=label).font = white_bold
+        for k, h in enumerate(cols):
+            cell = ws.cell(row=r, column=4 + k, value=h)
+            cell.font, cell.fill, cell.border = white_bold, navy_fill, border
+            cell.alignment = Alignment(horizontal="center")
+        r += 1
+
+    section("SUMMARY — " + rep["period_label"])
+    head("Overall", "Value")
+    line("Total orders", t["orders"])
+    line("Total books / copies", t["books"])
+    line("Subtotal (₹)", t["subtotal"], fmts=[money])
+    if disc:
+        line("Discount (₹)", t["discount"], fmts=[money])
+    line("Shipping (₹)", t["shipping"], fmts=[money])
+    line("GRAND TOTAL (₹)", t["total"], bold=True, fmts=[money])
+    line("Average order value (₹)", t["avg_order"], fmts=[money])
+    r += 1
+    head("Format-wise", "Copies")
+    for k, v in rep["formats"].items():
+        if v:
+            line(k, v)
+    r += 1
+    head("Language-wise", "Copies")
+    for k, v in rep["languages"]:
+        line(k, v)
+    r += 1
+    head("Book-wise", "Copies", "Sales (₹)")
+    for title, d in rep["books"]:
+        line(title, d["qty"], round(d["amount"], 2), fmts=[None, money])
+    if rep["combos"]:
+        r += 1
+        head("Combos sold", "Qty", "Sales (₹)")
+        for title, d in rep["combos"]:
+            line(title, d["qty"], round(d["amount"], 2), fmts=[None, money])
+        line("Note: books inside combos are counted under Book-wise copies (sales shown against the combo).")
+    r += 1
+    head("Payment method-wise", "Orders", "Total (₹)")
+    for k, d in rep["payments"]:
+        line(k, d["orders"], round(d["total"], 2), fmts=[None, money])
+    r += 1
+    head("Order status-wise", "Orders")
+    for k, v in rep["statuses"]:
+        line(k, v)
+
+    widths = {1: 18, 2: 14, 3: 70, 4: 16, 5: 14}
+    if disc:
+        widths[6], widths[7] = 14, 16
+    else:
+        widths[6] = 16
+    for c, w in widths.items():
+        ws.column_dimensions[get_column_letter(c)].width = w
+    ws.freeze_panes = ws.cell(row=hr + 1, column=1)
+    ws.page_setup.orientation = "landscape"
+    ws.page_setup.fitToWidth, ws.page_setup.fitToHeight = 1, 0
+    from openpyxl.worksheet.properties import PageSetupProperties
+    ws.sheet_properties.pageSetUpPr = PageSetupProperties(fitToPage=True)
+    ws.print_title_rows = f"{hr}:{hr}"
+
+    buf = io.BytesIO()
+    wb.save(buf)
+    tag = f"{year}-{month:02d}" if month else f"{year}_full-year"
+    return Response(buf.getvalue(),
+                    mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    headers={"Content-Disposition": f"attachment; filename=sales_report_{tag}.xlsx"})
+
+
 @app.route("/admin/orders/export-csv")
 @admin_required
 def export_orders_csv():
