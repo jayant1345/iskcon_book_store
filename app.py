@@ -5134,7 +5134,7 @@ def _token_score(qt, qs, tt, ts):
         return 1.5
     if len(qt) >= 4 and _SequenceMatcher(None, qt, tt).ratio() >= 0.8:
         return 1.2
-    if len(qs) >= 3 and len(ts) >= 3 and _SequenceMatcher(None, qs, ts).ratio() >= 0.8:
+    if len(qs) >= 4 and len(ts) >= 4 and _SequenceMatcher(None, qs, ts).ratio() >= 0.8:
         return 1.0
     return 0.0
 
@@ -5185,6 +5185,7 @@ def smart_search(query, limit=None):
     qwords = [(t, _query_forms(t), t in _SEARCH_FILLER) for t in qtokens]
     core = [w for w in qwords if not w[2]] or qwords      # all-filler query: treat words as required
     phrase = " ".join(qtokens)
+    core_phrase = " ".join(t for t in qtokens if t not in _SEARCH_FILLER) or phrase
     full, partial = [], []
     for row in _search_index():
         total, matched, missed = 0.0, 0, 0
@@ -5205,7 +5206,7 @@ def smart_search(query, limit=None):
             continue
         if phrase in row["norm_title"]:
             total += 3
-        if row["norm_title"].startswith(phrase):
+        if row["norm_title"].startswith(core_phrase):
             total += 3
         entry = (-total, row["title"].lower(), row)
         if missed == 0:
