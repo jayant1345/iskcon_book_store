@@ -398,6 +398,9 @@
                         {% endif %}
                         <tr><td colspan="4" class="text-end"><strong>Shipping:</strong></td><td>₹{{ "%.0f"|format(order.shipping_charge) }}</td></tr>
                         <tr class="table-warning"><td colspan="4" class="text-end"><strong>Total:</strong></td><td class="fw-bold text-success fs-5">₹{{ "%.0f"|format(order.total_amount) }}</td></tr>
+                        {% if order.gift %}
+                        <tr class="table-info"><td colspan="4" class="text-end"><strong>🎁 Free gift to pack:</strong></td><td class="fw-bold">{{ order.gift }}</td></tr>
+                        {% endif %}
                         {% if order.refund > 0 %}
                         <tr class="text-danger"><td colspan="4" class="text-end"><strong>{{ 'Discount' if order.refund_type == 'discount' else 'Refund' }} given:</strong></td><td>-₹{{ "%.0f"|format(order.refund) }}</td></tr>
                         <tr class="table-success"><td colspan="4" class="text-end"><strong>Net amount:</strong></td><td class="fw-bold fs-5">₹{{ "%.0f"|format(order.net_amount) }}</td></tr>

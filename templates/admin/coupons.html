@@ -13,6 +13,24 @@
     </button>
 </div>
 
+<div class="card shadow-sm mb-4 border-success">
+    <div class="card-header bg-light"><strong>🎁 Free Gift Offer</strong> <small class="text-muted">— sent with big orders (shown on cart, checkout and book pages)</small></div>
+    <div class="card-body">
+        <form method="POST" action="{{ url_for('admin_gift_offer') }}" class="row g-2 align-items-end">
+            <div class="col-auto form-check form-switch ms-2">
+                <input class="form-check-input" type="checkbox" name="gift_enabled" id="giftOn" {{ 'checked' if gift.enabled }}>
+                <label class="form-check-label" for="giftOn">Offer ON</label>
+            </div>
+            <div class="col-sm-2"><label class="form-label small mb-0">Minimum books</label>
+                <input type="number" min="1" name="gift_min_books" class="form-control" value="{{ gift.min }}"></div>
+            <div class="col-sm-5"><label class="form-label small mb-0">Gift choices (comma separated)</label>
+                <input type="text" name="gift_options" class="form-control" value="{{ gift.options|join(', ') }}" placeholder="Bead Bag, Japa Mala"></div>
+            <div class="col-auto"><button class="btn btn-success">Save</button></div>
+        </form>
+        <div class="small text-muted mt-2">The customer picks the gift at checkout; it appears on the order so you can pack it. Only physical books count (e-books do not).</div>
+    </div>
+</div>
+
 <div class="row g-3">
     {% for coupon in coupons %}
     <div class="col-md-6 col-lg-4">

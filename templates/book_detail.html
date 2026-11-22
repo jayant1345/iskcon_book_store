@@ -163,6 +163,17 @@
       </p>
       {% endif %}
 
+
+<style>
+  .gift-box { background:#FFF7E0; border:1px dashed #d99a00; border-radius:10px; padding:8px 12px; font-size:.86rem; color:#6b4a00; margin:10px 0; }
+  .gift-box.gift-ok { background:#E8F7EC; border-color:#28a745; color:#1b5e2e; }
+  .cpn-chip { display:inline-block; font-size:.74rem; background:#fff; border:1px solid #d9c9a6; border-radius:14px; padding:2px 9px; margin:2px 3px 0 0; cursor:pointer; }
+  .cpn-chip:hover { border-color:var(--saffron); }
+</style>
+      {% if gift_cfg and gift_cfg.enabled %}
+      <div class="gift-box mb-3">🎁 Buy <strong>{{ gift_cfg.min }} or more books</strong> and get a <strong>FREE {{ gift_cfg.options|join(' or ') }}</strong> from us!</div>
+      {% endif %}
+
       <!-- Add to Cart -->
       {% if book.in_stock %}
       <form method="post" action="{{ url_for('add_to_cart', book_id=book.id) }}" class="mb-4">
@@ -189,6 +200,18 @@
             <i class="bi bi-share-fill me-2"></i>Share
           </button>
         </div>
+      </form>
+
+      <!-- Coupon -->
+      <form method="post" action="{{ url_for('apply_coupon') }}" class="mb-4" style="max-width:420px;">
+        <input type="hidden" name="next" value="/book/{{ book.id }}">
+        <div class="fw-semibold small mb-1"><i class="bi bi-ticket-perforated me-1"></i>Have a discount coupon?</div>
+        <div class="d-flex gap-2">
+          <input type="text" name="coupon_code" id="detail-cpn" class="form-control" placeholder="Enter coupon code" maxlength="30" value="{{ applied_coupon or '' }}">
+          <button type="submit" class="btn btn-gold px-3">Apply</button>
+        </div>
+        {% if applied_coupon %}<div class="small mt-1" style="color:#28a745;">✅ Coupon <strong>{{ applied_coupon }}</strong> will be used on your order.</div>{% endif %}
+        {% if coupons_public %}<div>{% for c in coupons_public %}<span class="cpn-chip" onclick="document.getElementById('detail-cpn').value='{{ c.code }}'"><strong>{{ c.code }}</strong> — {{ c.text }}</span>{% endfor %}</div>{% endif %}
       </form>
       <script>
       document.getElementById('share-book-btn').addEventListener('click', function () {

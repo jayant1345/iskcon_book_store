@@ -314,6 +314,7 @@ class Order(db.Model):
     refund_books       = db.Column(db.Integer, default=0)             # copies not sent (reduces "No. of Books")
     refund_note        = db.Column(db.Text, nullable=True)
     refund_date        = db.Column(db.DateTime, nullable=True)
+    gift               = db.Column(db.String(100), nullable=True)   # free gift sent with 5+ books
     items              = db.relationship("OrderItem", backref="order", lazy=True)
 
     @property
@@ -1103,6 +1104,36 @@ def item_is_ebook(item):
     return item["book"].is_ebook
 
 
+def gift_config():
+    """Free-gift offer: shown to customers who buy N or more physical books.
+    Everything is editable in Admin > Coupons (no code change needed)."""
+    try:
+        minimum = max(1, int(Setting.get("gift_min_books", "5") or 5))
+    except (TypeError, ValueError):
+        minimum = 5
+    options = [o.strip() for o in (Setting.get("gift_options", "Bead Bag, Japa Mala") or "").split(",") if o.strip()]
+    return {
+        "enabled": Setting.get("gift_enabled", "1") == "1" and bool(options),
+        "min": minimum,
+        "options": options,
+    }
+
+
+def gift_offer(items):
+    """How the cart stands against the free-gift offer (physical books only)."""
+    cfg = gift_config()
+    count = 0
+    for it in items:
+        if it["is_combo"]:
+            count += it["qty"] * sum(ci.quantity for ci in it["combo"].combo_items
+                                     if ci.book and not ci.book.is_ebook)
+        elif not it["book"].is_ebook:
+            count += it["qty"]
+    cfg.update(count=count, eligible=cfg["enabled"] and count >= cfg["min"],
+               remaining=max(0, cfg["min"] - count))
+    return cfg
+
+
 # ── Wishlist helpers (stored in Flask session, same pattern as cart) ──
 
 def get_wishlist():
@@ -1180,6 +1211,17 @@ def cart_totals():
             session.pop("coupon_auto", None)
             code = None
 
+    # A code typed on a book page before the cart was ready
+    pending = session.get("pending_coupon")
+    if not code and pending:
+        pc = Coupon.query.filter_by(code=pending).first()
+        if pc and pc.is_valid(subtotal)[0]:
+            session["coupon_code"]     = pc.code
+            session["coupon_discount"] = pc.calculate_discount(subtotal)
+            session["coupon_auto"]     = False
+            session.pop("pending_coupon", None)
+            code = pc.code
+
     # No coupon applied — try to auto-apply the best matching coupon
     if not code:
         best, best_discount = None, 0
@@ -1202,6 +1244,7 @@ def cart_totals():
         "shipping": shipping,
         "discount": discount,
         "total":    total,
+        "gift":     gift_offer(items),
     }
 
 
@@ -1608,7 +1651,9 @@ def book_detail(book_id):
                            other_lang_books=other_lang_books,
                            approved_reviews=approved_reviews,
                            review_count=review_count, avg_rating=avg_rating,
-                           my_review=my_review, can_review=can_review)
+                           my_review=my_review, can_review=can_review,
+                           coupons_public=public_coupons(), gift_cfg=gift_config(),
+                           applied_coupon=session.get("coupon_code") or session.get("pending_coupon"))
 
 
 @app.route("/book/<int:book_id>/review", methods=["POST"])
@@ -1779,7 +1824,8 @@ def cart():
     totals = cart_totals()
     coupon_code = session.get("coupon_code", "")
     coupon_auto = session.get("coupon_auto", False)
-    return render_template("cart.html", **totals, coupon_code=coupon_code, coupon_auto=coupon_auto)
+    return render_template("cart.html", **totals, coupon_code=coupon_code, coupon_auto=coupon_auto,
+                           coupons_public=public_coupons())
 
 
 @app.route("/cart/update", methods=["POST"])
@@ -1867,20 +1913,43 @@ def clear_cart():
 # COUPON
 # ─────────────────────────────────────────────
 
+def _chosen_gift(totals):
+    """The free gift for this order (None when the cart doesn't qualify)."""
+    g = totals.get("gift") or {}
+    if not g.get("eligible"):
+        return None
+    pick = request.form.get("gift_choice", "").strip()
+    return pick if pick in g["options"] else g["options"][0]
+
+
 @app.route("/apply-coupon", methods=["POST"])
 def apply_coupon():
     code    = request.form.get("coupon_code", "").strip().upper()
     totals  = cart_totals()
     coupon  = Coupon.query.filter_by(code=code).first()
+    back    = request.form.get("next", "cart")
+    nxt     = url_for("checkout") if back == "checkout" else url_for("cart")
+    if back.startswith("/book/"):
+        nxt = back
 
     if not coupon:
         flash("Invalid coupon code.", "danger")
-        return redirect(url_for("cart"))
+        return redirect(nxt)
+
+    if not totals["items"]:
+        # Nothing in the cart yet — remember a good code and apply it once books are added
+        ok, msg = coupon.is_valid(coupon.min_order or 0)
+        if not ok:
+            flash(msg, "danger")
+        else:
+            session["pending_coupon"] = code
+            flash(f"Coupon {code} saved — it will apply when you add books to your cart.", "success")
+        return redirect(nxt)
 
     valid, msg = coupon.is_valid(totals["subtotal"])
     if not valid:
         flash(msg, "danger")
-        return redirect(url_for("cart"))
+        return redirect(nxt)
 
     discount = coupon.calculate_discount(totals["subtotal"])
     session["coupon_code"]     = code
@@ -1888,7 +1957,24 @@ def apply_coupon():
     session["coupon_auto"]     = False
     session.modified = True
     flash(f"Coupon applied! You saved ₹{discount:.0f}.", "success")
-    return redirect(url_for("cart"))
+    return redirect(nxt)
+
+
+def public_coupons():
+    """Coupons worth advertising to customers (active, unexpired, not used up)."""
+    now = datetime.utcnow()
+    out = []
+    for c in Coupon.query.filter_by(active=True).order_by(Coupon.id).all():
+        if c.used_count >= (c.max_uses or 0) or (c.expires_at and c.expires_at < now):
+            continue
+        if c.discount_type == "percent":
+            what = f"{c.discount_value:g}% off" + (f" (up to ₹{c.max_discount:.0f})" if c.max_discount else "")
+        else:
+            what = f"₹{c.discount_value:.0f} off"
+        if c.min_order:
+            what += f" on orders above ₹{c.min_order:.0f}"
+        out.append({"code": c.code, "text": what})
+    return out
 
 
 # ─────────────────────────────────────────────
@@ -1935,18 +2021,21 @@ def checkout():
         if not all([name, phone, address, city, pincode, age_raw, profession]):
             flash("Please fill all required fields.", "danger")
             return render_template("checkout.html", **totals,
+                                   coupons_public=public_coupons(), coupon_code=session.get("coupon_code", ""),
                                    all_ebooks=all(item_is_ebook(item) for item in totals["items"]))
 
         normalized_phone = valid_indian_phone(phone)
         if not normalized_phone:
             flash("Please enter a valid 10-digit mobile number.", "danger")
             return render_template("checkout.html", **totals,
+                                   coupons_public=public_coupons(), coupon_code=session.get("coupon_code", ""),
                                    all_ebooks=all(item_is_ebook(item) for item in totals["items"]))
         phone = normalized_phone
 
         if not valid_email(email):
             flash("Please enter a valid email address.", "danger")
             return render_template("checkout.html", **totals,
+                                   coupons_public=public_coupons(), coupon_code=session.get("coupon_code", ""),
                                    all_ebooks=all(item_is_ebook(item) for item in totals["items"]))
 
         try:
@@ -1956,16 +2045,19 @@ def checkout():
         except ValueError:
             flash("Please enter a valid age.", "danger")
             return render_template("checkout.html", **totals,
+                                   coupons_public=public_coupons(), coupon_code=session.get("coupon_code", ""),
                                    all_ebooks=all(item_is_ebook(item) for item in totals["items"]))
 
         if payment == "cod":
             flash("Cash on Delivery is not available. Please choose an online payment method.", "danger")
             return render_template("checkout.html", **totals,
+                                   coupons_public=public_coupons(), coupon_code=session.get("coupon_code", ""),
                                    all_ebooks=all(item_is_ebook(item) for item in totals["items"]))
 
         if payment == "payu":
             flash("This payment option is temporarily unavailable. Please pay via UPI or Razorpay.", "danger")
             return render_template("checkout.html", **totals,
+                                   coupons_public=public_coupons(), coupon_code=session.get("coupon_code", ""),
                                    all_ebooks=all(item_is_ebook(item) for item in totals["items"]))
 
         # Ebook-only orders have no shipping
@@ -2006,6 +2098,7 @@ def checkout():
             total_amount    = total_amount,
             payment_method  = payment,
             coupon_code     = session.get("coupon_code"),
+            gift            = _chosen_gift(totals),
             notes           = notes,
             payment_status  = "pending",
             order_status    = "placed",
@@ -2191,7 +2284,9 @@ def checkout():
 
     return render_template("checkout.html", **totals,
                            razorpay_key=app.config["RAZORPAY_KEY_ID"],
-                           prefill=prefill,
+                           prefill=prefill, coupons_public=public_coupons(),
+                           coupon_code=session.get("coupon_code", ""),
+                           coupon_auto=session.get("coupon_auto", False),
                            all_ebooks=all(item_is_ebook(item) for item in totals["items"]))
 
 
@@ -6133,7 +6228,7 @@ def admin_hard_delete_order(order_id):
 @admin_required
 def admin_coupons():
     coupons = Coupon.query.order_by(Coupon.id.desc()).all()
-    return render_template("admin/coupons.html", coupons=coupons)
+    return render_template("admin/coupons.html", coupons=coupons, gift=gift_config())
 
 
 @app.route("/admin/coupons/add", methods=["POST"])
@@ -6155,6 +6250,21 @@ def admin_add_coupon():
     db.session.add(coupon)
     db.session.commit()
     flash(f'Coupon "{coupon.code}" created!', "success")
+    return redirect(url_for("admin_coupons"))
+
+
+@app.route("/admin/gift-offer", methods=["POST"])
+@admin_required
+def admin_gift_offer():
+    try:
+        minimum = max(1, int(request.form.get("gift_min_books", "5")))
+    except ValueError:
+        minimum = 5
+    options = ", ".join(o.strip() for o in request.form.get("gift_options", "").split(",") if o.strip())
+    Setting.set("gift_enabled", "1" if request.form.get("gift_enabled") else "0")
+    Setting.set("gift_min_books", str(minimum))
+    Setting.set("gift_options", options or "Bead Bag, Japa Mala")
+    flash("Free-gift offer saved.", "success")
     return redirect(url_for("admin_coupons"))
 
 
@@ -6515,6 +6625,7 @@ def init_db():
             ("orders",             "refund_books",               "INTEGER DEFAULT 0"),
             ("orders",             "refund_note",                "TEXT"),
             ("orders",             "refund_date",                "TIMESTAMP"),
+            ("orders", "gift",               "VARCHAR(100)"),
             ("gita_yagna_donations", "distribution", "VARCHAR(10) DEFAULT 'local'"),
             ("gita_yagna_donations", "courier_charge", "FLOAT DEFAULT 0"),
             ("gita_yagna_donations", "parcel_kg", "FLOAT"),
