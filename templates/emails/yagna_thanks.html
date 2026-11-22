@@ -6,14 +6,14 @@
   <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#fff;border-radius:10px;overflow:hidden;">
     <tr><td style="background:#13294b;padding:28px 24px;text-align:center;">
       <p style="margin:0 0 6px;font-size:28px;">🙏</p>
-      <h1 style="margin:0;color:#fff;font-size:22px;">ISKCON Ahmedabad — Gita Dan Yagna</h1>
+      <h1 style="margin:0;color:#fff;font-size:22px;">ISKCON — Gita Dan Yagna</h1>
       <p style="margin:8px 0 0;color:#ffd98a;font-size:13px;">Gītā Dāna Mahā Dāna</p>
     </td></tr>
     <tr><td style="padding:26px 24px;">
       <h2 style="margin:0 0 10px;color:#13294b;font-size:20px;">Hare Krishna, {{ d.donor_name }}!</h2>
       <p style="font-size:15px;line-height:1.6;">Thank you for taking part in the Gita Dan Yagna. We have received your donation of
         <strong>{{ d.quantity }} Bhagavad-gītā{{ 's' if d.quantity != 1 }} ({{ d.language }})</strong> — ₹{{ "%.0f"|format(d.amount) }}.
-        These will be given to students, village residents and other people by ISKCON Ahmedabad.</p>
+        These will be given to students, village residents and other people by ISKCON.</p>
       <table width="100%" cellpadding="6" cellspacing="0" style="border-collapse:collapse;font-size:14px;margin:12px 0;">
         <tr><td style="border-bottom:1px solid #eee;">Gitas ({{ d.quantity }} × ₹{{ "%.0f"|format(d.amount / d.quantity) }})</td><td align="right" style="border-bottom:1px solid #eee;">₹{{ "%.0f"|format(d.amount) }}</td></tr>
         <tr><td style="border-bottom:1px solid #eee;">📦 Courier charge

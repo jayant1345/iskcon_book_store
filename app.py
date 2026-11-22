@@ -2443,7 +2443,7 @@ def gita_dan_yagna():
         customer_email            = donor_email or None,
         customer_phone            = phone,
         address                   = (r_address if distribution == "courier"
-                                     else "Gita Dan Yagna — distributed by ISKCON Ahmedabad"),
+                                     else "Gita Dan Yagna — distributed by ISKCON"),
         city                      = (r_city or "—") if distribution == "courier" else (area or "—"),
         state                     = r_state if distribution == "courier" else "",
         pincode                   = r_pin if distribution == "courier" else "000000",

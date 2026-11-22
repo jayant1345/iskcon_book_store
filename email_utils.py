@@ -70,7 +70,7 @@ def send_yagna_thanks(order, donation):
         html_body = render_template("emails/yagna_thanks.html", order=order, d=donation,
                                     cert_url=_safe_url("gita_yagna_certificate",
                                                        order_number=order.order_number))
-        _send(order.customer_email, "Thank you — Gita Dan Yagna, ISKCON Ahmedabad 🙏", html_body)
+        _send(order.customer_email, "Thank you — Gita Dan Yagna, ISKCON 🙏", html_body)
     except Exception as exc:
         print(f"[EMAIL] send_yagna_thanks error: {exc}")
         current_app.logger.error(f"[EMAIL] send_yagna_thanks error: {exc}")

@@ -49,11 +49,11 @@
     <a href="{{ url_for('gita_yagna_certificate', order_number=order.order_number) }}" target="_blank" class="btn btn-saffron btn-lg">🏅 View / Print Thank-you Certificate</a>
     {% endif %}
     <a class="btn btn-success" target="_blank" rel="noopener"
-       href="https://wa.me/?text={{ ('🙏 I took part in the ISKCON Ahmedabad Gita Dan Yagna and donated ' ~ d.quantity ~ ' Bhagavad-gita(s)! You can join too: ' ~ url_for('gita_dan_yagna', _external=True))|urlencode }}">
+       href="https://wa.me/?text={{ ('🙏 I took part in the ISKCON Gita Dan Yagna and donated ' ~ d.quantity ~ ' Bhagavad-gita(s)! You can join too: ' ~ url_for('gita_dan_yagna', _external=True))|urlencode }}">
       💬 Share on WhatsApp — inspire others
     </a>
     <a href="{{ url_for('gita_dan_yagna') }}" class="btn btn-outline-secondary">Donate more Gitas</a>
   </div>
-  <p class="text-center text-muted small mt-4">🙏 Your gift of Bhagavad-gītā will reach students, villagers and other people through ISKCON Ahmedabad.</p>
+  <p class="text-center text-muted small mt-4">🙏 Your gift of Bhagavad-gītā will reach students, villagers and other people through ISKCON.</p>
 </div>
 {% endblock %}
