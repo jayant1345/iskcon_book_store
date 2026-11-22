@@ -1735,3 +1735,33 @@ img {
   .yagna-banner .yb-prog > div:last-child { height: 8px !important; }
   .yagna-banner .yb-btn { width: 100%; padding: 5px 10px !important; font-size: .88rem; }
 }
+
+
+/* ═══════════════ CART ON PHONES — each item becomes a clean card (no squashed columns) ═══════════════ */
+@media (max-width: 767.98px) {
+  .cart-table { overflow: visible; border: 0; background: transparent; box-shadow: none; }
+  .cart-table table, .cart-table tbody { display: block; width: 100%; }
+  .cart-table thead { display: none; }
+  .cart-table tbody tr {
+    display: grid;
+    grid-template-columns: minmax(0,1fr) auto minmax(0,1fr) auto;
+    gap: 8px 10px;
+    align-items: center;
+    background: #fff !important;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px;
+    margin-bottom: 12px;
+  }
+  .cart-table tbody td { display: block; border: 0 !important; padding: 0 !important; text-align: left !important; background: transparent !important; min-width: 0; }
+  .cart-table tbody td:nth-child(1) { grid-column: 1 / -1; }
+  .cart-table tbody td:nth-child(1) .d-flex { gap: 12px !important; align-items: flex-start !important; }
+  .cart-table tbody td:nth-child(1) a { font-size: .95rem; line-height: 1.3; word-break: normal; overflow-wrap: anywhere; }
+  .cart-table .cart-item-img { width: 56px; height: 74px; flex: 0 0 56px; }
+  .cart-table tbody td:nth-child(2)::before,
+  .cart-table tbody td:nth-child(4)::before { display: block; font-size: .68rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: .4px; }
+  .cart-table tbody td:nth-child(2)::before { content: "Price"; }
+  .cart-table tbody td:nth-child(4)::before { content: "Total"; }
+  .cart-table tbody td:nth-child(3) .qty-control { justify-content: flex-start !important; }
+  .cart-table tbody td:nth-child(5) { justify-self: end; }
+}
