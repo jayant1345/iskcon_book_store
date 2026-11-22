@@ -44,11 +44,17 @@
 
 <!-- ── Announcement Bar ── -->
 <div class="announcement-bar">
-  🙏 Hare Krishna Hare Krishna, Krishna Krishna Hare Hare &nbsp;&nbsp;
-  Hare Ram Hare Ram, Ram Ram Hare Hare &nbsp;—&nbsp; Chant &amp; Be Happy! 😊🪷
-  {% if settings_get('yagna_enabled', '0') == '1' %}
-  <a href="{{ url_for('gita_dan_yagna') }}" style="color:#FFD98A; font-weight:700; text-decoration:underline; display:inline-block;">&nbsp;|&nbsp; 🙏 ગીતા દાન યજ્ઞ · गीता दान यज्ञ · Gita Dan Yagna — Donate Gitas →</a>
-  {% endif %}
+  <div class="ann-track">
+    {% for copy in (1, 2) %}
+    <span class="ann-item"{% if copy == 2 %} aria-hidden="true"{% endif %}>
+      🙏 Hare Krishna Hare Krishna, Krishna Krishna Hare Hare &nbsp;&nbsp;
+      Hare Ram Hare Ram, Ram Ram Hare Hare &nbsp;—&nbsp; Chant &amp; Be Happy! 😊🪷
+      {% if settings_get('yagna_enabled', '0') == '1' %}
+      <a href="{{ url_for('gita_dan_yagna') }}" style="color:#FFD98A; font-weight:700; text-decoration:underline; display:inline-block;">&nbsp;|&nbsp; 🙏 ગીતા દાન યજ્ઞ · गीता दान यज्ञ · Gita Dan Yagna — Donate Gitas →</a>
+      {% endif %}
+    </span>
+    {% endfor %}
+  </div>
 </div>
 
 <!-- ── Navbar ── -->

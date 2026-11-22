@@ -7,18 +7,18 @@
 <style>
   @page { size: A4 landscape; margin: 0; }
   body { margin:0; background:#eee; font-family:Georgia,'Times New Roman',serif; color:#222; }
-  .sheet { width:297mm; max-width:100%; min-height:210mm; margin:0 auto; background:#fffaf0; box-sizing:border-box; padding:12mm; }
-  .frame { border:3px double #c8901e; min-height:calc(210mm - 24mm); padding:10mm 14mm; text-align:center; position:relative; }
+  .sheet { width:297mm; max-width:100%; margin:0 auto; background:#fffaf0; box-sizing:border-box; padding:12mm; }
+  .frame { border:3px double #c8901e; padding:8mm 14mm 6mm; text-align:center; position:relative; }
   .brand { display:flex; align-items:center; justify-content:center; gap:14px; }
-  .brand img { height:64px; }
+  .brand img { height:64px; mix-blend-mode:multiply; }
   h1 { font-size:34px; margin:10px 0 0; color:#13294b; letter-spacing:2px; }
   .sub { color:#a06a00; font-size:18px; margin-bottom:6px; }
   .verse { color:#8a1c3c; font-size:15px; margin:10px 0 14px; line-height:1.7; }
   .name { font-size:34px; color:#0f6b68; border-bottom:1px solid #c8901e; display:inline-block; padding:0 30px 4px; margin:6px 0; }
   .big { font-size:20px; line-height:1.7; }
   .qty { font-size:26px; font-weight:bold; color:#ea580c; }
-  .foot { display:flex; justify-content:space-between; margin-top:26px; font-size:14px; color:#555; text-align:left; }
-  .note { font-size:11px; color:#888; margin-top:14px; }
+  .foot { display:flex; justify-content:space-between; margin-top:16px; font-size:14px; color:#555; text-align:left; }
+  .note { font-size:11px; color:#888; margin-top:8px; }
   .noprint { text-align:center; padding:12px; }
   .noprint button { padding:10px 22px; font-size:16px; background:#ea580c; color:#fff; border:0; border-radius:8px; cursor:pointer; }
   @media print { body { background:#fff; } .noprint { display:none; } .sheet { padding:8mm; } }

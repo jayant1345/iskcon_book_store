@@ -1707,3 +1707,31 @@ img {
   .home-page .why-h { font-size: 1rem !important; margin: 4px 0 3px !important; }
   .home-page .why-p { font-size: .74rem !important; line-height: 1.35 !important; margin: 0 !important; }
 }
+
+
+/* ═══════════════ MOBILE: RUNNING MANTRA TICKER + COMPACT GITA DAN BANNER ═══════════════ */
+.announcement-bar .ann-track { display: inline; }
+.announcement-bar .ann-item[aria-hidden="true"] { display: none; }
+@media (max-width: 991.98px) {
+  .announcement-bar { padding: 5px 0; overflow: hidden; white-space: nowrap; text-align: left; font-size: .78rem; }
+  .announcement-bar .ann-track { display: inline-block; white-space: nowrap; animation: annScroll 28s linear infinite; will-change: transform; }
+  .announcement-bar .ann-item { display: inline-block; padding-right: 3rem; }
+  .announcement-bar .ann-item[aria-hidden="true"] { display: inline-block; }
+  .announcement-bar:active .ann-track { animation-play-state: paused; }
+}
+@keyframes annScroll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+@media (prefers-reduced-motion: reduce) {
+  .announcement-bar .ann-track { animation: none !important; }
+  .announcement-bar { overflow-x: auto; }
+}
+@media (max-width: 767.98px) {
+  .yagna-banner .container { padding-top: 6px !important; padding-bottom: 8px !important; }
+  .yagna-banner .yb-row { gap: 6px !important; }
+  .yagna-banner .yb-text, .yagna-banner .yb-prog { flex: 1 1 100%; min-width: 0 !important; max-width: none !important; }
+  .yagna-banner .yb-event { font-size: .64rem !important; }
+  .yagna-banner .yb-title { font-size: .98rem !important; }
+  .yagna-banner .yb-sub { display: none; }
+  .yagna-banner .yb-prog > div:first-child { font-size: .7rem !important; margin-bottom: 2px !important; }
+  .yagna-banner .yb-prog > div:last-child { height: 8px !important; }
+  .yagna-banner .yb-btn { width: 100%; padding: 5px 10px !important; font-size: .88rem; }
+}

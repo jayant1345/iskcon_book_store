@@ -29,16 +29,16 @@
 
 {% if yagna_banner %}
 <!-- ═══════ GITA DAN YAGNA — TOP BANNER ═══════ -->
-<a href="{{ url_for('gita_dan_yagna') }}" class="text-decoration-none d-block"
+<a href="{{ url_for('gita_dan_yagna') }}" class="text-decoration-none d-block yagna-banner"
    style="background:linear-gradient(135deg,#13294b 0%,#1d3d6e 100%); border-bottom:3px solid #e0a82e; color:#fff;">
   <div class="container py-2">
-    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
-      <div>
-        <div style="color:#ffd98a; font-weight:700; font-size:.75rem; letter-spacing:1px;">ISKCON · {{ yagna_cfg.event_date }}</div>
-        <div style="font-family:'Cinzel',serif; font-size:1.25rem; font-weight:700; color:#ffffff; line-height:1.3;">🙏 ગીતા દાન યજ્ઞ · गीता दान यज्ञ · Gita Dan Yagna</div>
-        <div style="color:#e9eefc; font-size:.85rem;">Donate Bhagavad-gītās for students, villagers &amp; others. Take your saṅkalpa today!</div>
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 yb-row">
+      <div class="yb-text">
+        <div class="yb-event" style="color:#ffd98a; font-weight:700; font-size:.75rem; letter-spacing:1px;">ISKCON · {{ yagna_cfg.event_date }}</div>
+        <div class="yb-title" style="font-family:'Cinzel',serif; font-size:1.25rem; font-weight:700; color:#ffffff; line-height:1.3;">🙏 ગીતા દાન યજ્ઞ · गीता दान यज्ञ · Gita Dan Yagna</div>
+        <div class="yb-sub" style="color:#e9eefc; font-size:.85rem;">Donate Bhagavad-gītās for students, villagers &amp; others. Take your saṅkalpa today!</div>
       </div>
-      <div class="flex-grow-1" style="min-width:200px; max-width:380px;">
+      <div class="flex-grow-1 yb-prog" style="min-width:200px; max-width:380px;">
         <div class="d-flex justify-content-between fw-bold mb-1" style="font-size:.78rem; color:#ffffff;">
           <span>{{ "{:,}".format(yagna_banner.gitas) }} Gitas donated</span><span>Goal {{ "{:,}".format(yagna_banner.goal) }}</span>
         </div>
@@ -46,7 +46,7 @@
           <div style="height:100%; width:{{ yagna_banner.pct }}%; min-width:{{ 2 if yagna_banner.gitas else 0 }}px; background:linear-gradient(90deg,#f59e0b,#ea580c);"></div>
         </div>
       </div>
-      <span class="btn btn-saffron fw-bold px-4">Donate Gitas →</span>
+      <span class="btn btn-saffron fw-bold px-4 yb-btn">Donate Gitas →</span>
     </div>
   </div>
 </a>
